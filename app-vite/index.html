@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/src/style.css">
+    <title>3D聊天 - WebRTC演示</title>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h1>3D聊天 WebRTC连接演示</h1>
+      </header>
+
+      <div class="connection-controls">
+        <div class="form-group">
+          <label for="roomId">房间ID (留空创建新房间):</label>
+          <input type="text" id="roomId" placeholder="房间ID">
+        </div>
+
+        <div class="form-group">
+          <label for="userName">用户名:</label>
+          <input type="text" id="userName" placeholder="输入您的名称" value="用户">
+        </div>
+
+        <button id="joinBtn" class="primary-btn">加入/创建房间</button>
+        <button id="leaveBtn" class="secondary-btn" disabled>离开房间</button>
+      </div>
+
+      <div class="status-panel">
+        <h2>连接状态</h2>
+        <div id="connectionStatus">未连接</div>
+        <div id="roomInfo"></div>
+        <div id="peersContainer">
+          <h3>房间成员</h3>
+          <ul id="peersList"></ul>
+        </div>
+      </div>
+
+      <div class="data-channel">
+        <h2>数据通道</h2>
+        <div class="form-group">
+          <label for="dataMessage">消息:</label>
+          <input type="text" id="dataMessage" placeholder="输入要发送的消息">
+          <button id="sendBtn" class="primary-btn" disabled>发送</button>
+        </div>
+        <div class="messages-container">
+          <h3>消息记录</h3>
+          <div id="messages"></div>
+        </div>
+      </div>
+
+      <div class="log-container">
+        <h2>日志</h2>
+        <pre id="logs"></pre>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
