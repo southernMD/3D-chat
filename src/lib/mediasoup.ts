@@ -74,6 +74,7 @@ export class MediasoupHandler {
 
       const peerKey = `${peerId}-${consuming ? 'consumer' : 'producer'}`;
       this.roomTransports.get(roomId)?.set(peerKey, transport);
+      console.log(`Transport created and saved: roomId=${roomId}, peerId=${peerId}, peerKey=${peerKey}, consuming=${consuming}`);
 
       // 监听transport关闭事件
       transport.on('@close', () => {
@@ -145,6 +146,9 @@ export class MediasoupHandler {
 
     const peerKey = `${consumerPeerId}-consumer`;
     const transport = this.roomTransports.get(roomId)?.get(peerKey);
+
+    console.log(`Looking for consumer transport: roomId=${roomId}, consumerPeerId=${consumerPeerId}, peerKey=${peerKey}`);
+    console.log(`Available transports for room ${roomId}:`, Array.from(this.roomTransports.get(roomId)?.keys() || []));
 
     if (!transport) {
       throw new Error(`Consumer transport not found for ${consumerPeerId}`);

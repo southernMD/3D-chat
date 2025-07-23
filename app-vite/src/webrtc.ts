@@ -10,7 +10,8 @@ import type {
     ProduceResponse,
     GetProducersResponse,
     JoinedEventData,
-    NewDataProducerEventData
+    NewDataProducerEventData,
+    ConsumeResponse
 } from './types';
 
 // 日志类型
@@ -168,11 +169,49 @@ export class WebRTCManager {
     // 监听数据生产者关闭事件
     this.state.socket.on('dataProducerClosed', ({ dataProducerId, producerPeerId }) => {
       this.log(`数据生产者关闭: ${producerPeerId}`);
-      
+
       const dataConsumerInfo = this.state.dataConsumers.get(dataProducerId);
       if (dataConsumerInfo) {
         dataConsumerInfo.dataConsumer.close();
         this.state.dataConsumers.delete(dataProducerId);
+      }
+    });
+
+    // 监听新的音频生产者事件
+    this.state.socket.on('newProducer', async ({ producerId, producerPeerId, kind }) => {
+      this.log(`新的${kind}生产者: ${producerPeerId}`);
+
+      // 只处理音频生产者
+      if (kind === 'audio') {
+        // 检查是否已经有这个生产者的消费者
+        if (this.state.audioConsumers.has(producerId)) {
+          this.log(`已经在消费音频生产者 ${producerId}`);
+          return;
+        }
+
+        try {
+          // 消费这个音频生产者
+          await this.consumeAudio(producerId, producerPeerId);
+        } catch (error) {
+          this.log(`消费音频生产者失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+      }
+    });
+
+    // 监听音频生产者关闭事件
+    this.state.socket.on('producerClosed', ({ producerId, producerPeerId }) => {
+      this.log(`音频生产者关闭: ${producerPeerId}`);
+
+      const audioConsumerInfo = this.state.audioConsumers.get(producerId);
+      if (audioConsumerInfo) {
+        audioConsumerInfo.consumer.close();
+        this.state.audioConsumers.delete(producerId);
+
+        // 移除对应的音频元素
+        const audioElement = document.getElementById(`audio-${producerId}`) as HTMLAudioElement;
+        if (audioElement) {
+          audioElement.remove();
+        }
       }
     });
   }
@@ -414,24 +453,35 @@ export class WebRTCManager {
       // 记录已经尝试消费的生产者ID，避免重复消费
       const attemptedProducerIds = new Set<string>();
       
-      // 消费每个数据生产者
+      // 消费每个生产者
       for (const producer of producers) {
         const { producerId, producerPeerId } = producer;
-        
-        // 如果已经尝试过这个生产者，或者已经有对应的消费者，则跳过
-        if (attemptedProducerIds.has(producerId) || this.state.dataConsumers.has(producerId)) {
+
+        // 如果已经尝试过这个生产者，则跳过
+        if (attemptedProducerIds.has(producerId)) {
           continue;
         }
-        
+
         // 标记为已尝试
         attemptedProducerIds.add(producerId);
         
-        try {
-          // 尝试消费数据
-          await this.consumeData(producerId, producerPeerId);
-        } catch (error) {
-          // 忽略错误，可能是因为这是一个媒体生产者而不是数据生产者
-          this.log(`尝试消费生产者 ${producerId} 失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        // 首先尝试作为数据生产者消费（保持原有逻辑）
+        if (!this.state.dataConsumers.has(producerId)) {
+          try {
+            await this.consumeData(producerId, producerPeerId);
+            continue; // 如果数据消费成功，跳过音频消费尝试
+          } catch (dataError) {
+            // 数据消费失败，可能是音频生产者，继续尝试音频消费
+          }
+        }
+
+        // 尝试作为音频生产者消费
+        if (!this.state.audioConsumers.has(producerId)) {
+          try {
+            await this.consumeAudio(producerId, producerPeerId);
+          } catch (audioError) {
+            this.log(`消费生产者 ${producerId} 失败: ${audioError instanceof Error ? audioError.message : '未知错误'}`);
+          }
         }
       }
     } catch (error) {
@@ -585,39 +635,62 @@ export class WebRTCManager {
    * 清理资源
    */
   public cleanupResources(): void {
+    // 清理数据生产者
     if (this.state.dataProducer) {
       this.state.dataProducer.close();
       this.state.dataProducer = null;
     }
-    
+
+    // 清理数据消费者
     for (const [_, { dataConsumer }] of this.state.dataConsumers) {
       dataConsumer.close();
     }
     this.state.dataConsumers.clear();
-    
+
+    // 清理音频生产者
+    if (this.state.audioProducer) {
+      this.state.audioProducer.close();
+      this.state.audioProducer = null;
+    }
+
+    // 清理音频消费者和音频元素
+    for (const [producerId, { consumer }] of this.state.audioConsumers) {
+      consumer.close();
+
+      // 移除对应的音频元素
+      const audioElement = document.getElementById(`audio-${producerId}`) as HTMLAudioElement;
+      if (audioElement) {
+        audioElement.remove();
+      }
+    }
+    this.state.audioConsumers.clear();
+
+    // 清理传输
     if (this.state.producerTransport) {
       this.state.producerTransport.close();
       this.state.producerTransport = null;
     }
-    
+
     if (this.state.consumerTransport) {
       this.state.consumerTransport.close();
       this.state.consumerTransport = null;
     }
-    
+
     // 重置状态
     this.state.roomId = null;
     this.state.peerId = null;
-    
+    this.state.microphoneEnabled = false;
+
     // 更新UI
     document.getElementById('joinBtn')?.removeAttribute('disabled');
     document.getElementById('leaveBtn')?.setAttribute('disabled', 'disabled');
     document.getElementById('sendBtn')?.setAttribute('disabled', 'disabled');
-    
+    document.getElementById('micBtn')?.setAttribute('disabled', 'disabled');
+
     this.updateConnectionStatusCallback('connected', '已连接到服务器');
     this.updateRoomInfoCallback(null);
     this.updatePeersListCallback([]);
-    
+
     this.log('已清理所有资源');
   }
 
@@ -731,6 +804,75 @@ export class WebRTCManager {
       this.state.audioProducer = null;
       this.state.microphoneEnabled = false;
       this.log('麦克风已关闭');
+    }
+  }
+
+  /**
+   * 消费音频
+   */
+  private async consumeAudio(producerId: string, producerPeerId: string): Promise<void> {
+    if (!this.state.socket || !this.state.consumerTransport || !this.state.roomId || !this.state.peerId) {
+      throw new Error('缺少初始化参数');
+    }
+
+    try {
+      this.log(`开始消费音频，生产者ID: ${producerId}, 生产者PeerID: ${producerPeerId}, 消费者PeerID: ${this.state.peerId}`);
+      this.log(`消费者传输状态: ${this.state.consumerTransport.connectionState}`);
+      const result = await this.emitAsync<ConsumeResponse>('consume', {
+        roomId: this.state.roomId,
+        consumerPeerId: this.state.peerId,
+        producerId,
+        rtpCapabilities: this.state.rtpCapabilities
+      });
+
+      if (result.error || !result.id || !result.rtpParameters) {
+        throw new Error(result.error || '消费音频失败');
+      }
+
+      const consumer = await this.state.consumerTransport.consume({
+        id: result.id,
+        producerId,
+        kind: result.kind as any,
+        rtpParameters: result.rtpParameters,
+        appData: { producerPeerId }
+      });
+
+      this.state.audioConsumers.set(producerId, { consumer, producerPeerId });
+
+      consumer.on('transportclose', () => {
+        this.log(`音频消费者传输关闭: ${producerPeerId}`);
+        this.state.audioConsumers.delete(producerId);
+      });
+
+      // 创建音频元素播放音频
+      const audioElement = document.createElement('audio');
+      audioElement.id = `audio-${producerId}`;
+      audioElement.srcObject = new MediaStream([consumer.track]);
+      audioElement.autoplay = true;
+      audioElement.controls = false;
+      audioElement.muted = false;
+      audioElement.volume = 0.8;
+      audioElement.style.display = 'none'; // 隐藏音频控件
+      document.body.appendChild(audioElement);
+
+      // 监听音频播放事件
+      audioElement.addEventListener('loadedmetadata', () => {
+        this.log(`音频元素已加载，来自 ${producerPeerId}`);
+      });
+
+      audioElement.addEventListener('error', (e) => {
+        this.log(`音频播放错误: ${e}`);
+      });
+
+      // 恢复消费者
+      await this.emitAsync('resumeConsumer', {
+        roomId: this.state.roomId,
+        consumerId: consumer.id
+      });
+
+      this.log(`开始消费来自 ${producerPeerId} 的音频`);
+    } catch (error) {
+      this.log(`消费音频失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   }
 }
