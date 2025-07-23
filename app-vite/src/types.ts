@@ -12,6 +12,9 @@ export interface AppState {
   consumerTransport: mediasoupTypes.Transport | null;
   dataProducer: mediasoupTypes.DataProducer | null;
   dataConsumers: Map<string, { dataConsumer: mediasoupTypes.DataConsumer; producerPeerId: string }>;
+  audioProducer: mediasoupTypes.Producer | null;
+  audioConsumers: Map<string, { consumer: mediasoupTypes.Consumer; producerPeerId: string }>;
+  microphoneEnabled: boolean;
   roomId: string | null;
   peerId: string | null;
 }
@@ -91,6 +94,21 @@ export interface ProduceDataResponse {
   protocol?: string;
   error?: string;
   streamId?: number;
+}
+
+// 音频生产响应类型
+export interface ProduceResponse {
+  id?: string;
+  error?: string;
+}
+
+// 消费响应类型
+export interface ConsumeResponse {
+  id?: string;
+  kind?: string;
+  rtpParameters?: any;
+  producerPeerId?: string;
+  error?: string;
 }
 
 export interface GetProducersResponse {

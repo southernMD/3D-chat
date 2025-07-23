@@ -7,6 +7,7 @@ import type {
     TransportResponse,
     ConnectTransportResponse,
     ProduceDataResponse,
+    ProduceResponse,
     GetProducersResponse,
     JoinedEventData,
     NewDataProducerEventData
@@ -24,6 +25,9 @@ export class WebRTCManager {
     consumerTransport: null,
     dataProducer: null,
     dataConsumers: new Map(),
+    audioProducer: null,
+    audioConsumers: new Map(),
+    microphoneEnabled: false,
     roomId: null,
     peerId: null,
   };
@@ -110,6 +114,7 @@ export class WebRTCManager {
       this.updatePeersListCallback(peers);
       document.getElementById('joinBtn')?.setAttribute('disabled', 'disabled');
       document.getElementById('leaveBtn')?.removeAttribute('disabled');
+      document.getElementById('micBtn')?.removeAttribute('disabled');
       
       // 初始化WebRTC连接
       await this.initializeWebRTC();
@@ -265,10 +270,10 @@ export class WebRTCManager {
     // 处理生产者传输生产数据事件
     this.state.producerTransport.on('producedata', async (parameters, callback, errback) => {
       const { sctpStreamParameters, label, protocol, appData } = parameters;
-      
+
       try {
         const result = await this.emitAsync<ProduceDataResponse>(
-          'produceData', 
+          'produceData',
           {
             roomId: this.state.roomId,
             peerId: this.state.peerId,
@@ -278,17 +283,46 @@ export class WebRTCManager {
             sctpStreamParameters
           }
         );
-        
+
         if (result.error || !result.id) {
           errback(new Error(result.error || '创建数据生产者失败'));
           return;
         }
-        
+
         callback({ id: result.id });
         this.log(`数据生产者已创建，ID: ${result.id}`);
       } catch (error) {
         errback(error instanceof Error ? error : new Error('创建失败'));
         this.log(`数据生产失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      }
+    });
+
+    // 处理生产者传输生产音频事件
+    this.state.producerTransport.on('produce', async (parameters, callback, errback) => {
+      const { kind, rtpParameters, appData } = parameters;
+
+      try {
+        const result = await this.emitAsync<ProduceResponse>(
+          'produce',
+          {
+            roomId: this.state.roomId,
+            peerId: this.state.peerId,
+            kind,
+            rtpParameters,
+            appData
+          }
+        );
+
+        if (result.error || !result.id) {
+          errback(new Error(result.error || '创建音频生产者失败'));
+          return;
+        }
+
+        callback({ id: result.id });
+        this.log(`音频生产者已创建，ID: ${result.id}`);
+      } catch (error) {
+        errback(error instanceof Error ? error : new Error('创建失败'));
+        this.log(`音频生产失败: ${error instanceof Error ? error.message : '未知错误'}`);
       }
     });
     
@@ -596,10 +630,107 @@ export class WebRTCManager {
         reject(new Error('Socket未连接'));
         return;
       }
-      
+
       this.state.socket.emit(event, data, (response: T) => {
         resolve(response);
       });
     });
+  }
+
+  /**
+   * 切换麦克风状态
+   */
+  public async toggleMicrophone(): Promise<boolean> {
+    try {
+      if (this.state.microphoneEnabled) {
+        await this.disableMicrophone();
+        return false;
+      } else {
+        await this.enableMicrophone();
+        return true;
+      }
+    } catch (error) {
+      this.log(`切换麦克风失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 启用麦克风
+   */
+  private async enableMicrophone(): Promise<void> {
+    if (!this.state.socket || !this.state.producerTransport || !this.state.roomId || !this.state.peerId) {
+      throw new Error('缺少初始化参数');
+    }
+
+    try {
+      this.log('正在请求麦克风权限...');
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+
+      const track = stream.getAudioTracks()[0];
+      if (!track) {
+        throw new Error('无法获取音频轨道');
+      }
+
+      this.log('获取到麦克风音频轨道');
+
+      this.state.audioProducer = await this.state.producerTransport.produce({
+        track,
+        codecOptions: {
+          opusStereo: true,
+          opusDtx: true,
+        },
+        appData: {
+          peerId: this.state.peerId,
+          roomId: this.state.roomId
+        }
+      });
+
+      this.log(`音频生产者已创建，ID: ${this.state.audioProducer.id}`);
+
+      this.state.audioProducer.on('transportclose', () => {
+        this.log('音频生产者传输关闭');
+        this.state.audioProducer = null;
+        this.state.microphoneEnabled = false;
+      });
+
+      this.state.microphoneEnabled = true;
+    } catch (error) {
+      let errorMessage = '未知错误';
+
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError' || error.message.includes('Permission denied')) {
+          errorMessage = '麦克风权限被拒绝。请在浏览器设置中允许访问麦克风。';
+        } else if (error.name === 'NotFoundError') {
+          errorMessage = '未找到麦克风设备。';
+        } else if (error.name === 'NotReadableError') {
+          errorMessage = '麦克风被其他应用程序占用。';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      this.log(`启用麦克风失败: ${errorMessage}`);
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * 禁用麦克风
+   */
+  private async disableMicrophone(): Promise<void> {
+    if (this.state.audioProducer) {
+      this.state.audioProducer.close();
+      this.state.audioProducer = null;
+      this.state.microphoneEnabled = false;
+      this.log('麦克风已关闭');
+    }
   }
 }

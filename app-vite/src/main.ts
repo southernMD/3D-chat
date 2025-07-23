@@ -6,6 +6,8 @@ import type { ConnectionStatus } from './types';
 const joinBtn = document.getElementById('joinBtn') as HTMLButtonElement;
 const leaveBtn = document.getElementById('leaveBtn') as HTMLButtonElement;
 const sendBtn = document.getElementById('sendBtn') as HTMLButtonElement;
+const micBtn = document.getElementById('micBtn') as HTMLButtonElement;
+const micStatus = document.getElementById('micStatus') as HTMLSpanElement;
 const connectionStatus = document.getElementById('connectionStatus') as HTMLDivElement;
 const roomInfo = document.getElementById('roomInfo') as HTMLDivElement;
 const peersList = document.getElementById('peersList') as HTMLUListElement;
@@ -101,9 +103,41 @@ function handleLeaveRoom(): void {
 function handleSendMessage(): void {
   const message = dataMessage.value.trim();
   if (!message) return;
-  
+
   webrtcManager.sendMessage(message);
   dataMessage.value = '';
+}
+
+// 切换麦克风
+async function handleToggleMicrophone(): Promise<void> {
+  try {
+    micBtn.disabled = true;
+    const isEnabled = await webrtcManager.toggleMicrophone();
+    updateMicrophoneStatus(isEnabled);
+  } catch (error) {
+    log(`麦克风操作失败: ${error instanceof Error ? error.message : '未知错误'}`);
+  } finally {
+    micBtn.disabled = false;
+  }
+}
+
+// 更新麦克风状态UI
+function updateMicrophoneStatus(isEnabled: boolean): void {
+  if (isEnabled) {
+    micBtn.textContent = '🎤 关闭麦克风';
+    micBtn.classList.remove('primary-btn');
+    micBtn.classList.add('danger-btn');
+    micStatus.textContent = '麦克风已开启';
+    micStatus.classList.add('mic-enabled');
+    micStatus.classList.remove('mic-disabled');
+  } else {
+    micBtn.textContent = '🎤 开启麦克风';
+    micBtn.classList.remove('danger-btn');
+    micBtn.classList.add('primary-btn');
+    micStatus.textContent = '麦克风已关闭';
+    micStatus.classList.add('mic-disabled');
+    micStatus.classList.remove('mic-enabled');
+  }
 }
 
 // 初始化
@@ -124,13 +158,17 @@ function init(): void {
   joinBtn.addEventListener('click', handleJoinRoom);
   leaveBtn.addEventListener('click', handleLeaveRoom);
   sendBtn.addEventListener('click', handleSendMessage);
-  
+  micBtn.addEventListener('click', handleToggleMicrophone);
+
   // 回车发送消息
   dataMessage.addEventListener('keypress', (event) => {
     if (event.key === 'Enter') {
       handleSendMessage();
     }
   });
+
+  // 初始化麦克风状态
+  updateMicrophoneStatus(false);
   
   // 连接到Socket.IO服务器
   webrtcManager.connectSocket();

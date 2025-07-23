@@ -112,6 +112,51 @@ button {
   cursor: not-allowed;
 }
 
+.danger-btn {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.danger-btn:hover {
+  background-color: #c0392b;
+}
+
+.danger-btn:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.audio-controls {
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #eee;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+
+.audio-controls .form-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.mic-status {
+  font-weight: bold;
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 14px;
+}
+
+.mic-enabled {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.mic-disabled {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
 .connection-controls {
   margin-bottom: 20px;
   padding: 15px;
