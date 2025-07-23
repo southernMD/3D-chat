@@ -344,6 +344,11 @@ export class MediasoupHandler {
     });
     return count;
   }
+
+  // 获取生产者信息
+  getProducer(producerId: string) {
+    return this.producers.get(producerId);
+  }
 }
 
 // 导出单例

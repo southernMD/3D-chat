@@ -302,19 +302,25 @@ export const handleConnection = (socket: Socket, io: Server): void => {
       for (const peer of peers) {
         // 添加媒体生产者
         for (const producerId of peer.producers) {
+          // 从mediasoup获取生产者信息以确定类型
+          const producerInfo = mediasoupHandler.getProducer(producerId);
           producers.push({
             producerId,
             producerPeerId: peer.id,
             producerPeerName: peer.name,
+            kind: producerInfo?.kind || 'unknown',
+            type: 'media'
           });
         }
-        
+
         // 添加数据生产者
         for (const dataProducerId of peer.dataProducers) {
           producers.push({
             producerId: dataProducerId,
             producerPeerId: peer.id,
             producerPeerName: peer.name,
+            kind: 'data',
+            type: 'data'
           });
         }
       }

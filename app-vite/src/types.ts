@@ -66,6 +66,8 @@ export interface ProducerEventData {
   producerId: string;
   producerPeerId: string;
   producerPeerName: string;
+  kind?: string;
+  type?: 'media' | 'data';
 }
 
 // 响应数据类型

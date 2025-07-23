@@ -455,7 +455,7 @@ export class WebRTCManager {
       
       // 消费每个生产者
       for (const producer of producers) {
-        const { producerId, producerPeerId } = producer;
+        const { producerId, producerPeerId, kind, type } = producer;
 
         // 如果已经尝试过这个生产者，则跳过
         if (attemptedProducerIds.has(producerId)) {
@@ -464,24 +464,31 @@ export class WebRTCManager {
 
         // 标记为已尝试
         attemptedProducerIds.add(producerId);
-        
-        // 首先尝试作为数据生产者消费（保持原有逻辑）
-        if (!this.state.dataConsumers.has(producerId)) {
-          try {
-            await this.consumeData(producerId, producerPeerId);
-            continue; // 如果数据消费成功，跳过音频消费尝试
-          } catch (dataError) {
-            // 数据消费失败，可能是音频生产者，继续尝试音频消费
-          }
-        }
 
-        // 尝试作为音频生产者消费
-        if (!this.state.audioConsumers.has(producerId)) {
-          try {
-            await this.consumeAudio(producerId, producerPeerId);
-          } catch (audioError) {
-            this.log(`消费生产者 ${producerId} 失败: ${audioError instanceof Error ? audioError.message : '未知错误'}`);
+        // 根据生产者类型主动判断并触发相应的消费
+        if (type === 'data' || kind === 'data') {
+          // 数据生产者
+          if (!this.state.dataConsumers.has(producerId)) {
+            try {
+              await this.consumeData(producerId, producerPeerId);
+              this.log(`成功消费数据生产者: ${producerId}`);
+            } catch (error) {
+              this.log(`消费数据生产者 ${producerId} 失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            }
           }
+        } else if (type === 'media' && kind === 'audio') {
+          // 音频生产者
+          if (!this.state.audioConsumers.has(producerId)) {
+            try {
+              await this.consumeAudio(producerId, producerPeerId);
+              this.log(`成功消费音频生产者: ${producerId}`);
+            } catch (error) {
+              this.log(`消费音频生产者 ${producerId} 失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            }
+          }
+        } else {
+          // 未知类型或其他媒体类型（如视频）
+          this.log(`跳过未支持的生产者类型: ${type}, kind: ${kind}, producerId: ${producerId}`);
         }
       }
     } catch (error) {
