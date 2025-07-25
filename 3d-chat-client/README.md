@@ -1,6 +1,6 @@
 # 3D Chat Client - Vue.js Frontend
 
-一个具有GSAP官网风格动画效果的Vue.js前端应用，展示"Chat in the Third Dimension"和"Loot³"。
+一个具有GSAP官网风格动画效果的Vue.js前端应用，展示"Chat in the Third Dimension"和"NEXUS³"。
 
 ## 功能特性
 
@@ -66,7 +66,7 @@ src/
 - 鼠标移动视差效果
 - 渐变色彩动画
 
-### 副标题 "Loot³"
+### 副标题 "NEXUS³"
 - 弹性入场效果 (`elastic.out`)
 - 装饰线条动画
 - 同步悬浮动画

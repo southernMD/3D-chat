@@ -14,7 +14,7 @@
 ### TopBar 组件
 - 位置：`src/components/TopBar.vue`
 - 功能：
-  - 左侧显示 "Loot³" 品牌标志
+  - 左侧显示 "NEXUS³" 品牌标志
   - 右侧语言选择器
   - 支持中文/英文切换
   - 响应式设计
@@ -31,13 +31,13 @@
 
 ### 中文翻译
 - 标题：在第三维度聊天
-- 副标题：Loot³
+- 副标题：NEXUS³
 - 按钮：进入维度
 - 描述：体验前所未有的沉浸式3D交流
 
 ### 英文翻译
 - 标题：Chat in the Third Dimension
-- 副标题：Loot³
+- 副标题：NEXUS³
 - 按钮：Enter the Dimension
 - 描述：Experience immersive 3D communication like never before
 
