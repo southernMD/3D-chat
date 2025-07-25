@@ -17,12 +17,14 @@
     "three": "^0.178.0",
     "three-mesh-ui": "^6.5.4",
     "vue": "^3.5.17",
+    "vue-i18n": "^11.1.11",
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
     "@types/three": "^0.178.1",
     "@vitejs/plugin-vue": "^6.0.0",
     "@vue/tsconfig": "^0.7.0",
+    "less": "^4.4.0",
     "typescript": "~5.8.3",
     "unplugin-auto-import": "^19.3.0",
     "unplugin-vue-components": "^28.8.0",

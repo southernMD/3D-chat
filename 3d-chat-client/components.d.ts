@@ -8,7 +8,9 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ParticleBackground: typeof import('./src/components/ParticleBackground.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    TopBar: typeof import('./src/components/TopBar.vue')['default']
   }
 }
