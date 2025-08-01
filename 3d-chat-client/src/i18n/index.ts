@@ -12,6 +12,25 @@ const zh = {
     enterButton: '进入维度',
     description: '体验前所未有的沉浸式3D交流'
   },
+  mode: {
+    create: {
+      title: '创建房间',
+      description: '创建一个全新的3D聊天房间',
+      feature1: '自定义房间设置',
+      feature2: '邀请好友加入',
+      feature3: '管理员权限',
+      action: '立即创建'
+    },
+    join: {
+      title: '加入房间',
+      description: '通过Ping码加入现有房间',
+      pingLabel: 'Ping码',
+      pingPlaceholder: '请输入房间Ping码',
+      feature1: '快速连接',
+      feature2: '实时同步',
+      action: '立即加入'
+    }
+  },
   common: {
     loading: '加载中...',
     error: '错误',
@@ -56,6 +75,25 @@ const en = {
     subtitle: 'NEXUS³',
     enterButton: 'Enter the Dimension',
     description: 'Experience immersive 3D communication like never before'
+  },
+  mode: {
+    create: {
+      title: 'Create Room',
+      description: 'Create a brand new 3D chat room',
+      feature1: 'Custom room settings',
+      feature2: 'Invite friends',
+      feature3: 'Admin privileges',
+      action: 'Create Now'
+    },
+    join: {
+      title: 'Join Room',
+      description: 'Join an existing room with Ping code',
+      pingLabel: 'Ping Code',
+      pingPlaceholder: 'Enter room Ping code',
+      feature1: 'Quick connection',
+      feature2: 'Real-time sync',
+      action: 'Join Now'
+    }
   },
   common: {
     loading: 'Loading...',

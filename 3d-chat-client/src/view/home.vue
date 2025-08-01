@@ -7,6 +7,7 @@ import { MorphSVGPlugin } from 'gsap/MorphSVGPlugin'
 import { useI18n } from 'vue-i18n'
 import ParticleBackground from '@/components/ParticleBackground.vue'
 import TopBar from '@/components/TopBar.vue'
+import ModeSelection from '@/components/ModeSelection.vue'
 
 // 注册GSAP插件
 gsap.registerPlugin(TextPlugin, ScrollTrigger)
@@ -22,6 +23,11 @@ const enterButton = ref<HTMLElement>()
 const backgroundElements = ref<HTMLElement[]>([])
 const floatingElements = ref<HTMLElement[]>([])
 const homeContainer = ref<HTMLElement>()
+const descriptionRef = ref<HTMLElement>()
+const decorativeElements = ref<HTMLElement>()
+
+// 模式选择状态
+const showModeSelection = ref(false)
 
 // 滚动控制
 let currentSection = 0 // 当前所在的区域 (0: top-item, 1: mid-item)
@@ -80,8 +86,18 @@ onMounted(() => {
   }
 })
 
-// 组件卸载时清理事件监听器
+// 组件卸载时清理事件监听器和动画
 onUnmounted(() => {
+  console.log('Home component unmounting - cleaning up animations')
+
+  // 移除鼠标移动事件监听器
+  document.removeEventListener('mousemove', handleMouseMove)
+
+  // 停止所有GSAP动画
+  gsap.killTweensOf("*")
+  gsap.globalTimeline.clear()
+
+  // 移除事件监听器
   if (homeContainer.value) {
     homeContainer.value.removeEventListener('wheel', handleWheel)
   }
@@ -89,31 +105,62 @@ onUnmounted(() => {
 
 // 进入聊天功能
 const enterChat = () => {
-  // 创建退出动画
-  const exitTl = gsap.timeline({
-    onComplete: () => {
-      // 这里可以路由到聊天页面
-      console.log('Entering 3D Chat...')
-    }
+  console.log('Entering chat - stopping all GSAP animations')
+
+  // 移除鼠标移动事件监听器，防止继续触发视差动画
+  document.removeEventListener('mousemove', handleMouseMove)
+
+  // 停止所有GSAP动画和时间线
+  gsap.killTweensOf("*") // 停止所有动画
+  gsap.globalTimeline.clear() // 清除全局时间线
+
+  // 停止特定元素的动画
+  const elementsToStop = [
+    mainTitle.value,
+    subtitle.value,
+    enterButton.value,
+    descriptionRef.value,
+    decorativeElements.value,
+    ...backgroundElements.value
+  ].filter(Boolean)
+
+  gsap.killTweensOf(elementsToStop)
+
+  // 创建淡出动画
+  const exitTl = gsap.timeline()
+
+  // 淡出原有元素
+  exitTl.to([mainTitle.value, subtitle.value, enterButton.value, descriptionRef.value], {
+    opacity: 0,
+    y: -50,
+    scale: 0.8,
+    duration: 0.8,
+    ease: "power2.in",
+    stagger: 0.1
   })
 
-  exitTl
-    .to([mainTitle.value, subtitle.value, enterButton.value], {
+  // 淡出背景元素
+  if (decorativeElements.value) {
+    exitTl.to(decorativeElements.value, {
+      opacity: 0,
       scale: 0.8,
-      opacity: 0,
-      y: -50,
       duration: 0.6,
-      ease: "power2.in",
-      stagger: 0.1
-    })
-    .to(heroSection.value, {
-      scale: 1.2,
-      opacity: 0,
-      duration: 0.8,
       ease: "power2.in"
-    }, "-=0.3")
+    }, "-=0.4")
+  }
+
+  // 动画完成后显示模式选择
+  exitTl.call(() => {
+    showModeSelection.value = true
+  })
 }
 
+// 处理模式选择
+const handleModeSelected = (mode: 'create' | 'join') => {
+  console.log(`Selected mode: ${mode}`)
+  // 这里可以路由到对应的页面
+  showModeSelection.value = false
+}
 // 主标题和副标题动画
 const initHeroAnimations = () => {
   // 设置初始状态 - 使用整数像素值避免模糊
@@ -125,6 +172,16 @@ const initHeroAnimations = () => {
     transformOrigin: "center center"
   })
 
+  // 设置描述文字初始状态
+  const description = document.querySelector('.description')
+  if (description) {
+    gsap.set(description, {
+      opacity: 0,
+      y: 50,
+      scale: 0.9
+    })
+  }
+
   // 设置单词初始状态 - 避免模糊
   const titleWords = mainTitle.value?.querySelectorAll('.title-word')
   if (titleWords) {
@@ -135,6 +192,15 @@ const initHeroAnimations = () => {
       transformOrigin: "50% 50% -50px",
       force3D: true,
       backfaceVisibility: "hidden"
+    })
+  }
+
+  // 设置描述文字初始状态
+  if (descriptionRef.value) {
+    gsap.set(descriptionRef.value, {
+      opacity: 0,
+      y: 50,
+      scale: 0.9
     })
   }
 
@@ -184,6 +250,17 @@ const initHeroAnimations = () => {
     force3D: true,
     transformOrigin: "center center"
   }, "-=0.8")
+
+  // 描述文字动画
+  if (descriptionRef.value) {
+    masterTl.to(descriptionRef.value, {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      duration: 0.8,
+      ease: "power2.out"
+    }, "-=0.4")
+  }
 
   // 移除上下摆动动画，保持静态位置
 
@@ -239,43 +316,46 @@ const initScrollAnimations = () => {
   // 不再使用滚动视差效果
 }
 
+// 鼠标移动处理函数
+const handleMouseMove = (e: MouseEvent) => {
+  const { clientX, clientY } = e
+  const { innerWidth, innerHeight } = window
+
+  const xPercent = (clientX / innerWidth - 0.5) * 2
+  const yPercent = (clientY / innerHeight - 0.5) * 2
+
+  gsap.to(mainTitle.value, {
+    x: Math.round(xPercent * 5),
+    y: Math.round(yPercent * 3),
+    duration: 0.8,
+    ease: "power2.out",
+    force3D: true
+  })
+
+  gsap.to(subtitle.value, {
+    x: Math.round(xPercent * 3),
+    y: Math.round(yPercent * 2),
+    duration: 1,
+    ease: "power2.out",
+    force3D: true
+  })
+
+  // 背景元素视差
+  backgroundElements.value.forEach((element, index) => {
+    const multiplier = (index + 1) * 0.5
+    gsap.to(element, {
+      x: xPercent * multiplier * 10,
+      y: yPercent * multiplier * 10,
+      duration: 0.8,
+      ease: "power2.out"
+    })
+  })
+}
+
 // 交互元素
 const initInteractiveElements = () => {
   // 鼠标移动视差效果
-  document.addEventListener('mousemove', (e) => {
-    const { clientX, clientY } = e
-    const { innerWidth, innerHeight } = window
-
-    const xPercent = (clientX / innerWidth - 0.5) * 2
-    const yPercent = (clientY / innerHeight - 0.5) * 2
-
-    gsap.to(mainTitle.value, {
-      x: Math.round(xPercent * 5),
-      y: Math.round(yPercent * 3),
-      duration: 0.8,
-      ease: "power2.out",
-      force3D: true
-    })
-
-    gsap.to(subtitle.value, {
-      x: Math.round(xPercent * 3),
-      y: Math.round(yPercent * 2),
-      duration: 1,
-      ease: "power2.out",
-      force3D: true
-    })
-
-    // 背景元素视差
-    backgroundElements.value.forEach((element, index) => {
-      const multiplier = (index + 1) * 0.5
-      gsap.to(element, {
-        x: xPercent * multiplier * 10,
-        y: yPercent * multiplier * 10,
-        duration: 0.8,
-        ease: "power2.out"
-      })
-    })
-  })
+  document.addEventListener('mousemove', handleMouseMove)
 }
 
 // 按钮动画
@@ -362,8 +442,17 @@ const initButtonAnimations = () => {
 
     <!-- 内容包装器 -->
     <div class="content-wrapper">
-      <!-- 背景动画元素 -->
-      <div class="top-item">
+      <!-- 模式选择组件 -->
+      <ModeSelection
+        v-if="showModeSelection"
+        :visible="showModeSelection"
+        @mode-selected="handleModeSelected"
+      />
+
+      <!-- 原始内容 -->
+      <template v-if="!showModeSelection">
+        <!-- 背景动画元素 -->
+        <div class="top-item">
         <div class="background-elements">
           <div v-for="i in 12" :key="i" :ref="el => backgroundElements.push(el as HTMLElement)" class="bg-element"
             :class="`bg-element-${i % 4 + 1}`"></div>
@@ -398,15 +487,17 @@ const initButtonAnimations = () => {
                 <div class="button-glow"></div>
                 <div class="button-particles"></div>
               </button>
-              <p class="description">{{ $t('home.description') }}</p>
+              <p ref="descriptionRef" class="description">{{ $t('home.description') }}</p>
             </div>
 
             <!-- 装饰性元素 -->
-            <div class="decorative-elements">
+            <div ref="decorativeElements" class="decorative-elements">
               <div class="floating-cube"></div>
               <div class="floating-sphere"></div>
               <div class="floating-pyramid"></div>
             </div>
+
+
           </div>
         </div>
 
@@ -618,7 +709,8 @@ const initButtonAnimations = () => {
           </div>
         </footer>
       </div>
-    </div> 
+      </template>
+    </div>
   </div>
 </template>
 
@@ -641,7 +733,7 @@ const initButtonAnimations = () => {
   flex-direction: column;
   padding-top: 60px;
   /* 为topbar留出空间 */
-  height: calc(200vh + 60px);
+  // height: calc(200vh + 60px);
   /* 强制高度，确保内容足够高可以滚动 */
 }
 

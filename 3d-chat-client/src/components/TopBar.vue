@@ -2,11 +2,41 @@
   <div class="topbar">
     <!-- 左侧品牌标志 -->
     <div class="topbar-brand">
-      <h1 class="brand-text">{{ $t('nav.brand') }}</h1>
+      <h1 class="brand-text" @click="handleBrandClick">{{ $t('nav.brand') }}</h1>
     </div>
 
-    <!-- 右侧语言选择 -->
+    <!-- 右侧操作区域 -->
     <div class="topbar-actions">
+      <!-- 登录区域 -->
+      <div class="auth-section">
+        <!-- 未登录状态 -->
+        <div v-if="!isLoggedIn" class="login-area">
+          <button class="login-button" @click="handleLogin">
+            <span class="login-icon">👤</span>
+            <span class="login-text">登录</span>
+          </button>
+        </div>
+
+        <!-- 已登录状态 -->
+        <div v-else class="user-area">
+          <div class="user-info" @click="toggleUserMenu" :class="{ active: showUserMenu }">
+            <span class="user-avatar">👤</span>
+            <span class="username">{{ username }}</span>
+            <span class="dropdown-arrow" :class="{ rotated: showUserMenu }">▼</span>
+          </div>
+
+          <div class="user-menu" v-show="showUserMenu">
+            <button class="user-option" @click="handleProfile">
+              <span class="option-icon">⚙️</span>
+              <span>个人设置</span>
+            </button>
+            <button class="user-option" @click="handleLogout">
+              <span class="option-icon">🚪</span>
+              <span>退出登录</span>
+            </button>
+          </div>
+        </div>
+      </div>
       <div class="language-selector">
         <button 
           class="language-button"
@@ -44,12 +74,58 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter, useRoute } from 'vue-router'
 
 const { locale, t } = useI18n()
+const router = useRouter()
+const route = useRoute()
 
 const showLanguageMenu = ref(false)
+const showUserMenu = ref(false)
+
+// 登录状态管理
+const isLoggedIn = ref(false)
+const username = ref('')
 
 const currentLocale = computed(() => locale.value)
+
+// 品牌点击处理
+const handleBrandClick = () => {
+  console.log('Brand clicked, current route:', route.path)
+
+  if (route.path === '/home' || route.path === '/') {
+    // 如果在home页面，刷新页面
+    window.location.reload()
+  } else {
+    // 如果不在home页面，导航到home页面
+    router.push('/home')
+  }
+}
+
+// 登录相关功能
+const handleLogin = () => {
+  // 这里可以打开登录弹窗或跳转到登录页面
+  console.log('Login clicked')
+  // 模拟登录成功
+  isLoggedIn.value = true
+  username.value = '用户' + Math.floor(Math.random() * 1000)
+}
+
+const handleLogout = () => {
+  isLoggedIn.value = false
+  username.value = ''
+  showUserMenu.value = false
+  console.log('User logged out')
+}
+
+const handleProfile = () => {
+  console.log('Profile clicked')
+  showUserMenu.value = false
+}
+
+const toggleUserMenu = () => {
+  showUserMenu.value = !showUserMenu.value
+}
 
 const toggleLanguageMenu = () => {
   showLanguageMenu.value = !showLanguageMenu.value
@@ -66,6 +142,9 @@ const handleClickOutside = (event: Event) => {
   const target = event.target as HTMLElement
   if (!target.closest('.language-selector')) {
     showLanguageMenu.value = false
+  }
+  if (!target.closest('.auth-section')) {
+    showUserMenu.value = false
   }
 }
 
@@ -143,6 +222,117 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.auth-section {
+  position: relative;
+}
+
+.login-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 0, 255, 0.1);
+  border: 1px solid rgba(255, 0, 255, 0.3);
+  border-radius: 25px;
+  color: #ff00ff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 0, 255, 0.2);
+    border-color: rgba(255, 0, 255, 0.5);
+    box-shadow: 0 0 10px rgba(255, 0, 255, 0.3);
+    transform: translateY(-1px);
+  }
+
+  .login-icon {
+    font-size: 1rem;
+  }
+}
+
+.user-area {
+  position: relative;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(0, 255, 0, 0.1);
+  border: 1px solid rgba(0, 255, 0, 0.3);
+  border-radius: 25px;
+  color: #00ff00;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover,
+  &.active {
+    background: rgba(0, 255, 0, 0.2);
+    border-color: rgba(0, 255, 0, 0.5);
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+  }
+
+  .user-avatar {
+    font-size: 1rem;
+  }
+
+  .username {
+    font-weight: 500;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dropdown-arrow {
+    font-size: 0.7rem;
+    transition: transform 0.3s ease;
+
+    &.rotated {
+      transform: rotate(180deg);
+    }
+  }
+}
+
+.user-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 150px;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 255, 0, 0.3);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.user-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(0, 255, 0, 0.1);
+    color: #00ff00;
+  }
+
+  .option-icon {
+    font-size: 1rem;
+  }
 }
 
 .language-selector {
@@ -248,12 +438,23 @@ onUnmounted(() => {
     font-size: 1.2rem;
   }
 
-  .language-button {
+  .language-button,
+  .login-button {
     padding: 0.4rem 0.8rem;
     font-size: 0.8rem;
 
-    .language-text {
+    .language-text,
+    .login-text {
       display: none;
+    }
+  }
+
+  .user-info {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+
+    .username {
+      max-width: 60px;
     }
   }
 
@@ -272,11 +473,26 @@ onUnmounted(() => {
     font-size: 1rem;
   }
 
-  .language-button {
+  .language-button,
+  .login-button {
     padding: 0.3rem 0.6rem;
 
-    .language-icon {
+    .language-icon,
+    .login-icon {
       font-size: 0.9rem;
+    }
+  }
+
+  .user-info {
+    padding: 0.3rem 0.6rem;
+
+    .user-avatar {
+      font-size: 0.9rem;
+    }
+
+    .username {
+      max-width: 40px;
+      font-size: 0.8rem;
     }
   }
 }
