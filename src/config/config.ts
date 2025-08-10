@@ -30,6 +30,34 @@ export const config = {
   useHttps: process.env.HTTPS === 'true',
   sslCertPath: process.env.SSL_CERT_PATH,
   sslKeyPath: process.env.SSL_KEY_PATH,
+
+  // 数据库配置
+  database: {
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || 'm123042012',
+    database: process.env.DB_NAME || 'chat',
+    connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT || '10', 10),
+    acquireTimeout: parseInt(process.env.DB_ACQUIRE_TIMEOUT || '60000', 10),
+    timeout: parseInt(process.env.DB_TIMEOUT || '60000', 10),
+  },
+
+  // JWT配置
+  jwt: {
+    secret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  },
+
+  // 邮件配置
+  email: {
+    service: 'qq',
+    port: 465,
+    secureConnection: true,
+    auth: {
+      user: process.env.EMAIL_USER || 'bluenomarisa@qq.com',
+      pass: process.env.EMAIL_PASS || 'xvtjkxgmsjefebbi'
+    }
+  },
   
   // Mediasoup配置
   mediasoup: {

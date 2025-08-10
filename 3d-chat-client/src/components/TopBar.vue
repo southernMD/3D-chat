@@ -10,7 +10,11 @@
       <!-- 登录区域 -->
       <div class="auth-section">
         <!-- 未登录状态 -->
-        <div v-if="!isLoggedIn" class="login-area">
+        <div v-if="!authStore.isAuthenticated" class="login-area">
+          <button class="register-button" @click="handleRegister">
+            <span class="register-icon">✨</span>
+            <span class="register-text">注册</span>
+          </button>
           <button class="login-button" @click="handleLogin">
             <span class="login-icon">👤</span>
             <span class="login-text">登录</span>
@@ -21,7 +25,8 @@
         <div v-else class="user-area">
           <div class="user-info" @click="toggleUserMenu" :class="{ active: showUserMenu }">
             <span class="user-avatar">👤</span>
-            <span class="username">{{ username }}</span>
+            <span class="username">{{ authStore.user?.username || '用户' }}</span>
+            <span class="verification-badge" v-if="authStore.user?.is_verified" title="已验证">✓</span>
             <span class="dropdown-arrow" :class="{ rotated: showUserMenu }">▼</span>
           </div>
 
@@ -75,17 +80,16 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { ElMessage } from 'element-plus'
 
 const { locale, t } = useI18n()
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 
 const showLanguageMenu = ref(false)
 const showUserMenu = ref(false)
-
-// 登录状态管理
-const isLoggedIn = ref(false)
-const username = ref('')
 
 const currentLocale = computed(() => locale.value)
 
@@ -102,25 +106,35 @@ const handleBrandClick = () => {
   }
 }
 
-// 登录相关功能
+// 认证相关功能
 const handleLogin = () => {
-  // 这里可以打开登录弹窗或跳转到登录页面
-  console.log('Login clicked')
-  // 模拟登录成功
-  isLoggedIn.value = true
-  username.value = '用户' + Math.floor(Math.random() * 1000)
+  router.push('/login')
 }
 
-const handleLogout = () => {
-  isLoggedIn.value = false
-  username.value = ''
-  showUserMenu.value = false
-  console.log('User logged out')
+const handleRegister = () => {
+  router.push('/register')
+}
+
+const handleLogout = async () => {
+  try {
+    authStore.logout()
+    showUserMenu.value = false
+
+    // 如果当前在需要认证的页面，跳转到首页
+    if (route.meta.requiresAuth) {
+      router.push('/home')
+    }
+  } catch (error) {
+    console.error('Logout error:', error)
+    ElMessage.error('退出登录失败')
+  }
 }
 
 const handleProfile = () => {
   console.log('Profile clicked')
   showUserMenu.value = false
+  // TODO: 跳转到个人设置页面
+  // router.push('/profile')
 }
 
 const toggleUserMenu = () => {
@@ -228,6 +242,37 @@ onUnmounted(() => {
   position: relative;
 }
 
+.login-area {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.register-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  border-radius: 25px;
+  color: #00ffff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(0, 255, 255, 0.2);
+    border-color: rgba(0, 255, 255, 0.5);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    transform: translateY(-1px);
+  }
+
+  .register-icon {
+    font-size: 1rem;
+  }
+}
+
 .login-button {
   display: flex;
   align-items: center;
@@ -287,6 +332,19 @@ onUnmounted(() => {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .verification-badge {
+    font-size: 0.8rem;
+    color: #00ff00;
+    background: rgba(0, 255, 0, 0.2);
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
   }
 
   .dropdown-arrow {
@@ -439,12 +497,14 @@ onUnmounted(() => {
   }
 
   .language-button,
-  .login-button {
+  .login-button,
+  .register-button {
     padding: 0.4rem 0.8rem;
     font-size: 0.8rem;
 
     .language-text,
-    .login-text {
+    .login-text,
+    .register-text {
       display: none;
     }
   }
@@ -474,11 +534,13 @@ onUnmounted(() => {
   }
 
   .language-button,
-  .login-button {
+  .login-button,
+  .register-button {
     padding: 0.3rem 0.6rem;
 
     .language-icon,
-    .login-icon {
+    .login-icon,
+    .register-icon {
       font-size: 0.9rem;
     }
   }

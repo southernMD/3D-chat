@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import express from 'express';
 import http from 'http';
 import https from 'https';
@@ -6,7 +7,9 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { config } from './config/config';
+import { initializeDatabase } from './config/database';
 import apiRoutes from './routes/api';
+import authRoutes from './routes/auth';
 import { mediasoupHandler } from './lib/mediasoup';
 import { handleConnection } from './controllers/socket-controller';
 
@@ -20,6 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // API路由
 app.use('/api', apiRoutes);
+app.use('/api/auth', authRoutes);
 
 // 根路由
 app.get('/', (req, res) => {
@@ -65,15 +69,24 @@ io.on('connection', (socket) => {
 // 启动应用程序
 async function start() {
   try {
+    console.log('Starting 3D Chat Server...');
+
+    // 初始化数据库
+    console.log('Initializing Database...');
+    await initializeDatabase();
+
     // 初始化mediasoup
+    console.log('Initializing MediaSoup...');
     await mediasoupHandler.init();
-    
+
     // 启动服务器
     server.listen(config.port, config.host, () => {
-      console.log(`Server running on ${config.useHttps ? 'https' : 'http'}://${config.host}:${config.port}`);
+      console.log(`🚀 3D Chat Server running on ${config.useHttps ? 'https' : 'http'}://${config.host}:${config.port}`);
+      console.log('🎥 MediaSoup initialized');
+      console.log('🔌 Socket.IO ready for connections');
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 }
