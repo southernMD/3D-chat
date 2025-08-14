@@ -594,7 +594,20 @@ const playLeaveAnimation = () => {
 // 选择模式
 const selectMode = (mode: 'create' | 'join') => {
   if (!isFullyVisible.value) return
-  emit('modeSelected', mode)
+
+  if (mode === 'create') {
+    // 检查是否已登录
+    if (!authStore.isAuthenticated) {
+      // 未登录，跳转到登录页面
+      router.push('/login')
+      return
+    }
+    // 已登录，跳转到房间创建页面
+    router.push('/create-room')
+  } else {
+    // 加入房间逻辑保持不变
+    emit('modeSelected', mode)
+  }
 }
 
 // 组件挂载时检查是否需要执行动画

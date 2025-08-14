@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { showSuccess, showError } from '@/utils/message'
 
 // 用户信息接口
 export interface User {
@@ -123,14 +123,14 @@ export const useAuthStore = defineStore('auth', () => {
         if (response.data) {
           setAuth(response.data)
         }
-        ElMessage.success(response.message)
+        showSuccess(response.message || '注册成功，已自动登录！')
         return true
       } else {
-        ElMessage.error(response.message)
+        showError(response.message || '注册失败，请检查输入信息')
         return false
       }
     } catch (error: any) {
-      ElMessage.error(error.message || '注册失败')
+      showError(error.message || '网络错误，请稍后重试')
       return false
     } finally {
       loading.value = false
@@ -149,14 +149,14 @@ export const useAuthStore = defineStore('auth', () => {
 
       if (response.success && response.data) {
         setAuth(response.data)
-        ElMessage.success(response.message)
+        showSuccess(response.message || '登录成功！')
         return true
       } else {
-        ElMessage.error(response.message)
+        showError(response.message || '登录失败，请检查邮箱/用户名和密码')
         return false
       }
     } catch (error: any) {
-      ElMessage.error(error.message || '登录失败')
+      showError(error.message || '网络错误，请稍后重试')
       return false
     } finally {
       loading.value = false

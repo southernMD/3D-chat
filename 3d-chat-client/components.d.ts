@@ -16,10 +16,17 @@ declare module 'vue' {
     ElIcon: typeof import('element-plus/es')['ElIcon']
     ElInput: typeof import('element-plus/es')['ElInput']
     ElLink: typeof import('element-plus/es')['ElLink']
+    ElOption: typeof import('element-plus/es')['ElOption']
+    ElRadio: typeof import('element-plus/es')['ElRadio']
+    ElRadioGroup: typeof import('element-plus/es')['ElRadioGroup']
+    ElSelect: typeof import('element-plus/es')['ElSelect']
     ModeSelection: typeof import('./src/components/ModeSelection.vue')['default']
     ParticleBackground: typeof import('./src/components/ParticleBackground.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    ThemeInput: typeof import('./src/components/ThemeInput.vue')['default']
+    ThemeRadioGroup: typeof import('./src/components/ThemeRadioGroup.vue')['default']
+    ThemeSelect: typeof import('./src/components/ThemeSelect.vue')['default']
     TopBar: typeof import('./src/components/TopBar.vue')['default']
   }
 }

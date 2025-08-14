@@ -9,6 +9,12 @@ import { useAuthStore } from '@/stores/auth'
 const pinia = createPinia()
 const app = createApp(App)
 
+// 配置Element Plus全局属性
+app.config.globalProperties.$ELEMENT = {
+  size: 'default',
+  zIndex: 3000
+}
+
 app.use(pinia)
 app.use(router)
 app.use(i18n)

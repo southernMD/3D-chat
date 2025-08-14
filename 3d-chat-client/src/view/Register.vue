@@ -157,11 +157,12 @@
 import { ref, reactive, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ElMessage, ElNotification } from 'element-plus'
+import { ElNotification } from 'element-plus'
 import { SuccessFilled } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import ParticleBackground from '@/components/ParticleBackground.vue'
 import { useAuthStore } from '@/stores/auth'
+import { showSuccess, showError, showWarning } from '@/utils/message'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -255,13 +256,13 @@ const sendVerificationCode = async () => {
   try {
     // 验证邮箱格式
     if (!registerForm.email) {
-      ElMessage.error(t('auth.validation.emailRequired'))
+      showWarning(t('auth.validation.emailRequired'))
       return
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(registerForm.email)) {
-      ElMessage.error(t('auth.validation.emailInvalid'))
+      showWarning(t('auth.validation.emailInvalid'))
       return
     }
 
@@ -281,14 +282,14 @@ const sendVerificationCode = async () => {
 
     if (data.success) {
       codeSent.value = true
-      ElMessage.success(data.message)
+      showSuccess(data.message || '验证码已发送到您的邮箱')
       startCountdown()
     } else {
-      ElMessage.error(data.message)
+      showError(data.message || '发送验证码失败，请检查邮箱地址')
     }
   } catch (error: any) {
     console.error('Send verification code error:', error)
-    ElMessage.error('发送验证码失败')
+    showError('网络错误，请稍后重试')
   } finally {
     loading.value = false
   }

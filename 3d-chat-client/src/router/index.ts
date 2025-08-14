@@ -40,6 +40,12 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: false }
     },
     {
+        path: '/create-room',
+        name: 'create-room',
+        component: () => import('@/view/CreateRoom.vue'),
+        meta: { requiresAuth: true }
+    },
+    {
         // 捕获所有未匹配的路由，重定向到首页
         path: '/:pathMatch(.*)*',
         redirect: '/home'
