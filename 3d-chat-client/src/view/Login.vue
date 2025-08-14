@@ -4,8 +4,8 @@
     
     <div class="login-card">
       <div class="login-header">
-        <h1 class="login-title">3D Chat</h1>
-        <p class="login-subtitle">欢迎回来，开始您的3D聊天之旅</p>
+        <h1 class="login-title">{{ $t('auth.login.title') }}</h1>
+        <p class="login-subtitle">{{ $t('auth.login.subtitle') }}</p>
       </div>
 
       <el-form
@@ -18,7 +18,7 @@
         <el-form-item prop="loginField">
           <el-input
             v-model="loginForm.loginField"
-            placeholder="请输入邮箱或用户名"
+            :placeholder="$t('auth.login.loginFieldPlaceholder')"
             size="large"
             prefix-icon="Message"
             :disabled="loading"
@@ -29,7 +29,7 @@
           <el-input
             v-model="loginForm.password"
             type="password"
-            placeholder="请输入密码"
+            :placeholder="$t('auth.login.passwordPlaceholder')"
             size="large"
             prefix-icon="Lock"
             show-password
@@ -40,9 +40,9 @@
 
         <el-form-item>
           <div class="form-options">
-            <el-checkbox v-model="rememberMe">记住我</el-checkbox>
+            <el-checkbox v-model="rememberMe">{{ $t('auth.login.rememberMe') }}</el-checkbox>
             <el-link type="primary" @click="showForgotPassword = true">
-              忘记密码？
+              {{ $t('auth.login.forgotPassword') }}
             </el-link>
           </div>
         </el-form-item>
@@ -55,14 +55,14 @@
             @click="handleLogin"
             class="login-button"
           >
-            {{ loading ? '登录中...' : '登录' }}
+            {{ loading ? $t('common.loading') : $t('auth.login.loginButton') }}
           </el-button>
         </el-form-item>
 
         <div class="register-link">
-          <span>还没有账户？</span>
+          <span>{{ $t('auth.login.noAccount') }}</span>
           <el-link type="primary" @click="$router.push('/register')">
-            立即注册
+            {{ $t('auth.login.registerLink') }}
           </el-link>
         </div>
       </el-form>
@@ -71,7 +71,7 @@
     <!-- 忘记密码对话框 -->
     <el-dialog
       v-model="showForgotPassword"
-      title="重置密码"
+      :title="$t('auth.login.resetPassword')"
       width="400px"
       :close-on-click-modal="false"
     >
@@ -80,21 +80,21 @@
           <el-input
             v-model="forgotForm.email"
             type="email"
-            placeholder="请输入注册邮箱"
+            :placeholder="$t('auth.login.resetPasswordPlaceholder')"
             prefix-icon="Message"
           />
         </el-form-item>
       </el-form>
-      
+
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="showForgotPassword = false">取消</el-button>
+          <el-button @click="showForgotPassword = false">{{ $t('common.cancel') }}</el-button>
           <el-button
             type="primary"
             :loading="forgotLoading"
             @click="handleForgotPassword"
           >
-            发送重置邮件
+            {{ $t('auth.login.sendResetEmail') }}
           </el-button>
         </span>
       </template>
@@ -105,6 +105,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElNotification } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import ParticleBackground from '@/components/ParticleBackground.vue'
@@ -136,20 +137,22 @@ const rememberMe = ref(false)
 const showForgotPassword = ref(false)
 
 // 表单验证规则
+const { t } = useI18n()
+
 const loginRules: FormRules = {
   loginField: [
-    { required: true, message: '请输入邮箱或用户名', trigger: 'blur' }
+    { required: true, message: t('auth.validation.loginFieldRequired'), trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 8, message: '密码长度至少为8位', trigger: 'blur' }
+    { required: true, message: t('auth.validation.passwordRequired'), trigger: 'blur' },
+    { min: 8, message: t('auth.validation.passwordLength'), trigger: 'blur' }
   ]
 }
 
 const forgotRules: FormRules = {
   email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+    { required: true, message: t('auth.validation.emailRequired'), trigger: 'blur' },
+    { type: 'email', message: t('auth.validation.emailInvalid'), trigger: 'blur' }
   ]
 }
 

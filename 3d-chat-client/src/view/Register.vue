@@ -4,8 +4,8 @@
     
     <div class="register-card">
       <div class="register-header">
-        <h1 class="register-title">加入3D Chat</h1>
-        <p class="register-subtitle">创建账户，开启全新的3D聊天体验</p>
+        <h1 class="register-title">{{ $t('auth.register.title') }}</h1>
+        <p class="register-subtitle">{{ $t('auth.register.subtitle') }}</p>
       </div>
 
       <el-form
@@ -19,7 +19,7 @@
           <el-input
             v-model="registerForm.email"
             type="email"
-            placeholder="请输入邮箱"
+            :placeholder="$t('auth.register.emailPlaceholder')"
             size="large"
             prefix-icon="Message"
             :disabled="loading"
@@ -30,7 +30,7 @@
           <div class="verification-input-group">
             <el-input
               v-model="registerForm.verificationCode"
-              placeholder="请输入6位验证码"
+              :placeholder="$t('auth.register.verificationCodePlaceholder')"
               size="large"
               prefix-icon="Key"
               :disabled="loading"
@@ -45,7 +45,7 @@
               @click="sendVerificationCode"
               class="send-code-button"
             >
-              {{ countdown > 0 ? `${countdown}s后重发` : (codeSent ? '重新发送' : '发送验证码') }}
+              {{ getCodeButtonText() }}
             </el-button>
           </div>
         </el-form-item>
@@ -53,7 +53,7 @@
         <el-form-item prop="username">
           <el-input
             v-model="registerForm.username"
-            placeholder="请输入用户名"
+            :placeholder="$t('auth.register.usernamePlaceholder')"
             size="large"
             prefix-icon="User"
             :disabled="loading"
@@ -64,7 +64,7 @@
           <el-input
             v-model="registerForm.password"
             type="password"
-            placeholder="请输入密码"
+            :placeholder="$t('auth.register.passwordPlaceholder')"
             size="large"
             prefix-icon="Lock"
             show-password
@@ -76,7 +76,7 @@
           <el-input
             v-model="registerForm.confirmPassword"
             type="password"
-            placeholder="请确认密码"
+            :placeholder="$t('auth.register.confirmPasswordPlaceholder')"
             size="large"
             prefix-icon="Lock"
             show-password
@@ -87,10 +87,10 @@
 
         <el-form-item prop="agreement">
           <el-checkbox v-model="registerForm.agreement" :disabled="loading">
-            我已阅读并同意
-            <el-link type="primary" @click="showTerms = true">用户协议</el-link>
-            和
-            <el-link type="primary" @click="showPrivacy = true">隐私政策</el-link>
+            {{ $t('auth.register.agreement') }}
+            <el-link type="primary" @click="showTerms = true">{{ $t('auth.register.termsOfService') }}</el-link>
+            {{ $t('auth.register.and') }}
+            <el-link type="primary" @click="showPrivacy = true">{{ $t('auth.register.privacyPolicy') }}</el-link>
           </el-checkbox>
         </el-form-item>
 
@@ -102,14 +102,14 @@
             @click="handleRegister"
             class="register-button"
           >
-            {{ loading ? '注册中...' : '注册账户' }}
+            {{ loading ? $t('common.loading') : $t('auth.register.registerButton') }}
           </el-button>
         </el-form-item>
 
         <div class="login-link">
-          <span>已有账户？</span>
+          <span>{{ $t('auth.register.hasAccount') }}</span>
           <el-link type="primary" @click="$router.push('/login')">
-            立即登录
+            {{ $t('auth.register.loginLink') }}
           </el-link>
         </div>
       </el-form>
@@ -156,6 +156,7 @@
 <script setup lang="ts">
 import { ref, reactive, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElNotification } from 'element-plus'
 import { SuccessFilled } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -164,6 +165,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 // 表单引用
 const registerFormRef = ref<FormInstance>()
@@ -193,7 +195,7 @@ const registerForm = reactive({
 // 确认密码验证
 const validateConfirmPassword = (rule: any, value: string, callback: any) => {
   if (value !== registerForm.password) {
-    callback(new Error('两次输入的密码不一致'))
+    callback(new Error(t('auth.validation.passwordMismatch')))
   } else {
     callback()
   }
@@ -202,38 +204,33 @@ const validateConfirmPassword = (rule: any, value: string, callback: any) => {
 // 表单验证规则
 const registerRules: FormRules = {
   email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+    { required: true, message: t('auth.validation.emailRequired'), trigger: 'blur' },
+    { type: 'email', message: t('auth.validation.emailInvalid'), trigger: 'blur' }
   ],
   verificationCode: [
-    { required: true, message: '请输入验证码', trigger: 'blur' },
-    { len: 6, message: '验证码为6位数字', trigger: 'blur' },
-    { pattern: /^\d{6}$/, message: '验证码必须为6位数字', trigger: 'blur' }
+    { required: true, message: t('auth.validation.verificationCodeRequired'), trigger: 'blur' },
+    { len: 6, message: t('auth.validation.verificationCodeLength'), trigger: 'blur' },
+    { pattern: /^\d{6}$/, message: t('auth.validation.verificationCodeFormat'), trigger: 'blur' }
   ],
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 2, message: '用户名长度至少为2位', trigger: 'blur' },
-    { max: 20, message: '用户名长度不能超过20位', trigger: 'blur' },
-    { pattern: /^[a-zA-Z0-9_\u4e00-\u9fa5]+$/, message: '用户名只能包含字母、数字、下划线和中文', trigger: 'blur' }
+    { required: true, message: t('auth.validation.usernameRequired'), trigger: 'blur' },
+    { min: 2, message: t('auth.validation.usernameLength'), trigger: 'blur' },
+    { max: 20, message: t('auth.validation.usernameLength'), trigger: 'blur' },
+    { pattern: /^[a-zA-Z0-9_\u4e00-\u9fa5]+$/, message: t('auth.validation.usernameFormat'), trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 8, message: '密码长度至少为8位', trigger: 'blur' },
-    {
-      pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      message: '密码必须包含大小写字母和数字',
-      trigger: 'blur'
-    }
+    { required: true, message: t('auth.validation.passwordRequired'), trigger: 'blur' },
+    { min: 8, message: t('auth.validation.passwordLength'), trigger: 'blur' }
   ],
   confirmPassword: [
-    { required: true, message: '请确认密码', trigger: 'blur' },
+    { required: true, message: t('auth.validation.confirmPasswordRequired'), trigger: 'blur' },
     { validator: validateConfirmPassword, trigger: 'blur' }
   ],
   agreement: [
     {
       validator: (rule: any, value: boolean, callback: any) => {
         if (!value) {
-          callback(new Error('请阅读并同意用户协议和隐私政策'))
+          callback(new Error(t('auth.validation.agreementRequired')))
         } else {
           callback()
         }
@@ -243,6 +240,14 @@ const registerRules: FormRules = {
   ]
 }
 
+// 获取验证码按钮文本
+const getCodeButtonText = () => {
+  if (countdown.value > 0) {
+    return `${countdown.value}s${t('auth.register.resendCode')}`
+  }
+  return codeSent.value ? t('auth.register.resendCode') : t('auth.register.sendCode')
+}
+
 // 发送验证码
 const sendVerificationCode = async () => {
   if (!registerFormRef.value) return
@@ -250,13 +255,13 @@ const sendVerificationCode = async () => {
   try {
     // 验证邮箱格式
     if (!registerForm.email) {
-      ElMessage.error('请输入邮箱')
+      ElMessage.error(t('auth.validation.emailRequired'))
       return
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(registerForm.email)) {
-      ElMessage.error('请输入正确的邮箱格式')
+      ElMessage.error(t('auth.validation.emailInvalid'))
       return
     }
 

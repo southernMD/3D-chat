@@ -23,7 +23,7 @@
 
           <!-- 右侧：详细内容和按钮 -->
           <div ref="createDetails" class="panel-right panel-details">
-            <div class="feature-list">
+            <!-- <div class="feature-list">
               <div ref="createFeature1" class="feature-item">
                 <div class="feature-icon">🎮</div>
                 <span>{{ $t('mode.create.feature1') }}</span>
@@ -36,7 +36,7 @@
                 <div class="feature-icon">🔧</div>
                 <span>{{ $t('mode.create.feature3') }}</span>
               </div>
-            </div>
+            </div> -->
             <button ref="createButton" class="mode-action-btn" @click="selectMode('create')">{{ $t('mode.create.action') }}</button>
           </div>
         </div>
@@ -90,9 +90,13 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { gsap } from 'gsap'
+import { useAuthStore } from '@/stores/auth'
 
 const { t } = useI18n()
+const router = useRouter()
+const authStore = useAuthStore()
 
 // Props
 const props = defineProps<{

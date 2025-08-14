@@ -13,11 +13,11 @@
         <div v-if="!authStore.isAuthenticated" class="login-area">
           <button class="register-button" @click="handleRegister">
             <span class="register-icon">✨</span>
-            <span class="register-text">注册</span>
+            <span class="register-text">{{ $t('auth.register.title') }}</span>
           </button>
           <button class="login-button" @click="handleLogin">
             <span class="login-icon">👤</span>
-            <span class="login-text">登录</span>
+            <span class="login-text">{{ $t('auth.login.title') }}</span>
           </button>
         </div>
 
@@ -33,11 +33,11 @@
           <div class="user-menu" v-show="showUserMenu">
             <button class="user-option" @click="handleProfile">
               <span class="option-icon">⚙️</span>
-              <span>个人设置</span>
+              <span>{{ $t('nav.profile') }}</span>
             </button>
             <button class="user-option" @click="handleLogout">
               <span class="option-icon">🚪</span>
-              <span>退出登录</span>
+              <span>{{ $t('nav.logout') }}</span>
             </button>
           </div>
         </div>
