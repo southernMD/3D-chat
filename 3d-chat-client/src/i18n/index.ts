@@ -125,20 +125,12 @@ const zh = {
       addMapDescription: '自定义地图环境',
       notSupported: '暂不支持',
       notSupportedDescription: '自定义地图功能正在开发中，敬请期待！',
-      spaceStation: '太空站',
-      spaceStationDescription: '未来科技风格的太空站环境，体验星际探索的奇妙之旅。高科技设施和宇宙景观为您的聊天增添科幻色彩。',
-      spaceStationFeature1: '零重力体验',
-      spaceStationFeature2: '星际景观',
-      spaceStationFeature3: '科技设施',
+      school: '学校',
+      schoolDescription: '可能不是你记忆中常规的学校，但它的确是学校',
       forestCabin: '森林小屋',
       forestCabinDescription: '自然清新的森林环境，享受大自然的宁静与美好。鸟语花香、绿树成荫，是放松心情的理想场所。',
-      forestCabinFeature1: '自然音效',
-      forestCabinFeature2: '清新空气',
-      forestCabinFeature3: '动物伙伴',
       cityRooftop: '城市天台',
       cityRooftopDescription: '现代都市风格的城市环境，感受繁华都市的活力与节奏。高楼大厦、霓虹灯光营造现代感。',
-      cityRooftopFeature1: '都市景观',
-      cityRooftopFeature2: '霓虹灯光'
     },
     room: {
       title: '房间基本设置',
@@ -179,12 +171,87 @@ const zh = {
         description: '启用文字消息功能，支持表情和文本交流'
       }
     },
-    createButton: '创建房间',
+    createButton: '去选择模型',
+    roomConfigSaved: '房间配置已保存，进入模型选择',
     validation: {
       incomplete: '请完善房间信息'
     },
     success: '房间创建成功！',
     error: '房间创建失败，请重试'
+  },
+  modelSelection: {
+    title: '选择你的头像',
+    searchPlaceholder: '搜索模型...',
+    uploadModel: '上传模型',
+    category: '类别',
+    type: '类型',
+    polygons: '面数',
+    description: '描述',
+    confirmButton: '确认选择',
+    pleaseSelectModel: '请选择一个模型',
+    modelSelected: '模型选择成功！',
+    accessDenied: '无权访问此页面',
+    models: {
+      casualMale: {
+        name: '休闲男性',
+        category: '人物角色',
+        description: '日常休闲风格的男性角色，适合各种场景使用。具有完整的骨骼绑定和基础动画。'
+      },
+      casualFemale: {
+        name: '休闲女性',
+        category: '人物角色',
+        description: '日常休闲风格的女性角色，设计精美，动作自然。适合各种交互场景。'
+      },
+      robot: {
+        name: '机器人',
+        category: '科幻角色',
+        description: '未来科技风格的机器人角色，具有独特的金属质感和机械结构。'
+      },
+      fantasyWarrior: {
+        name: '奇幻战士',
+        category: '奇幻角色',
+        description: '中世纪奇幻风格的战士角色，配备精美的装备和武器。'
+      }
+    },
+    features: {
+      rigged: '已绑定',
+      animated: '有动画',
+      sciFi: '科幻',
+      fantasy: '奇幻'
+    },
+    uploadDialog: {
+      title: '上传自定义模型',
+      dragDrop: '拖放文件到此处或点击选择',
+      supportedFormats: '支持格式：FBX、OBJ、GLB、GLTF',
+      selectFile: '选择文件',
+      uploadingFile: '正在上传 {filename}...',
+      uploadSuccess: '模型上传成功！'
+    }
+  },
+  fileUploader: {
+    dragDrop: '拖放文件到此处或点击上传',
+    supportedFormats: '支持格式：GLB、GLTF、PMX',
+    formatRequirements: 'GLB/GLTF必须含有walk和stand动作，PMX格式必须添加walk.vmd与stand.vmd动作文件',
+    selectFiles: '选择文件',
+    uploadList: '上传列表',
+    upload: '上传',
+    uploading: '上传中...',
+    remove: '移除',
+    uploadAll: '全部上传',
+    clearCompleted: '清除已完成',
+    uploadFailed: '上传失败',
+    networkError: '网络错误',
+    fileTooLarge: '文件 {name} 超过最大允许大小 {size}MB',
+    invalidFileType: '文件 {name} 类型不支持，仅支持GLB、GLTF、PMX格式',
+    noValidFiles: '没有有效的文件',
+    singleFileOnly: '一次只能上传一个模型文件',
+    detectingAnimation: '正在检测动作文件...',
+    pmxNeedsVmd: 'PMX模型需要配套的VMD动作文件',
+    pmxRequiredFiles: 'PMX模型必须包含walk.vmd和stand.vmd文件',
+    selectVmdFile: '请选择VMD动作文件',
+    vmdFormatOnly: '请选择VMD格式的动作文件',
+    modelWithAnimation: '模型包含动作',
+    modelWithoutAnimation: '模型未包含动作'
   },
   common: {
     loading: '加载中...',
@@ -365,20 +432,10 @@ const en = {
       addMapDescription: 'Custom map environment',
       notSupported: 'Not Supported',
       notSupportedDescription: 'Custom map feature is under development, stay tuned!',
-      spaceStation: 'Space Station',
-      spaceStationDescription: 'Futuristic space station environment, experience the wonder of interstellar exploration. High-tech facilities and cosmic views add sci-fi flair to your chat.',
-      spaceStationFeature1: 'Zero Gravity Experience',
-      spaceStationFeature2: 'Stellar Views',
-      spaceStationFeature3: 'Tech Facilities',
+      school: 'school',
+      schoolDescription: 'It may not be the regular school in your memory, but it is indeed a school',
       forestCabin: 'Forest Cabin',
       forestCabinDescription: 'Fresh and natural forest environment, enjoy the tranquility and beauty of nature. Birds singing and trees flourishing, an ideal place to relax.',
-      forestCabinFeature1: 'Natural Sounds',
-      forestCabinFeature2: 'Fresh Air',
-      forestCabinFeature3: 'Animal Friends',
-      cityRooftop: 'City Rooftop',
-      cityRooftopDescription: 'Modern urban city environment, feel the vitality and rhythm of the bustling city. Skyscrapers and neon lights create a modern atmosphere.',
-      cityRooftopFeature1: 'Urban Views',
-      cityRooftopFeature2: 'Neon Lights'
     },
     room: {
       title: 'Basic Room Settings',
@@ -419,12 +476,87 @@ const en = {
         description: 'Enable text messaging with emoji and text communication support'
       }
     },
-    createButton: 'Create Room',
+    createButton: 'Go To Select Model',
+    roomConfigSaved: 'Room config saved, entering model selection',
     validation: {
       incomplete: 'Please complete room information'
     },
     success: 'Room created successfully!',
     error: 'Failed to create room, please try again'
+  },
+  modelSelection: {
+    title: 'Choose Your Avatar',
+    searchPlaceholder: 'Search models...',
+    uploadModel: 'Upload Model',
+    category: 'Category',
+    type: 'Type',
+    polygons: 'Polygons',
+    description: 'Description',
+    confirmButton: 'Confirm Selection',
+    pleaseSelectModel: 'Please select a model',
+    modelSelected: 'Model selected successfully!',
+    accessDenied: 'Access denied to this page',
+    models: {
+      casualMale: {
+        name: 'Casual Male',
+        category: 'Character',
+        description: 'A casual style male character suitable for various scenes. Features complete skeleton binding and basic animations.'
+      },
+      casualFemale: {
+        name: 'Casual Female',
+        category: 'Character',
+        description: 'A casual style female character with exquisite design and natural movements. Suitable for various interactive scenes.'
+      },
+      robot: {
+        name: 'Robot',
+        category: 'Sci-Fi Character',
+        description: 'A futuristic robot character with unique metallic texture and mechanical structure.'
+      },
+      fantasyWarrior: {
+        name: 'Fantasy Warrior',
+        category: 'Fantasy Character',
+        description: 'A medieval fantasy warrior character equipped with exquisite equipment and weapons.'
+      }
+    },
+    features: {
+      rigged: 'Rigged',
+      animated: 'Animated',
+      sciFi: 'Sci-Fi',
+      fantasy: 'Fantasy'
+    },
+    uploadDialog: {
+      title: 'Upload Custom Model',
+      dragDrop: 'Drag and drop file here or click to select',
+      supportedFormats: 'Supported formats: FBX, OBJ, GLB, GLTF',
+      selectFile: 'Select File',
+      uploadingFile: 'Uploading {filename}...',
+      uploadSuccess: 'Model uploaded successfully!'
+    }
+  },
+  fileUploader: {
+    dragDrop: 'Drag and drop files here or click to upload',
+    supportedFormats: 'Supported formats: GLB, GLTF, PMX',
+    formatRequirements: 'GLB/GLTF must contain walk and stand animations, PMX format must add walk.vmd and stand.vmd animation files',
+    selectFiles: 'Select Files',
+    uploadList: 'Upload List',
+    upload: 'Upload',
+    uploading: 'Uploading...',
+    remove: 'Remove',
+    uploadAll: 'Upload All',
+    clearCompleted: 'Clear Completed',
+    uploadFailed: 'Upload Failed',
+    networkError: 'Network Error',
+    fileTooLarge: 'File {name} exceeds maximum size limit {size}MB',
+    invalidFileType: 'File {name} type not supported, only GLB, GLTF, PMX formats are allowed',
+    noValidFiles: 'No valid files',
+    singleFileOnly: 'Only one model file can be uploaded at a time',
+    detectingAnimation: 'Detecting animation files...',
+    pmxNeedsVmd: 'PMX model requires a corresponding VMD animation file',
+    pmxRequiredFiles: 'PMX model must include walk.vmd and stand.vmd files',
+    selectVmdFile: 'Please select a VMD animation file',
+    vmdFormatOnly: 'Please select a VMD format animation file',
+    modelWithAnimation: 'Model contains animation',
+    modelWithoutAnimation: 'Model does not contain animation'
   },
   common: {
     loading: 'Loading...',

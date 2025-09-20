@@ -143,11 +143,6 @@
                 </div>
                 <div class="map-description">
                   <p>{{ currentMapInfo.description }}</p>
-                  <div class="map-features">
-                    <div v-for="feature in currentMapInfo.features" :key="feature" class="feature-tag">
-                      {{ feature }}
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -195,7 +190,6 @@
               :disabled="!canCreate"
               @click="createRoom"
             >
-              <span class="button-icon">✨</span>
               <span class="button-text">{{ $t('createRoom.createButton') }}</span>
             </button>
           </div>
@@ -234,13 +228,12 @@ const activeTab = ref('map')
 // 地图数据
 const maps = ref([
   {
-    id: 'space-station',
-    name: t('createRoom.map.spaceStation'),
-    description: t('createRoom.map.spaceStationDescription'),
-    preview: 'space-station',
+    id: 'school',
+    name: t('createRoom.map.school'),
+    description: t('createRoom.map.schoolDescription'),
+    preview: 'school',
     available: true,
-    title: t('createRoom.map.spaceStation'),
-    features: [t('createRoom.map.spaceStationFeature1'), t('createRoom.map.spaceStationFeature2'), t('createRoom.map.spaceStationFeature3')]
+    title: t('createRoom.map.school'),
   },
   {
     id: 'forest',
@@ -249,16 +242,6 @@ const maps = ref([
     preview: 'forest',
     available: true,
     title: t('createRoom.map.forestCabin'),
-    features: [t('createRoom.map.forestCabinFeature1'), t('createRoom.map.forestCabinFeature2'), t('createRoom.map.forestCabinFeature3')]
-  },
-  {
-    id: 'city',
-    name: t('createRoom.map.cityRooftop'),
-    description: t('createRoom.map.cityRooftopDescription'),
-    preview: 'city',
-    available: false,
-    title: t('createRoom.map.cityRooftop'),
-    features: [t('createRoom.map.cityRooftopFeature1'), t('createRoom.map.cityRooftopFeature2')]
   }
 ])
 
@@ -312,9 +295,6 @@ const roomConfig = reactive({
   isPrivate: false,
   enableVoice: true,
   enableText: true,
-  enableVideo: false,
-  enableScreenShare: false,
-  enableFileShare: false
 })
 
 // 检查是否可以创建房间
@@ -341,9 +321,16 @@ const createRoom = async () => {
       map: selectedMap.value
     })
 
-    showSuccess(t('createRoom.success'))
-    // TODO: 跳转到房间页面
-    // router.push(`/room/${roomId}`)
+    // 保存房间配置到 sessionStorage
+    sessionStorage.setItem('room_config', JSON.stringify({
+      ...roomConfig,
+      map: selectedMap.value
+    }))
+    
+    showSuccess(t('createRoom.roomConfigSaved'))
+    
+    // 直接跳转到模型选择页面，路由守卫会检查来源
+    router.push('/model-selection')
   } catch (error) {
     console.error('Failed to create room:', error)
     showError(t('createRoom.error'))
@@ -490,7 +477,7 @@ const createRoom = async () => {
   position: relative;
   overflow: hidden;
 
-  &.map-space-station {
+  &.map-school {
     background: linear-gradient(135deg, #0a0a2e 0%, #1a1a4e 50%, #2a2a6e 100%);
   }
 
@@ -644,7 +631,7 @@ const createRoom = async () => {
   position: relative;
   overflow: hidden;
 
-  &.map-space-station {
+  &.map-school {
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   }
 
@@ -670,12 +657,6 @@ const createRoom = async () => {
     line-height: 1.6;
     margin-bottom: 12px;
   }
-}
-
-.map-features {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .feature-tag {

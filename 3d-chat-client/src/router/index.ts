@@ -58,6 +58,21 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: false }
     },
     {
+        path: '/model-selection',
+        name: 'model-selection',
+        component: () => import('@/view/ModelSelection.vue'),
+        meta: { requiresAuth: true },
+        beforeEnter: (to, from, next) => {
+            // 只允许从创建房间页面跳转过来
+            if (from.name === 'create-room') {
+                next()
+            } else {
+                // 直接访问或从其他页面跳转，重定向到首页
+                next({ name: 'home' })
+            }
+        }
+    },
+    {
         // 捕获所有未匹配的路由，重定向到首页
         path: '/:pathMatch(.*)*',
         redirect: '/home'
@@ -79,7 +94,8 @@ router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore()
 
     // 初始化认证状态（仅在首次访问时）
-    if (!authStore.isAuthenticated && localStorage.getItem('auth_token')) {
+    const hasToken = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')
+    if (!authStore.isAuthenticated && hasToken) {
         await authStore.initAuth()
     }
 

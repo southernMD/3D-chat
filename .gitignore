@@ -40,3 +40,6 @@ dist-ssr/
 
 # 系统文件
 Thumbs.db
+
+src/models
+demo-main

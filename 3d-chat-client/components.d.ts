@@ -20,6 +20,7 @@ declare module 'vue' {
     ElRadio: typeof import('element-plus/es')['ElRadio']
     ElRadioGroup: typeof import('element-plus/es')['ElRadioGroup']
     ElSelect: typeof import('element-plus/es')['ElSelect']
+    FileUploader: typeof import('./src/components/FileUploader.vue')['default']
     ModeSelection: typeof import('./src/components/ModeSelection.vue')['default']
     ParticleBackground: typeof import('./src/components/ParticleBackground.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

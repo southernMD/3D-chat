@@ -28,6 +28,19 @@ export class AuthService {
     return jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn } as jwt.SignOptions);
   }
 
+  //验证JWT token
+  verifyToken(token: string): Promise<{ success: boolean; message: string; data?: any }> {
+    return new Promise((resolve, reject) => {
+      jwt.verify(token, config.jwt.secret, (err, decoded) => {
+        if (err) {
+          resolve({ success: false, message: '无效的token' });
+        } else {
+          resolve({ success: true, message: '验证成功', data: decoded });
+        }
+      })
+    })
+  }
+
   // 密码加密
   private async hashPassword(password: string): Promise<string> {
     const saltRounds = 12;
@@ -349,6 +362,38 @@ export class AuthService {
     } catch (error) {
       console.error('Login error:', error);
       return { success: false, message: '登录过程中发生错误' };
+    }
+  }
+
+  // 根据用户ID获取用户信息
+  async getUserById(userId: number): Promise<{ success: boolean; message: string; data?: any }> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        return { success: false, message: '用户不存在' };
+      }
+
+      // 返回用户信息（不包括密码）
+      const userInfo = {
+        id: user.id,
+        email: user.username,
+        username: user.nickname,
+        is_verified: user.verify === 'verified',
+        created_at: user.createtime
+      };
+
+      return {
+        success: true,
+        message: '获取用户信息成功',
+        data: { user: userInfo }
+      };
+
+    } catch (error) {
+      console.error('Get user by id error:', error);
+      return { success: false, message: '获取用户信息过程中发生错误' };
     }
   }
 }

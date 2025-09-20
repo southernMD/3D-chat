@@ -161,7 +161,7 @@ const handleLogin = async () => {
     await loginFormRef.value.validate()
     loading.value = true
 
-    const success = await authStore.login(loginForm.loginField, loginForm.password)
+    const success = await authStore.login(loginForm.loginField, loginForm.password, rememberMe.value)
     
     if (success) {
       ElNotification({

@@ -5,9 +5,7 @@ import type { MessageOptions } from 'element-plus'
 const defaultConfig: Partial<MessageOptions> = {
   duration: 3000,
   showClose: true,
-  center: false,
   offset: 20,
-  grouping: true
 }
 
 // 成功消息
