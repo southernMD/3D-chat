@@ -1,10 +1,5 @@
 <template>
   <div class="create-room-container">
-    <ParticleBackground />
-    
-    <!-- 顶部导航栏 -->
-    <TopBar />
-    
     <!-- 主要内容区域 -->
     <div class="main-content">
       <!-- 左侧配置区域 -->
@@ -83,23 +78,6 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">{{ $t('createRoom.room.mode') }}</label>
-              <ThemeRadioGroup
-                v-model="roomConfig.mode"
-                :options="modeOptions"
-                direction="horizontal"
-              >
-                <template #default="{ option, direction }">
-                  <div :class="['mode-option-content', direction]">
-                    <div class="mode-text">
-                      <span class="mode-label">{{ option.label }}</span>
-                      <span class="mode-description">{{ option.description }}</span>
-                    </div>
-                  </div>
-                </template>
-              </ThemeRadioGroup>
-            </div>
-            <div v-if="showMaxUsersSettings" class="form-group">
               <label class="form-label">{{ $t('createRoom.room.maxUsers') }}</label>
               <ThemeSelect
                 v-model="roomConfig.maxUsers"
@@ -114,7 +92,7 @@
                 </template>
               </ThemeSelect>
             </div>
-            <div v-if="showPrivacySettings" class="form-group">
+            <div class="form-group">
               <label class="form-label">{{ $t('createRoom.room.privacy') }}</label>
               <ThemeRadioGroup
                 v-model="roomConfig.isPrivate"
@@ -180,17 +158,10 @@
             <h3 class="info-title">{{ $t('createRoom.info.roomTitle') }}</h3>
             <div class="info-content">
               <div class="info-item">
-                <span class="info-icon">�</span>
+                <span class="info-icon">👥</span>
                 <div class="info-text">
                   <h4>{{ $t('createRoom.info.roomFeature1.title') }}</h4>
                   <p>{{ $t('createRoom.info.roomFeature1.description') }}</p>
-                </div>
-              </div>
-              <div class="info-item">
-                <span class="info-icon">👥</span>
-                <div class="info-text">
-                  <h4>{{ $t('createRoom.info.roomFeature2.title') }}</h4>
-                  <p>{{ $t('createRoom.info.roomFeature2.description') }}</p>
                 </div>
               </div>
             </div>
@@ -240,8 +211,6 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import ParticleBackground from '@/components/ParticleBackground.vue'
-import TopBar from '@/components/TopBar.vue'
 import ThemeSelect from '@/components/ThemeSelect.vue'
 import ThemeInput from '@/components/ThemeInput.vue'
 import ThemeRadioGroup from '@/components/ThemeRadioGroup.vue'
@@ -321,20 +290,6 @@ const maxUsersOptions: SelectOption[] = [
   }
 ]
 
-// 模式选项
-const modeOptions: RadioOption[] = [
-  {
-    label: t('createRoom.room.chatMode'),
-    value: 'chat',
-    description: t('createRoom.room.chatModeDescription')
-  },
-  {
-    label: t('createRoom.room.storyMode'),
-    value: 'story',
-    description: t('createRoom.room.storyModeDescription')
-  }
-]
-
 // 隐私选项
 const privacyOptions: RadioOption[] = [
   {
@@ -353,7 +308,6 @@ const privacyOptions: RadioOption[] = [
 const roomConfig = reactive({
   name: '',
   description: '',
-  mode: 'chat',
   maxUsers: '6',
   isPrivate: false,
   enableVoice: true,
@@ -361,29 +315,6 @@ const roomConfig = reactive({
   enableVideo: false,
   enableScreenShare: false,
   enableFileShare: false
-})
-
-// 监听模式变化
-watch(() => roomConfig.mode, (newMode) => {
-  if (newMode === 'story') {
-    // 故事模式：强制单人，隐藏隐私设置
-    roomConfig.maxUsers = '1'
-    roomConfig.isPrivate = true
-  } else {
-    // 聊天模式：恢复默认设置
-    roomConfig.maxUsers = '6'
-    roomConfig.isPrivate = false
-  }
-})
-
-// 计算是否显示隐私设置
-const showPrivacySettings = computed(() => {
-  return roomConfig.mode === 'chat'
-})
-
-// 计算是否显示最大用户数设置
-const showMaxUsersSettings = computed(() => {
-  return roomConfig.mode === 'chat'
 })
 
 // 检查是否可以创建房间
@@ -641,58 +572,6 @@ const createRoom = async () => {
   .users-count {
     color: inherit;
     font-weight: 500;
-  }
-}
-
-// 模式选项样式
-.mode-option-content {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-
-  // 横向排列时：文本纵向排列
-  &.horizontal {
-    flex-direction: row;
-    align-items: center;
-
-    .mode-text {
-      flex: 1;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
-  }
-
-  // 纵向排列时：文本横向排列
-  &.vertical {
-    flex-direction: row;
-    align-items: flex-start;
-
-    .mode-text {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-  }
-
-  .mode-icon {
-    font-size: 1.5rem;
-    flex-shrink: 0;
-  }
-
-  .mode-label {
-    color: white;
-    font-weight: 600;
-    font-size: 1rem;
-  }
-
-  .mode-description {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.85rem;
-    line-height: 1.4;
   }
 }
 

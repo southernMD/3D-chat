@@ -1,7 +1,5 @@
 <template>
   <div class="login-container">
-    <ParticleBackground />
-    
     <div class="login-card">
       <div class="login-header">
         <h1 class="login-title">{{ $t('auth.login.title') }}</h1>
@@ -108,7 +106,6 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElNotification } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import ParticleBackground from '@/components/ParticleBackground.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()

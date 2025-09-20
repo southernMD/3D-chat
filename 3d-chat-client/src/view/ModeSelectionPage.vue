@@ -1,6 +1,13 @@
 <template>
-  <div class="mode-selection-overlay" v-if="visible" @click.stop>
+  <div class="mode-selection-page">
     <div class="mode-container">
+      <!-- 页面标题 -->
+      <div class="page-header">
+        <h1 class="page-title">{{ $t('mode.pageTitle') }}</h1>
+        <p class="page-subtitle">{{ $t('mode.pageSubtitle') }}</p>
+      </div>
+
+      <!-- 模式选项 -->
       <div class="mode-options">
         <!-- 创建房间 -->
         <div class="mode-option" @click="selectMode('create')">
@@ -35,6 +42,16 @@
           <p>{{ $t('mode.lobby.description') }}</p>
         </div>
       </div>
+
+      <!-- 返回按钮 -->
+      <div class="back-section">
+        <button class="back-button" @click="goBack">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"/>
+          </svg>
+          {{ $t('common.back') }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -43,20 +60,12 @@
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { onMounted, onUnmounted } from 'vue'
+import { gsap } from 'gsap'
 
 const { t } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
-
-// Props
-const props = defineProps<{
-  visible: boolean
-}>()
-
-// Emits
-const emit = defineEmits<{
-  modeSelected: [mode: 'create' | 'join']
-}>()
 
 // 选择模式
 const selectMode = (mode: 'create' | 'join' | 'lobby') => {
@@ -72,33 +81,108 @@ const selectMode = (mode: 'create' | 'join' | 'lobby') => {
   } else if (mode === 'lobby') {
     // 跳转到房间大厅
     router.push('/lobby')
-  } else {
-    // 加入房间逻辑保持不变
-    emit('modeSelected', mode)
+  } else if (mode === 'join') {
+    // 这里可以添加加入房间的逻辑，比如弹出输入框让用户输入房间ID
+    console.log('Join room mode selected')
+    // 暂时跳转到大厅页面
+    router.push('/lobby')
   }
 }
+
+// 返回首页
+const goBack = () => {
+  router.push('/')
+}
+
+// 页面进入动画
+onMounted(() => {
+  // 初始设置
+  gsap.set('.page-header', { opacity: 0, y: -50 })
+  gsap.set('.mode-option', { opacity: 0, y: 50, scale: 0.8 })
+  gsap.set('.back-section', { opacity: 0, y: 30 })
+
+  // 创建时间线
+  const tl = gsap.timeline()
+
+  // 页面标题动画
+  tl.to('.page-header', {
+    opacity: 1,
+    y: 0,
+    duration: 0.8,
+    ease: "power2.out"
+  })
+
+  // 模式选项动画
+  tl.to('.mode-option', {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    duration: 0.6,
+    ease: "back.out(1.7)",
+    stagger: 0.2
+  }, "-=0.4")
+
+  // 返回按钮动画
+  tl.to('.back-section', {
+    opacity: 1,
+    y: 0,
+    duration: 0.5,
+    ease: "power2.out"
+  }, "-=0.3")
+})
+
+// 清理动画
+onUnmounted(() => {
+  gsap.killTweensOf("*")
+})
 </script>
 
 <style scoped lang="less">
-.mode-selection-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+.mode-selection-page {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+  color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 5;
+  padding-top: 60px; /* 为TopBar留出空间 */
+  overflow-y: auto;
 }
 
 .mode-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 90vw;
   max-width: 1200px;
   padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 50px;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  background: linear-gradient(45deg, #00ffff, #ff00ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 20px;
+  text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+}
+
+.page-subtitle {
+  font-size: 1.3rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  line-height: 1.5;
 }
 
 .mode-options {
@@ -106,6 +190,7 @@ const selectMode = (mode: 'create' | 'join' | 'lobby') => {
   grid-template-columns: repeat(3, 1fr);
   gap: 40px;
   width: 100%;
+  max-width: 900px;
 }
 
 .mode-option {
@@ -154,9 +239,12 @@ const selectMode = (mode: 'create' | 'join' | 'lobby') => {
     filter: drop-shadow(0 0 15px currentColor);
   }
   
+  .mode-option:hover & {
+    transform: scale(1.1) rotate(360deg);
+  }
+  
   .mode-option.create:hover & {
     color: #00ff00;
-    transform: scale(1.1) rotate(360deg);
   }
   
   .mode-option.join:hover & {
@@ -166,7 +254,6 @@ const selectMode = (mode: 'create' | 'join' | 'lobby') => {
   
   .mode-option.lobby:hover & {
     color: #ff00ff;
-    transform: scale(1.1) rotate(360deg);
   }
 }
 
@@ -191,6 +278,36 @@ const selectMode = (mode: 'create' | 'join' | 'lobby') => {
   margin: 0;
 }
 
+.back-section {
+  margin-top: 20px;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: 2px solid rgba(0, 255, 255, 0.3);
+  color: #00ffff;
+  padding: 15px 30px;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.1rem;
+  
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  &:hover {
+    background: rgba(0, 255, 255, 0.1);
+    border-color: #00ffff;
+    transform: translateX(-5px);
+    box-shadow: 0 10px 25px rgba(0, 255, 255, 0.3);
+  }
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .mode-options {
@@ -201,6 +318,7 @@ const selectMode = (mode: 'create' | 'join' | 'lobby') => {
   .mode-container {
     width: 95vw;
     padding: 20px;
+    gap: 30px;
   }
   
   .mode-option {
@@ -220,6 +338,14 @@ const selectMode = (mode: 'create' | 'join' | 'lobby') => {
   .mode-option p {
     font-size: 1rem;
   }
+  
+  .page-title {
+    font-size: 2.5rem;
+  }
+  
+  .page-subtitle {
+    font-size: 1.1rem;
+  }
 }
 
 @media (max-width: 1024px) and (min-width: 769px) {
@@ -229,6 +355,10 @@ const selectMode = (mode: 'create' | 'join' | 'lobby') => {
   
   .mode-option {
     padding: 35px 25px;
+  }
+  
+  .page-title {
+    font-size: 3rem;
   }
 }
 </style>

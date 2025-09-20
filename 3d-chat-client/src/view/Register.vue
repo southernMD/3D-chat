@@ -1,7 +1,5 @@
 <template>
   <div class="register-container">
-    <ParticleBackground />
-    
     <div class="register-card">
       <div class="register-header">
         <h1 class="register-title">{{ $t('auth.register.title') }}</h1>
@@ -160,7 +158,6 @@ import { useI18n } from 'vue-i18n'
 import { ElNotification } from 'element-plus'
 import { SuccessFilled } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import ParticleBackground from '@/components/ParticleBackground.vue'
 import { useAuthStore } from '@/stores/auth'
 import { showSuccess, showError, showWarning } from '@/utils/message'
 

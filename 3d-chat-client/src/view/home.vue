@@ -5,15 +5,14 @@ import { TextPlugin } from 'gsap/TextPlugin'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { MorphSVGPlugin } from 'gsap/MorphSVGPlugin'
 import { useI18n } from 'vue-i18n'
-import ParticleBackground from '@/components/ParticleBackground.vue'
-import TopBar from '@/components/TopBar.vue'
-import ModeSelection from '@/components/ModeSelection.vue'
+import { useRouter } from 'vue-router'
 
 // 注册GSAP插件
 gsap.registerPlugin(TextPlugin, ScrollTrigger)
 
-// i18n
+// i18n 和 router
 const { t, locale } = useI18n()
+const router = useRouter()
 
 // 响应式引用
 const heroSection = ref<HTMLElement>()
@@ -26,8 +25,8 @@ const homeContainer = ref<HTMLElement>()
 const descriptionRef = ref<HTMLElement>()
 const decorativeElements = ref<HTMLElement>()
 
-// 模式选择状态
-const showModeSelection = ref(false)
+// 移除模式选择状态，不再需要
+// const showModeSelection = ref(false)
 
 // 滚动控制
 let currentSection = 0 // 当前所在的区域 (0: top-item, 1: mid-item)
@@ -103,64 +102,17 @@ onUnmounted(() => {
   }
 })
 
-// 进入聊天功能
+// 进入聊天功能 - 直接跳转到模式选择页面
 const enterChat = () => {
-  console.log('Entering chat - stopping all GSAP animations')
-
-  // 移除鼠标移动事件监听器，防止继续触发视差动画
-  document.removeEventListener('mousemove', handleMouseMove)
-
-  // 停止所有GSAP动画和时间线
-  gsap.killTweensOf("*") // 停止所有动画
-  gsap.globalTimeline.clear() // 清除全局时间线
-
-  // 停止特定元素的动画
-  const elementsToStop = [
-    mainTitle.value,
-    subtitle.value,
-    enterButton.value,
-    descriptionRef.value,
-    decorativeElements.value,
-    ...backgroundElements.value
-  ].filter(Boolean)
-
-  gsap.killTweensOf(elementsToStop)
-
-  // 创建淡出动画
-  const exitTl = gsap.timeline()
-
-  // 淡出原有元素
-  exitTl.to([mainTitle.value, subtitle.value, enterButton.value, descriptionRef.value], {
-    opacity: 0,
-    y: -50,
-    scale: 0.8,
-    duration: 0.8,
-    ease: "power2.in",
-    stagger: 0.1
-  })
-
-  // 淡出背景元素
-  if (decorativeElements.value) {
-    exitTl.to(decorativeElements.value, {
-      opacity: 0,
-      scale: 0.8,
-      duration: 0.6,
-      ease: "power2.in"
-    }, "-=0.4")
-  }
-
-  // 动画完成后显示模式选择
-  exitTl.call(() => {
-    showModeSelection.value = true
-  })
+  console.log('Navigating to mode selection page')
+  router.push('/mode-selection')
 }
 
-// 处理模式选择
-const handleModeSelected = (mode: 'create' | 'join') => {
-  console.log(`Selected mode: ${mode}`)
-  // 这里可以路由到对应的页面
-  showModeSelection.value = false
-}
+// 移除模式选择处理函数，不再需要
+// const handleModeSelected = (mode: 'create' | 'join') => {
+//   console.log(`Selected mode: ${mode}`)
+//   showModeSelection.value = false
+// }
 // 主标题和副标题动画
 const initHeroAnimations = () => {
   // 设置初始状态 - 使用整数像素值避免模糊
@@ -434,25 +386,10 @@ const initButtonAnimations = () => {
 
 <template>
   <div ref="homeContainer" class="home-container">
-    <!-- 顶部导航栏 -->
-    <TopBar />
-
-    <!-- 粒子背景 - 固定在屏幕底部 -->
-    <ParticleBackground />
-
     <!-- 内容包装器 -->
     <div class="content-wrapper">
-      <!-- 模式选择组件 -->
-      <ModeSelection
-        v-if="showModeSelection"
-        :visible="showModeSelection"
-        @mode-selected="handleModeSelected"
-      />
-
-      <!-- 原始内容 -->
-      <template v-if="!showModeSelection">
-        <!-- 背景动画元素 -->
-        <div class="top-item">
+      <!-- 背景动画元素 -->
+      <div class="top-item">
         <div class="background-elements">
           <div v-for="i in 12" :key="i" :ref="el => backgroundElements.push(el as HTMLElement)" class="bg-element"
             :class="`bg-element-${i % 4 + 1}`"></div>
@@ -709,7 +646,6 @@ const initButtonAnimations = () => {
           </div>
         </footer>
       </div>
-      </template>
     </div>
   </div>
 </template>

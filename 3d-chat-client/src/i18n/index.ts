@@ -15,6 +15,8 @@ const zh = {
     description: '体验前所未有的沉浸式3D交流'
   },
   mode: {
+    pageTitle: '选择聊天模式',
+    pageSubtitle: '选择一种聊天模式开始您的3D交流之旅',
     create: {
       title: '创建房间',
       description: '创建一个全新的3D聊天房间',
@@ -31,6 +33,10 @@ const zh = {
       feature1: '快速连接',
       feature2: '实时同步',
       action: '立即加入'
+    },
+    lobby: {
+      title: '房间大厅',
+      description: '浏览和加入现有的聊天房间'
     }
   },
   auth: {
@@ -143,10 +149,6 @@ const zh = {
       maxUsers: '最大用户数',
       selectMaxUsers: '选择最大用户数',
       users: '人',
-      mode: '房间模式',
-      selectMode: '选择房间模式',
-      storyMode: '故事模式',
-      storyModeDescription: '单人沉浸式体验',
       chatMode: '聊天模式',
       chatModeDescription: '多人互动聊天',
       privacy: '隐私设置',
@@ -165,10 +167,6 @@ const zh = {
       roomTitle: '房间配置说明',
       featureTitle: '功能设置说明',
       roomFeature1: {
-        title: '房间模式',
-        description: '选择故事模式进行单人体验，或聊天模式进行多人互动'
-      },
-      roomFeature2: {
         title: '用户管理',
         description: '设置房间最大用户数和隐私级别，控制访问权限'
       },
@@ -193,7 +191,28 @@ const zh = {
     error: '错误',
     success: '成功',
     cancel: '取消',
-    confirm: '确认'
+    confirm: '确认',
+    back: '返回'
+  },
+  lobby: {
+    title: '房间大厅',
+    searchPlaceholder: '搜索房间...',
+    filters: {
+      all: '全部',
+      public: '公开'
+    },
+    status: {
+      active: '活跃',
+      busy: '繁忙',
+      full: '已满'
+    },
+    mode: {
+      chat: '聊天'
+    },
+    empty: {
+      title: '暂无房间',
+      description: '当前没有符合条件的房间，请尝试其他搜索条件或稍后再试。'
+    }
   },
   footer: {
     subtitle: '在第三维度聊天',
@@ -236,6 +255,8 @@ const en = {
     description: 'Experience immersive 3D communication like never before'
   },
   mode: {
+    pageTitle: 'Choose Chat Mode',
+    pageSubtitle: 'Select a chat mode to begin your 3D communication journey',
     create: {
       title: 'Create Room',
       description: 'Create a brand new 3D chat room',
@@ -252,6 +273,10 @@ const en = {
       feature1: 'Quick connection',
       feature2: 'Real-time sync',
       action: 'Join Now'
+    },
+    lobby: {
+      title: 'Room Lobby',
+      description: 'Browse and join existing chat rooms'
     }
   },
   auth: {
@@ -364,10 +389,6 @@ const en = {
       maxUsers: 'Max Users',
       selectMaxUsers: 'Select max users',
       users: 'users',
-      mode: 'Room Mode',
-      selectMode: 'Select room mode',
-      storyMode: 'Story Mode',
-      storyModeDescription: 'Single-player immersive experience',
       chatMode: 'Chat Mode',
       chatModeDescription: 'Multi-player interactive chat',
       privacy: 'Privacy Settings',
@@ -386,10 +407,6 @@ const en = {
       roomTitle: 'Room Configuration Guide',
       featureTitle: 'Feature Settings Guide',
       roomFeature1: {
-        title: 'Room Mode',
-        description: 'Choose story mode for single-player experience, or chat mode for multi-player interaction'
-      },
-      roomFeature2: {
         title: 'User Management',
         description: 'Set maximum users and privacy level to control access permissions'
       },
@@ -414,7 +431,28 @@ const en = {
     error: 'Error',
     success: 'Success',
     cancel: 'Cancel',
-    confirm: 'Confirm'
+    confirm: 'Confirm',
+    back: 'Back'
+  },
+  lobby: {
+    title: 'Room Lobby',
+    searchPlaceholder: 'Search rooms...',
+    filters: {
+      all: 'All',
+      public: 'Public'
+    },
+    status: {
+      active: 'Active',
+      busy: 'Busy',
+      full: 'Full'
+    },
+    mode: {
+      chat: 'Chat'
+    },
+    empty: {
+      title: 'No Rooms Found',
+      description: 'No rooms match your current search criteria. Try different filters or check back later.'
+    }
   },
   footer: {
     subtitle: 'Chat in the Third Dimension',

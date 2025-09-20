@@ -1,7 +1,5 @@
 <template>
   <div class="verify-container">
-    <ParticleBackground />
-    
     <div class="verify-card">
       <!-- 验证中状态 -->
       <div v-if="verifying" class="verify-content">
@@ -105,7 +103,6 @@ import {
   WarningFilled 
 } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import ParticleBackground from '@/components/ParticleBackground.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()

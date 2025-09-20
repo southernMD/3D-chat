@@ -166,7 +166,6 @@ export const useAuthStore = defineStore('auth', () => {
   // 用户登出
   const logout = () => {
     clearAuth()
-    ElMessage.success('已退出登录')
   }
 
   // 验证邮箱

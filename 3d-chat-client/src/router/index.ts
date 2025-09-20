@@ -46,6 +46,18 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: true }
     },
     {
+        path: '/mode-selection',
+        name: 'mode-selection',
+        component: () => import('@/view/ModeSelectionPage.vue'),
+        meta: { requiresAuth: false }
+    },
+    {
+        path: '/lobby',
+        name: 'lobby',
+        component: () => import('@/view/RoomLobby.vue'),
+        meta: { requiresAuth: false }
+    },
+    {
         // 捕获所有未匹配的路由，重定向到首页
         path: '/:pathMatch(.*)*',
         redirect: '/home'
