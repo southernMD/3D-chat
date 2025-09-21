@@ -568,7 +568,7 @@ const createCancellableZip = async (
 
 
 // 使用原生XHR上传ZIP文件
-const uploadWithXHR = async (zipBlob: Blob, files: UploadFile[], modelHash: string): Promise<void> => {
+const uploadWithXHR = async (zipBlob: Blob, files: UploadFile[], modelHash: string, modelScreenshot?: string): Promise<void> => {
     return new Promise(async (resolve, reject) => {
         try {
             const xhr = new XMLHttpRequest()
@@ -577,6 +577,17 @@ const uploadWithXHR = async (zipBlob: Blob, files: UploadFile[], modelHash: stri
             const zipFileName = `${modelHash}.zip` // 使用模型文件hash作为文件名
 
             formData.append('file', zipBlob, zipFileName)
+
+            // 添加模型信息到FormData
+            const modelData = {
+                name: modelInfo.value.name,
+                description: modelInfo.value.description,
+                size: modelInfo.value.fileSize.toString(),
+                format: modelInfo.value.format,
+                hash: modelHash,
+                screenshot: modelScreenshot // 直接添加base64截图字符串
+            }
+            formData.append('modelInfo', JSON.stringify(modelData))
 
             // 监听上传进度
             xhr.upload.addEventListener('progress', (event) => {
@@ -723,7 +734,7 @@ const uploadAllFiles = async () => {
 
         // 计算主要模型文件的hash作为压缩包名
         console.log('正在计算主要模型文件hash:', mainModelFile.name)
-        const modelHash = Date.now().toString(36) + Math.random().toString(36).substr(2)  // 临时使用随机hash
+        const modelHash = await calculateFileHash(mainModelFile.file, signal, currentWorkers.value)
         console.log('主要模型文件hash:', modelHash)
 
         // 检查是否被取消
@@ -748,7 +759,7 @@ const uploadAllFiles = async () => {
         })
 
         // 使用原生XHR上传
-        await uploadWithXHR(zipBlob, filesToUpload, modelHash)
+        await uploadWithXHR(zipBlob, filesToUpload, modelHash, modelScreenshot)
 
         // 所有文件上传完成
         filesToUpload.forEach(file => {
@@ -813,52 +824,91 @@ const generateId = (): string => {
 
 // Three.js 初始化
 const initThreeJS = () => {
-    if (!modelCanvas.value) return
+    if (!modelCanvas.value) {
+        console.error('❌ 模型画布未找到，无法初始化Three.js')
+        return
+    }
 
-    // 场景
-    scene = new THREE.Scene()
-    scene.background = new THREE.Color(0x1a1a1a)
+    try {
+        console.log('🔧 开始初始化Three.js...')
 
-    // 相机
-    camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000)
-    camera.position.set(0, 1, 3)
+        // 清理之前的资源
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId)
+            animationFrameId = null
+        }
 
-    // 渲染器
-    renderer = new THREE.WebGLRenderer({ 
-        canvas: modelCanvas.value, 
-        antialias: true,
-        preserveDrawingBuffer: true // 保持绘制缓冲区，用于截图
-    })
-    renderer.setSize(300, 300)
-    renderer.shadowMap.enabled = true
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap
+        if (renderer) {
+            renderer.dispose()
+        }
 
-    // 控制器
-    controls = new OrbitControls(camera, renderer.domElement)
-    controls.enableDamping = true
-    controls.dampingFactor = 0.1
-    controls.enableZoom = true
+        if (controls) {
+            controls.dispose()
+        }
 
-    // 灯光
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1)
-    scene.add(ambientLight)
+        // 场景
+        scene = new THREE.Scene()
+        scene.background = new THREE.Color(0x1a1a1a)
+        console.log('✅ 场景创建完成')
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
-    directionalLight.position.set(1, 1, 1)
-    directionalLight.castShadow = true
-    scene.add(directionalLight)
+        // 相机
+        camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000)
+        camera.position.set(0, 1, 3)
+        console.log('✅ 相机创建完成')
 
-    // 开始渲染循环
-    animate()
+        // 渲染器
+        renderer = new THREE.WebGLRenderer({
+            canvas: modelCanvas.value,
+            antialias: true,
+            preserveDrawingBuffer: true // 保持绘制缓冲区，用于截图
+        })
+        renderer.setSize(300, 300)
+        renderer.shadowMap.enabled = true
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap
+        console.log('✅ 渲染器创建完成')
+
+        // 控制器
+        controls = new OrbitControls(camera, renderer.domElement)
+        controls.enableDamping = true
+        controls.dampingFactor = 0.1
+        controls.enableZoom = true
+        console.log('✅ 控制器创建完成')
+
+        // 灯光
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1)
+        scene.add(ambientLight)
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
+        directionalLight.position.set(1, 1, 1)
+        directionalLight.castShadow = true
+        scene.add(directionalLight)
+        console.log('✅ 灯光添加完成')
+
+        // 开始渲染循环
+        animate()
+        console.log('🎉 Three.js初始化完成')
+    } catch (error) {
+        console.error('❌ Three.js初始化失败:', error)
+        showError('3D预览初始化失败')
+    }
 }
 
 // 动画循环
 const animate = () => {
-    if (!renderer || !scene || !camera || !controls) return
+    if (!renderer || !scene || !camera || !controls) {
+        console.warn('⚠️ 动画循环停止：Three.js组件未就绪')
+        return
+    }
 
-    animationFrameId = requestAnimationFrame(animate)
-    controls.update()
-    renderer.render(scene, camera)
+    try {
+        animationFrameId = requestAnimationFrame(animate)
+        controls.update()
+        renderer.render(scene, camera)
+    } catch (error) {
+        console.error('❌ 渲染错误:', error)
+        // 尝试重新初始化
+        ensureThreeJSReady()
+    }
 }
 
 // ZIP 文件内容接口
@@ -902,15 +952,21 @@ const parseZipFile = async (zipFile: File): Promise<ZipContents> => {
 
 // 加载模型预览
 const loadModelPreview = async (file: File, fileType: 'glb' | 'gltf' | 'zip') => {
-    if (!scene) {
-        // 如果 Three.js 还未初始化，等待下一帧
-        await nextTick()
-        if (!scene) {
-            initThreeJS()
-        }
+    console.log('🎯 开始加载模型预览:', fileType)
+
+    // 确保Three.js场景准备就绪
+    ensureThreeJSReady()
+
+    // 等待下一帧确保DOM更新
+    await nextTick()
+
+    if (!scene || !renderer || !camera || !controls) {
+        console.error('❌ Three.js场景未正确初始化')
+        showError('3D预览初始化失败')
+        return
     }
 
-    if (!scene) return
+    console.log('✅ Three.js场景检查通过')
 
     // 清除之前的模型
     if (currentModel) {
@@ -1096,12 +1152,49 @@ const resetUploadState = () => {
         fileSize: 0,
         format: ''
     }
-    
+
     // 重置模型预览
     hasModelLoaded.value = false
     if (currentModel && scene) {
         scene.remove(currentModel)
         currentModel = null
+    }
+
+    // 确保Three.js场景正常工作
+    ensureThreeJSReady()
+}
+
+// 确保Three.js场景准备就绪
+const ensureThreeJSReady = () => {
+    if (!modelCanvas.value) return
+
+    // 检查渲染器是否还有效
+    if (!renderer || renderer.domElement !== modelCanvas.value) {
+        console.log('🔄 重新初始化Three.js渲染器')
+        initThreeJS()
+        return
+    }
+
+    // 检查场景是否存在
+    if (!scene) {
+        console.log('🔄 重新创建Three.js场景')
+        scene = new THREE.Scene()
+        scene.background = new THREE.Color(0x1a1a1a)
+
+        // 重新添加灯光
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1)
+        scene.add(ambientLight)
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
+        directionalLight.position.set(1, 1, 1)
+        directionalLight.castShadow = true
+        scene.add(directionalLight)
+    }
+
+    // 确保动画循环正在运行
+    if (!animationFrameId) {
+        console.log('🔄 重新启动动画循环')
+        animate()
     }
 }
 
@@ -1186,10 +1279,14 @@ const checkGLBModel = async (file: File) => {
 
 // 生命周期管理
 onMounted(() => {
+    console.log('🚀 FileUploader组件已挂载')
     // 在组件挂载后初始化 Three.js
     nextTick(() => {
         if (modelCanvas.value) {
+            console.log('🎯 初始化Three.js场景')
             initThreeJS()
+        } else {
+            console.warn('⚠️ 模型画布未找到')
         }
     })
 })

@@ -1,12 +1,29 @@
 import { Request, Response } from 'express'
 import path from 'path'
 import { fileService, FileUploadResult } from '../services/FileService'
+import { Validate, ValidationType } from '../decorators/validation'
 
 /**
  * 文件上传请求接口
  */
 interface FileUploadRequest extends Request {
   file?: Express.Multer.File
+  user?: {
+    userId: number;
+    email: string;
+  };
+}
+
+/**
+ * 模型信息接口
+ */
+interface ModelInfo {
+  name: string;
+  description?: string;
+  size: string;
+  format: string;
+  hash: string;
+  screenshot?: string; // base64截图字符串
 }
 
 /**
@@ -18,24 +35,33 @@ export class FileController {
   /**
    * 上传ZIP文件或单个文件
    */
+  @Validate({ type: ValidationType.MODEL_INFO, field: 'modelInfo' })
   async uploadFile(req: FileUploadRequest, res: Response): Promise<void> {
     try {
       if (!req.file) {
-        res.status(400).json({ 
+        res.status(400).json({
           success: false,
-          error: '没有上传文件' 
+          error: '没有上传文件'
         })
         return
       }
 
       const { path: filePath, originalname: originalName, size: fileSize } = req.file
       const fileExtension = path.extname(originalName).toLowerCase()
-      
+
+      // 从验证装饰器中获取解析后的模型信息
+      const modelInfo: ModelInfo | null = (req as any).parsedModelInfo || null
+
       let result: FileUploadResult
 
       if (fileExtension === '.zip') {
-        // 处理ZIP文件
-        result = await fileService.processZipFile(filePath, originalName)
+        // 处理ZIP文件，传入用户ID和模型信息
+        result = await fileService.processZipFile(
+          filePath,
+          originalName,
+          req.user?.userId || null,
+          modelInfo
+        )
       } else {
         // 处理单个文件
         result = await fileService.processSingleFile(filePath, originalName, fileSize)
@@ -48,9 +74,9 @@ export class FileController {
       }
     } catch (error) {
       console.error('文件上传错误:', error)
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
-        error: '文件上传失败' 
+        error: '文件上传失败'
       })
     }
   }
@@ -79,6 +105,27 @@ export class FileController {
       res.status(500).json({ 
         success: false,
         error: '获取文件列表失败' 
+      })
+    }
+  }
+
+  /**
+   * 获取模型信息列表
+   */
+  async getModelList(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await fileService.getModelList()
+
+      if (result.success) {
+        res.json(result)
+      } else {
+        res.status(500).json(result)
+      }
+    } catch (error) {
+      console.error('获取模型列表错误:', error)
+      res.status(500).json({
+        success: false,
+        error: '获取模型列表失败'
       })
     }
   }

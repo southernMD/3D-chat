@@ -3,6 +3,7 @@ import fs from 'fs'
 import JSZip from 'jszip'
 import { AppDataSource } from '../config/database'
 import { StaticResourcePath } from '../entities/StaticResourcePath'
+import { StaticResourceMessage } from '../entities/StaticResourceMessage'
 
 export interface FileUploadResult {
   success: boolean
@@ -36,12 +37,22 @@ export interface FileDeleteResult {
   error?: string
 }
 
+export interface ModelInfo {
+  name: string
+  description?: string
+  size: string
+  format: string
+  hash: string
+  screenshot?: string // base64截图字符串
+}
+
 /**
  * 文件处理服务 - Model 层
  */
 export class FileService {
   private readonly uploadsDir: string
   private readonly staticResourceRepository = AppDataSource.getRepository(StaticResourcePath)
+  private readonly staticResourceMessageRepository = AppDataSource.getRepository(StaticResourceMessage)
 
   constructor() {
     // 确保上传目录存在 - 保存到项目根目录的models文件夹
@@ -72,6 +83,44 @@ export class FileService {
     const allowedTypes = ['.zip', '.glb', '.gltf', '.pmx', '.vmd', '.png', '.jpg', '.jpeg']
     const fileExtension = path.extname(filename).toLowerCase()
     return allowedTypes.includes(fileExtension)
+  }
+
+
+
+  /**
+   * 保存base64截图到文件系统
+   */
+  private async saveScreenshot(base64Screenshot: string, modelHash: string): Promise<string> {
+    try {
+      // 解析base64数据
+      const matches = base64Screenshot.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/)
+      if (!matches) {
+        throw new Error('无效的base64图片格式')
+      }
+
+      const imageType = matches[1] // png, jpeg等
+      const base64Data = matches[2]
+
+      // 创建截图目录
+      const screenshotDir = path.join(this.uploadsDir, 'screenshots')
+      if (!fs.existsSync(screenshotDir)) {
+        fs.mkdirSync(screenshotDir, { recursive: true })
+      }
+
+      // 生成截图文件名
+      const screenshotFileName = `${modelHash}_preview.${imageType}`
+      const screenshotPath = path.join(screenshotDir, screenshotFileName)
+
+      // 将base64转换为Buffer并保存
+      const imageBuffer = Buffer.from(base64Data, 'base64')
+      fs.writeFileSync(screenshotPath, imageBuffer)
+
+      // 返回相对路径（用于数据库存储和URL访问）
+      return `screenshots/${screenshotFileName}`
+    } catch (error) {
+      console.error('保存截图失败:', error)
+      throw new Error('截图保存失败: ' + (error instanceof Error ? error.message : '未知错误'))
+    }
   }
 
   /**
@@ -112,7 +161,12 @@ export class FileService {
   /**
    * 处理ZIP文件上传和解压
    */
-  async processZipFile(filePath: string, originalName: string): Promise<FileUploadResult> {
+  async processZipFile(
+    filePath: string,
+    originalName: string,
+    userId?: number | null,
+    modelInfo?: ModelInfo | null
+  ): Promise<FileUploadResult> {
     const queryRunner = AppDataSource.createQueryRunner()
     await queryRunner.connect()
     await queryRunner.startTransaction()
@@ -186,10 +240,46 @@ export class FileService {
           }
         }
       }
-      
+
+      // 保存模型信息到StaticResourceMessage表
+      if (modelInfo && userId) {
+        // 检查是否已存在相同hash的模型信息
+        const existingMessage = await queryRunner.manager.findOne(StaticResourceMessage, {
+          where: { hash: zipHash }
+        })
+
+        if (!existingMessage) {
+          const staticResourceMessage = new StaticResourceMessage()
+          staticResourceMessage.hash = zipHash
+          staticResourceMessage.size = modelInfo.size
+          staticResourceMessage.des = modelInfo.description || null
+          staticResourceMessage.createrId = userId
+
+          // 处理截图保存
+          if (modelInfo.screenshot) {
+            try {
+              const screenshotPath = await this.saveScreenshot(modelInfo.screenshot, zipHash)
+              staticResourceMessage.picPath = screenshotPath
+              console.log(`📸 截图已保存: ${screenshotPath}`)
+            } catch (error) {
+              console.error('截图保存失败:', error)
+              // 截图保存失败不影响模型信息保存
+              staticResourceMessage.picPath = null
+            }
+          } else {
+            staticResourceMessage.picPath = null
+          }
+
+          await queryRunner.manager.save(staticResourceMessage)
+          console.log(`✅ 模型信息已保存: ${modelInfo.name} (hash: ${zipHash})`)
+        } else {
+          console.log(`ℹ️ 模型信息已存在: ${zipHash}`)
+        }
+      }
+
       // 提交事务
       await queryRunner.commitTransaction()
-      
+
       // 删除原始ZIP文件
       fs.unlinkSync(filePath)
       
@@ -262,7 +352,7 @@ export class FileService {
       })
 
       const groupFiles: Map<string, StaticResourcePath[]> = new Map()
-      
+
       fileRecords.forEach(record => {
         if (groupFiles.get(record.hash)) {
           groupFiles.set(record.hash, [...groupFiles.get(record.hash)!, record])
@@ -270,7 +360,7 @@ export class FileService {
           groupFiles.set(record.hash, [record])
         }
       })
-      
+
       return {
         success: true,
         data: groupFiles,
@@ -281,6 +371,48 @@ export class FileService {
       return {
         success: false,
         error: '获取文件列表失败'
+      }
+    }
+  }
+
+  /**
+   * 获取模型信息列表
+   */
+  async getModelList(): Promise<{ success: boolean; data?: any[]; total?: number; error?: string }> {
+    try {
+      // 查询所有模型信息记录，包含关联的用户信息
+      const modelRecords = await this.staticResourceMessageRepository.find({
+        relations: ['creater', 'resourcePath'],
+        order: {
+          create_time: 'DESC'
+        }
+      })
+
+      const modelList = modelRecords.map(record => ({
+        id: record.id,
+        hash: record.hash,
+        size: record.size,
+        description: record.des,
+        createdBy: record.creater ? {
+          id: record.creater.id,
+          nickname: record.creater.nickname,
+          email: record.creater.username
+        } : null,
+        createTime: record.create_time,
+        updateTime: record.update_time,
+        picPath: record.picPath
+      }))
+
+      return {
+        success: true,
+        data: modelList,
+        total: modelList.length
+      }
+    } catch (error) {
+      console.error('获取模型列表错误:', error)
+      return {
+        success: false,
+        error: '获取模型列表失败'
       }
     }
   }
