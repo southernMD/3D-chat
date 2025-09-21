@@ -29,8 +29,28 @@
           />
         </div>
         
+        <!-- 加载状态 -->
+        <div v-if="loading" class="loading-container">
+          <div class="loading-spinner"></div>
+          <p class="loading-text">正在加载模型列表...</p>
+        </div>
+
+        <!-- 错误状态 -->
+        <div v-else-if="error" class="error-container">
+          <div class="error-icon">⚠️</div>
+          <p class="error-text">{{ error }}</p>
+          <button class="retry-button" @click="loadModels">重试</button>
+        </div>
+
+        <!-- 空状态 -->
+        <div v-else-if="filteredModels.length === 0" class="empty-container">
+          <div class="empty-icon">📦</div>
+          <p class="empty-text">暂无模型数据</p>
+          <p class="empty-hint">请先上传一些3D模型文件</p>
+        </div>
+
         <!-- 模型网格 -->
-        <div class="model-grid">
+        <div v-else class="model-grid">
           <div
             v-for="model in filteredModels"
             :key="model.id"
@@ -39,12 +59,19 @@
           >
             <div class="model-preview" :class="`model-${model.type}`">
               <div class="model-thumbnail">
-                <span class="model-icon">{{ model.icon }}</span>
+                <img
+                  v-if="model.previewUrl"
+                  :src="model.previewUrl"
+                  :alt="model.name"
+                  class="model-preview-image"
+                  @error="handleImageError"
+                />
+                <span v-else class="model-icon">{{ model.icon }}</span>
               </div>
             </div>
             <div class="model-info">
               <h4 class="model-name">{{ model.name }}</h4>
-              <p class="model-category">{{ model.category }}</p>
+              <p class="model-size">{{ model.size }}</p>
             </div>
           </div>
         </div>
@@ -58,26 +85,30 @@
             
             <!-- 模型预览 -->
             <div class="model-preview-large" :class="`model-${currentModelInfo.type}`">
-              <div class="model-display">
-                <span class="model-icon-large">{{ currentModelInfo.icon }}</span>
-              </div>
+                <img
+                  v-if="currentModelInfo.previewUrl"
+                  :src="currentModelInfo.previewUrl"
+                  :alt="currentModelInfo.name"
+                  class="model-preview-image-large"
+                  @error="handleImageError"
+                />
             </div>
-            
+
             <!-- 模型信息 -->
             <div class="model-details">
               <div class="detail-item">
-                <span class="detail-label">{{ $t('modelSelection.category') }}:</span>
-                <span class="detail-value">{{ currentModelInfo.category }}</span>
+                <span class="detail-label">文件大小:</span>
+                <span class="detail-value">{{ currentModelInfo.size }}</span>
               </div>
-              
+
               <div class="detail-item">
-                <span class="detail-label">{{ $t('modelSelection.type') }}:</span>
-                <span class="detail-value">{{ currentModelInfo.type }}</span>
+                <span class="detail-label">创建者:</span>
+                <span class="detail-value">{{ currentModelInfo.createdBy }}</span>
               </div>
-              
+
               <div class="detail-item">
-                <span class="detail-label">{{ $t('modelSelection.polygons') }}:</span>
-                <span class="detail-value">{{ currentModelInfo.polygons }}</span>
+                <span class="detail-label">上传时间:</span>
+                <span class="detail-value">{{ currentModelInfo.createTime }}</span>
               </div>
             </div>
             
@@ -87,16 +118,7 @@
               <p>{{ currentModelInfo.description }}</p>
             </div>
             
-            <!-- 特性标签 -->
-            <div class="model-features">
-              <span
-                v-for="feature in currentModelInfo.features"
-                :key="feature"
-                class="feature-tag"
-              >
-                {{ feature }}
-              </span>
-            </div>
+
           </div>
           
           <!-- 确认按钮 -->
@@ -117,87 +139,125 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import FileUploader from '@/components/FileUploader.vue'
+import {
+  getModelList,
+  formatFileSize,
+  formatDate,
+  getModelPreviewUrl,
+  getModelTypeIcon,
+  type ModelInfo
+} from '@/api/modelApi'
 
-const { t } = useI18n()
 const router = useRouter()
 
 // 搜索查询
 const searchQuery = ref('')
 
 // 选中的模型
-const selectedModel = ref('')
+const selectedModel = ref<number | null>(null)
 
 // 模型数据
-const models = ref([
-  {
-    id: 'casual-male',
-    name: t('modelSelection.models.casualMale.name'),
-    category: t('modelSelection.models.casualMale.category'),
-    type: 'character',
-    icon: '🧑‍💼',
-    polygons: '15K',
-    description: t('modelSelection.models.casualMale.description'),
-    features: [t('modelSelection.features.rigged'), t('modelSelection.features.animated')]
-  },
-  {
-    id: 'casual-female',
-    name: t('modelSelection.models.casualFemale.name'),
-    category: t('modelSelection.models.casualFemale.category'),
-    type: 'character',
-    icon: '👩‍💼',
-    polygons: '16K',
-    description: t('modelSelection.models.casualFemale.description'),
-    features: [t('modelSelection.features.rigged'), t('modelSelection.features.animated')]
-  },
-  {
-    id: 'robot',
-    name: t('modelSelection.models.robot.name'),
-    category: t('modelSelection.models.robot.category'),
-    type: 'character',
-    icon: '🤖',
-    polygons: '12K',
-    description: t('modelSelection.models.robot.description'),
-    features: [t('modelSelection.features.rigged'), t('modelSelection.features.sciFi')]
-  },
-  {
-    id: 'fantasy-warrior',
-    name: t('modelSelection.models.fantasyWarrior.name'),
-    category: t('modelSelection.models.fantasyWarrior.category'),
-    type: 'character',
-    icon: '⚔️',
-    polygons: '20K',
-    description: t('modelSelection.models.fantasyWarrior.description'),
-    features: [t('modelSelection.features.rigged'), t('modelSelection.features.fantasy')]
-  }
-])
+const models = ref<ModelInfo[]>([])
+
+// 加载状态
+const loading = ref(false)
+
+// 错误状态
+const error = ref('')
+
+// 转换后的模型数据（用于显示）
+interface DisplayModel {
+  id: number
+  name: string
+  category: string
+  type: string
+  icon: string
+  size: string
+  description: string
+  features: string[]
+  createdBy: string
+  createTime: string
+  previewUrl: string
+  hash: string
+}
+
+const displayModels = computed((): DisplayModel[] => {
+  return models.value.map(model => ({
+    id: model.id,
+    name: model.name || `模型_${model.hash.substring(0, 8)}`,
+    category: '',
+    type: 'uploaded',
+    icon: getModelTypeIcon(model.hash),
+    size: formatFileSize(model.size),
+    description: model.description || '用户上传的3D模型',
+    features: [],
+    createdBy: model.createdBy?.nickname || '未知用户',
+    createTime: formatDate(model.createTime),
+    previewUrl: getModelPreviewUrl(model.picPath),
+    hash: model.hash
+  }))
+})
 
 // 过滤后的模型
 const filteredModels = computed(() => {
   if (!searchQuery.value) {
-    return models.value
+    return displayModels.value
   }
-  return models.value.filter(model =>
+  return displayModels.value.filter(model =>
     model.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-    model.category.toLowerCase().includes(searchQuery.value.toLowerCase())
+    model.createdBy.toLowerCase().includes(searchQuery.value.toLowerCase())
   )
 })
 
 // 当前模型信息
 const currentModelInfo = computed(() => {
-  return models.value.find(model => model.id === selectedModel.value) || models.value[0]
+  return displayModels.value.find(model => model.id === selectedModel.value) || displayModels.value[0]
 })
 
-// 检查访问权限
-onMounted(() => {
-  // 默认选择第一个模型
-  if (models.value.length > 0) {
-    selectedModel.value = models.value[0].id
+// 加载模型列表
+const loadModels = async () => {
+  loading.value = true
+  error.value = ''
+
+  try {
+    const response = await getModelList()
+
+    if (response.success && response.data) {
+      models.value = response.data
+
+      // 默认选择第一个模型
+      if (displayModels.value.length > 0) {
+        selectedModel.value = displayModels.value[0].id
+      }
+
+      console.log(`加载了 ${response.data.length} 个模型`)
+    } else {
+      error.value = response.error || '加载模型列表失败'
+      ElMessage.error(error.value)
+    }
+  } catch (err) {
+    error.value = '网络错误，请稍后重试'
+    ElMessage.error(error.value)
+    console.error('加载模型列表失败:', err)
+  } finally {
+    loading.value = false
   }
+}
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadModels()
 })
+
+// 图片加载错误处理
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  img.style.display = 'none'
+  // 可以在这里设置默认图片或显示图标
+}
 
 // 文件选择处理
 const handleFileSelected = (files: File[]) => {
@@ -209,6 +269,9 @@ const handleFileSelected = (files: File[]) => {
 const handleUploadCompleted = (file: any) => {
   console.log('File uploaded:', file)
   ElMessage.success(`文件 ${file.name} 上传成功！`)
+
+  // 重新加载模型列表
+  loadModels()
 }
 
 // 文件上传错误处理
@@ -220,13 +283,19 @@ const handleUploadError = (file: any, error: string) => {
 // 确认模型选择
 const confirmModelSelection = () => {
   if (!selectedModel.value) {
-    ElMessage.error(t('modelSelection.pleaseSelectModel'))
+    ElMessage.error('请先选择一个模型')
     return
   }
-  
-  console.log('Selected model:', selectedModel.value)
-  ElMessage.success(t('modelSelection.modelSelected'))
-  
+
+  const selected = displayModels.value.find(model => model.id === selectedModel.value)
+  if (!selected) {
+    ElMessage.error('选择的模型无效')
+    return
+  }
+
+  console.log('Selected model:', selected)
+  ElMessage.success(`已选择模型: ${selected.name}`)
+
   // TODO: 保存选择的模型并跳转到房间
   // 这里可以跳转到实际的房间页面或返回房间大厅
   router.push('/lobby')
@@ -365,6 +434,8 @@ const confirmModelSelection = () => {
 }
 
 .model-thumbnail {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -388,6 +459,121 @@ const confirmModelSelection = () => {
 .model-category {
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.85rem;
+  margin-bottom: 3px;
+}
+
+.model-size {
+  color: rgba(0, 255, 255, 0.8);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.model-preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.model-preview-image-large {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+// 加载状态样式
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(0, 255, 255, 0.3);
+  border-top: 3px solid #00ffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 1rem;
+  margin: 0;
+}
+
+// 错误状态样式
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+
+.error-text {
+  font-size: 1rem;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.retry-button {
+  padding: 10px 20px;
+  background: rgba(255, 0, 0, 0.2);
+  border: 1px solid rgba(255, 0, 0, 0.5);
+  border-radius: 8px;
+  color: #ff6b6b;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 0, 0, 0.3);
+    border-color: #ff6b6b;
+  }
+}
+
+// 空状态样式
+.empty-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.empty-hint {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
 }
 
 .description-section {
@@ -475,21 +661,7 @@ const confirmModelSelection = () => {
   }
 }
 
-.model-features {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 30px;
-}
 
-.feature-tag {
-  background: rgba(0, 255, 255, 0.2);
-  color: #00ffff;
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 0.8rem;
-  border: 1px solid rgba(0, 255, 255, 0.3);
-}
 
 .confirm-button-section {
   margin-top: auto;

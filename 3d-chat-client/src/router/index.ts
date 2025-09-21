@@ -33,12 +33,7 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('@/view/Register.vue'),
         meta: { requiresAuth: false, hideForAuth: true }
     },
-    {
-        path: '/verify-email',
-        name: 'verify-email',
-        component: () => import('@/view/VerifyEmail.vue'),
-        meta: { requiresAuth: false }
-    },
+
     {
         path: '/create-room',
         name: 'create-room',

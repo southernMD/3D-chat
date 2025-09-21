@@ -1,31 +1,17 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { showSuccess, showError } from '@/utils/message'
+import {
+  registerUser,
+  loginUser,
+  getCurrentUser,
+  sendRegisterCode,
+  type User,
+  type RegisterParams
+} from '@/api/authApi'
 
-// 用户信息接口
-export interface User {
-  id: number
-  email: string
-  username?: string
-  avatar_url?: string
-  is_verified: boolean
-  created_at: string
-}
-
-// 注册参数接口
-export interface RegisterParams {
-  email: string
-  username: string  // 改为必填
-  password: string
-  verificationCode: string
-}
-
-// API响应接口
-interface ApiResponse<T = any> {
-  success: boolean
-  message: string
-  data?: T
-}
+// 重新导出类型供其他模块使用
+export type { User, RegisterParams }
 
 export const useAuthStore = defineStore('auth', () => {
   // 状态
@@ -37,38 +23,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!token.value)
   const isVerified = computed(() => user.value?.is_verified ?? false)
 
-  // API基础URL
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
-  // HTTP请求工具函数
-  const request = async <T = any>(
-    endpoint: string, 
-    options: RequestInit = {}
-  ): Promise<T> => {
-    const url = `${API_BASE_URL}${endpoint}`
-    
-    const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token.value && { Authorization: `Bearer ${token.value}` }),
-        ...options.headers,
-      },
-      ...options,
-    }
-
-    try {
-      const response = await fetch(url, config)
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || `HTTP error! status: ${response.status}`)
-      }
-
-      return data
-    } catch (error: any) {
-      throw error
-    }
-  }
 
   // 设置认证信息
   const setAuth = (authData: { user: User; token: string }, remember: boolean = false) => {
@@ -109,16 +64,11 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       loading.value = true
 
-      const response = await request<ApiResponse<{ user: User; token: string }>>('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(params),
-      })
+      const response = await registerUser(params)
 
-      if (response.success) {
+      if (response.success && response.data) {
         // 注册成功后自动设置认证信息
-        if (response.data) {
-          setAuth(response.data)
-        }
+        setAuth(response.data)
         showSuccess(response.message || '注册成功，已自动登录！')
         return true
       } else {
@@ -138,10 +88,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       loading.value = true
 
-      const response = await request<ApiResponse<{ user: User; token: string }>>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email: loginField, password }),
-      })
+      const response = await loginUser({ email: loginField, password })
+
       if (response.success && response.data) {
         setAuth(response.data, remember)
         showSuccess(response.message || '登录成功！')
@@ -163,50 +111,22 @@ export const useAuthStore = defineStore('auth', () => {
     clearAuth()
   }
 
-  // 验证邮箱
-  const verifyEmail = async (verificationToken: string): Promise<boolean> => {
+  // 发送注册验证码
+  const sendVerificationCode = async (email: string): Promise<boolean> => {
     try {
       loading.value = true
-      
-      const response = await request<ApiResponse>('/auth/verify-email', {
-        method: 'POST',
-        body: JSON.stringify({ token: verificationToken }),
-      })
+
+      const response = await sendRegisterCode(email)
 
       if (response.success) {
-        ElMessage.success(response.message)
+        showSuccess(response.message || '验证码发送成功')
         return true
       } else {
-        ElMessage.error(response.message)
+        showError(response.message || '发送验证码失败')
         return false
       }
     } catch (error: any) {
-      ElMessage.error(error.message || '邮箱验证失败')
-      return false
-    } finally {
-      loading.value = false
-    }
-  }
-
-  // 重新发送验证邮件
-  const resendVerification = async (email: string): Promise<boolean> => {
-    try {
-      loading.value = true
-      
-      const response = await request<ApiResponse>('/auth/resend-verification', {
-        method: 'POST',
-        body: JSON.stringify({ email }),
-      })
-
-      if (response.success) {
-        ElMessage.success(response.message)
-        return true
-      } else {
-        ElMessage.error(response.message)
-        return false
-      }
-    } catch (error: any) {
-      ElMessage.error(error.message || '重新发送验证邮件失败')
+      showError(error.message || '发送验证码失败')
       return false
     } finally {
       loading.value = false
@@ -217,19 +137,17 @@ export const useAuthStore = defineStore('auth', () => {
   const fetchUserInfo = async (clearOnError: boolean = true, silent: boolean = false): Promise<boolean> => {
     try {
       loading.value = true
-      
-      const response = await request<ApiResponse>('/auth/me', {
-        method: 'GET',
-      })
-      
+
+      const response = await getCurrentUser()
+
       // 如果是静默模式且网络错误，直接返回 false
       if (!response.success && silent) {
         return false
       }
-      
+
       if (response.success && response.data) {
         user.value = response.data.user
-        
+
         // 根据是否记住我来保存用户信息
         const isRemembered = localStorage.getItem('remember_me') === 'true'
         if (isRemembered) {
@@ -237,7 +155,7 @@ export const useAuthStore = defineStore('auth', () => {
         } else {
           sessionStorage.setItem('auth_user', JSON.stringify(response.data.user))
         }
-        
+
         return true
       } else {
         if (clearOnError) {
@@ -297,17 +215,16 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     token,
     loading,
-    
+
     // 计算属性
     isAuthenticated,
     isVerified,
-    
+
     // 方法
     register,
     login,
     logout,
-    verifyEmail,
-    resendVerification,
+    sendVerificationCode,
     fetchUserInfo,
     checkAuth,
     initAuth,

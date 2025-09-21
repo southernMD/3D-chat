@@ -93,8 +93,9 @@
                                     <!-- 批量操作 -->
                                     <div class="batch-actions">
                                         <button class="batch-btn upload-btn" @click="uploadAllFiles"
-                                            :disabled="!canUpload || isUploading">
-                                            {{ $t('fileUploader.upload') }}
+                                            :disabled="!canUpload || isUploading || isUploadingDebounce">
+                                            <span v-if="isUploadingDebounce">处理中...</span>
+                                            <span v-else>{{ $t('fileUploader.upload') }}</span>
                                         </button>
 
                                         <button class="batch-btn cancel-btn" @click="cancelUpload"
@@ -239,6 +240,7 @@ const isUploading = ref(false)
 const currentXHR = ref<XMLHttpRequest | null>(null) // 保存当前的xhr引用
 const abortController = ref<AbortController | null>(null) // 用于取消hash计算和压缩
 const currentWorkers = ref<Worker[]>([]) // 保存当前运行的Workers
+const activeURLs = ref<string[]>([]) // 保存所有创建的URL对象，用于清理
 
 // 模型预览相关
 const modelCanvas = ref<HTMLCanvasElement | null>(null)
@@ -273,7 +275,11 @@ const canUpload = computed(() => {
 
 // 方法
 const showUploadDialog = () => {
+    // 打开弹窗前先清理之前的资源
+    performResourceCleanup()
+    resetUploadState()
     showUpload.value = true
+    console.log('📂 上传弹窗已打开，资源已清理')
 }
 
 const triggerFileSelect = () => {
@@ -667,7 +673,20 @@ const uploadWithXHR = async (zipBlob: Blob, files: UploadFile[], modelHash: stri
     })
 }
 
+// 防抖变量
+const isUploadingDebounce = ref(false)
+
 const uploadAllFiles = async () => {
+    // 防抖检查
+    if (isUploadingDebounce.value) {
+        console.log('⚠️ 上传按钮防抖中，忽略重复点击')
+        return
+    }
+
+    // 设置防抖标志
+    isUploadingDebounce.value = true
+
+    try {
     // 检查用户是否已登录
     // if (!authStore.isAuthenticated) {
     //     showError('请先登录后再上传文件')
@@ -789,6 +808,20 @@ const uploadAllFiles = async () => {
             worker.terminate()
         })
         currentWorkers.value = []
+
+        // 清除防抖标志（延迟500ms防止快速重复点击）
+        setTimeout(() => {
+            isUploadingDebounce.value = false
+        }, 500)
+    }
+    } catch (outerError) {
+        console.error('上传过程中发生错误:', outerError)
+        showError('上传失败: ' + (outerError instanceof Error ? outerError.message : '未知错误'))
+
+        // 清除防抖标志
+        setTimeout(() => {
+            isUploadingDebounce.value = false
+        }, 500)
     }
 }
 
@@ -971,14 +1004,15 @@ const loadModelPreview = async (file: File, fileType: 'glb' | 'gltf' | 'zip') =>
     // 清除之前的模型
     if (currentModel) {
         scene.remove(currentModel)
+        disposeModel(currentModel)
         currentModel = null
     }
 
     try {
         if (fileType === 'glb' || fileType === 'gltf') {
             const loader = new GLTFLoader()
-            const fileURL = URL.createObjectURL(file)
-            
+            const fileURL = createManagedURL(file)
+
             loader.load(fileURL, (gltf) => {
                 currentModel = gltf.scene
                 scene!.add(currentModel)
@@ -995,13 +1029,11 @@ const loadModelPreview = async (file: File, fileType: 'glb' | 'gltf' | 'zip') =>
                 controls!.update()
                 
                 hasModelLoaded.value = true
-                URL.revokeObjectURL(fileURL)
-                
+
                 showSuccess('模型加载成功')
             }, undefined, (error) => {
                 console.error('模型加载失败:', error)
                 showError('模型加载失败')
-                URL.revokeObjectURL(fileURL)
             })
         } else if (fileType === 'zip') {
             try {
@@ -1021,7 +1053,7 @@ const loadModelPreview = async (file: File, fileType: 'glb' | 'gltf' | 'zip') =>
                 const textureURLMap = new Map<string, string>()
 
                 for (const [fileName, textureFile] of zipContents.textures) {
-                    const textureURL = URL.createObjectURL(textureFile)
+                    const textureURL = createManagedURL(textureFile)
                     textureURLs.push(textureURL)
                     textureURLMap.set(fileName, textureURL)
                     console.log(`📝 生成纹理URL: ${fileName} -> ${textureURL}`)
@@ -1033,12 +1065,7 @@ const loadModelPreview = async (file: File, fileType: 'glb' | 'gltf' | 'zip') =>
                 // 监听所有资源加载完成
                 tempLoadingManager.onLoad = () => {
                     console.log('🎉 所有资源（包括纹理）加载完成')
-                    // 延迟清理纹理URL，确保纹理已经被使用
-                    nextTick(() => {
-                        textureURLs.forEach(url => {
-                            URL.revokeObjectURL(url)
-                        })
-                    })
+                    // URL会在组件卸载时统一清理，这里不需要手动清理
                 }
 
                 tempLoadingManager.resolveURL = function(url: string) {
@@ -1054,7 +1081,7 @@ const loadModelPreview = async (file: File, fileType: 'glb' | 'gltf' | 'zip') =>
                 
                 // 加载 PMX 模型，使用自定义的LoadingManager来处理纹理URL重定向
                 const loader = new MMDLoader(tempLoadingManager)
-                const pmxURL = URL.createObjectURL(zipContents.pmxFile)
+                const pmxURL = createManagedURL(zipContents.pmxFile)
 
                 loader.load(pmxURL, (mmd) => {
                     currentModel = new THREE.Group()
@@ -1085,18 +1112,11 @@ const loadModelPreview = async (file: File, fileType: 'glb' | 'gltf' | 'zip') =>
                     controls!.update()
 
                     hasModelLoaded.value = true
-                    URL.revokeObjectURL(pmxURL)
 
                     showSuccess(`PMX模型加载成功 (包含 ${zipContents.textures.size} 个纹理, ${zipContents.vmdFiles.length} 个动作文件)`)
                 }, undefined, (error: any) => {
                     console.error('PMX模型加载失败:', error)
                     showError('PMX模型加载失败: ' + (error?.message || '未知错误'))
-                    URL.revokeObjectURL(pmxURL)
-
-                    // 立即清理纹理URL（因为加载失败了）
-                    textureURLs.forEach(url => {
-                        URL.revokeObjectURL(url)
-                    })
 
                     hasModelLoaded.value = true
                 })
@@ -1110,6 +1130,112 @@ const loadModelPreview = async (file: File, fileType: 'glb' | 'gltf' | 'zip') =>
         console.error('模型预览失败:', error)
         showError('模型预览失败')
     }
+}
+
+// URL对象管理
+const createManagedURL = (blob: Blob): string => {
+    const url = URL.createObjectURL(blob)
+    activeURLs.value.push(url)
+    return url
+}
+
+const cleanupAllURLs = () => {
+    activeURLs.value.forEach(url => {
+        URL.revokeObjectURL(url)
+    })
+    activeURLs.value = []
+    console.log('🧹 已清理所有URL对象')
+}
+
+// 深度清理Three.js模型资源
+const disposeModel = (model: THREE.Object3D) => {
+    model.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+            // 清理几何体
+            if (child.geometry) {
+                child.geometry.dispose()
+            }
+
+            // 清理材质和纹理
+            if (child.material) {
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(material => {
+                        disposeMaterial(material)
+                    })
+                } else {
+                    disposeMaterial(child.material)
+                }
+            }
+        }
+    })
+}
+
+// 清理材质和相关纹理
+const disposeMaterial = (material: THREE.Material) => {
+    // 清理所有可能的纹理
+    const textureProperties = [
+        'map', 'normalMap', 'roughnessMap', 'metalnessMap',
+        'aoMap', 'emissiveMap', 'bumpMap', 'displacementMap',
+        'alphaMap', 'lightMap', 'envMap'
+    ]
+
+    textureProperties.forEach(prop => {
+        if ((material as any)[prop]) {
+            (material as any)[prop].dispose()
+        }
+    })
+
+    material.dispose()
+}
+
+// 执行完整的资源清理（弹窗关闭时调用）
+const performResourceCleanup = () => {
+    console.log('🧹 开始执行资源清理...')
+
+    // 1. 取消所有正在进行的操作
+    if (abortController.value) {
+        abortController.value.abort()
+        abortController.value = null
+    }
+
+    // 2. 终止所有Web Workers
+    currentWorkers.value.forEach(worker => {
+        worker.terminate()
+    })
+    currentWorkers.value = []
+
+    // 3. 取消XHR请求
+    if (currentXHR.value) {
+        currentXHR.value.abort()
+        currentXHR.value = null
+    }
+
+    // 4. 清理动画循环
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId)
+        animationFrameId = null
+    }
+
+    // 5. 清理Three.js资源
+    if (currentModel) {
+        disposeModel(currentModel)
+        currentModel = null
+    }
+
+    // 6. 清理场景
+    if (scene) {
+        scene.traverse((child) => {
+            if (child instanceof THREE.Object3D) {
+                disposeModel(child)
+            }
+        })
+        scene.clear()
+    }
+
+    // 7. 清理所有URL对象
+    cleanupAllURLs()
+
+    console.log('✅ 资源清理完成')
 }
 
 // 截图功能
@@ -1144,6 +1270,8 @@ const resetUploadState = () => {
     currentModelType.value = null
     waitingForVmd.value = false
     isDetectingAnimation.value = false
+    isUploading.value = false
+    isUploadingDebounce.value = false // 清理防抖状态
 
     // 重置信息表单
     modelInfo.value = {
@@ -1157,6 +1285,7 @@ const resetUploadState = () => {
     hasModelLoaded.value = false
     if (currentModel && scene) {
         scene.remove(currentModel)
+        disposeModel(currentModel)
         currentModel = null
     }
 
@@ -1247,14 +1376,24 @@ const cancelUpload = () => {
 
 // 修改关闭对话框方法
 const closeUploadDialog = () => {
-    showUpload.value = false
-    // 如果没有正在进行的上传，重置状态
-    const hasActiveUploads = uploadFiles.value.some(file =>
-        file.status === 'uploading' || waitingForVmd.value
-    )
-    if (!hasActiveUploads) {
-        resetUploadState()
+    console.log('🚪 关闭上传弹窗，开始清理资源...')
+
+    // 1. 强制取消所有正在进行的上传
+    if (isUploading.value) {
+        cancelUpload()
+        console.log('🛑 已取消正在进行的上传')
     }
+
+    // 2. 执行完整的资源清理
+    performResourceCleanup()
+
+    // 3. 重置所有状态
+    resetUploadState()
+
+    // 4. 关闭弹窗
+    showUpload.value = false
+
+    console.log('✅ 上传弹窗关闭，资源清理完成')
 }
 
 const checkGLBModel = async (file: File) => {
@@ -1292,34 +1431,28 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-    // 清理资源
-    if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId)
-    }
-    
-    if (renderer) {
-        renderer.dispose()
-    }
-    
+    console.log('🧹 组件卸载，执行最终资源清理...')
+
+    // 执行完整的资源清理
+    performResourceCleanup()
+
+    // 额外清理渲染器和控制器引用
     if (controls) {
         controls.dispose()
+        controls = null
     }
-    
-    // 清理模型资源
-    if (currentModel) {
-        currentModel.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-                if (child.geometry) child.geometry.dispose()
-                if (child.material) {
-                    if (Array.isArray(child.material)) {
-                        child.material.forEach(material => material.dispose())
-                    } else {
-                        child.material.dispose()
-                    }
-                }
-            }
-        })
+
+    if (renderer) {
+        renderer.dispose()
+        renderer.forceContextLoss()
+        renderer = null
     }
+
+    // 清理场景和相机引用
+    scene = null
+    camera = null
+
+    console.log('✅ 组件卸载清理完成')
 })
 
 

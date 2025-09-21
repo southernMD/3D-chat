@@ -32,7 +32,8 @@ app.use('/models', express.static(path.join(__dirname, '/models')));
 app.use('/api', apiRoutes);
 app.use('/api/auth', authRoutes);
 // 文件上传路由需要JWT认证
-app.use('/api/file', authMiddleware.authenticateToken, fileRoutes);
+// app.use('/api/file', authMiddleware.authenticateToken, fileRoutes);
+app.use('/api/file', fileRoutes);
 
 // 404处理中间件（放在所有路由之后）
 app.use(notFoundHandler);

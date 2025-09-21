@@ -263,32 +263,15 @@ const sendVerificationCode = async () => {
       return
     }
 
-    loading.value = true
+    const success = await authStore.sendVerificationCode(registerForm.email)
 
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/send-register-code`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: registerForm.email
-      }),
-    })
-
-    const data = await response.json()
-
-    if (data.success) {
+    if (success) {
       codeSent.value = true
-      showSuccess(data.message || '验证码已发送到您的邮箱')
       startCountdown()
-    } else {
-      showError(data.message || '发送验证码失败，请检查邮箱地址')
     }
   } catch (error: any) {
     console.error('Send verification code error:', error)
     showError('网络错误，请稍后重试')
-  } finally {
-    loading.value = false
   }
 }
 

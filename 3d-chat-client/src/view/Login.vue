@@ -39,9 +39,6 @@
         <el-form-item>
           <div class="form-options">
             <el-checkbox v-model="rememberMe">{{ $t('auth.login.rememberMe') }}</el-checkbox>
-            <el-link type="primary" @click="showForgotPassword = true">
-              {{ $t('auth.login.forgotPassword') }}
-            </el-link>
           </div>
         </el-form-item>
 
@@ -66,37 +63,7 @@
       </el-form>
     </div>
 
-    <!-- 忘记密码对话框 -->
-    <el-dialog
-      v-model="showForgotPassword"
-      :title="$t('auth.login.resetPassword')"
-      width="400px"
-      :close-on-click-modal="false"
-    >
-      <el-form ref="forgotFormRef" :model="forgotForm" :rules="forgotRules">
-        <el-form-item prop="email">
-          <el-input
-            v-model="forgotForm.email"
-            type="email"
-            :placeholder="$t('auth.login.resetPasswordPlaceholder')"
-            prefix-icon="Message"
-          />
-        </el-form-item>
-      </el-form>
 
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="showForgotPassword = false">{{ $t('common.cancel') }}</el-button>
-          <el-button
-            type="primary"
-            :loading="forgotLoading"
-            @click="handleForgotPassword"
-          >
-            {{ $t('auth.login.sendResetEmail') }}
-          </el-button>
-        </span>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -104,7 +71,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ElMessage, ElNotification } from 'element-plus'
+import { ElNotification } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 
@@ -113,11 +80,9 @@ const authStore = useAuthStore()
 
 // 表单引用
 const loginFormRef = ref<FormInstance>()
-const forgotFormRef = ref<FormInstance>()
 
 // 加载状态
 const loading = ref(false)
-const forgotLoading = ref(false)
 
 // 表单数据
 const loginForm = reactive({
@@ -125,13 +90,8 @@ const loginForm = reactive({
   password: ''
 })
 
-const forgotForm = reactive({
-  email: ''
-})
-
 // 其他状态
 const rememberMe = ref(false)
-const showForgotPassword = ref(false)
 
 // 表单验证规则
 const { t } = useI18n()
@@ -146,12 +106,7 @@ const loginRules: FormRules = {
   ]
 }
 
-const forgotRules: FormRules = {
-  email: [
-    { required: true, message: t('auth.validation.emailRequired'), trigger: 'blur' },
-    { type: 'email', message: t('auth.validation.emailInvalid'), trigger: 'blur' }
-  ]
-}
+
 
 // 登录处理
 const handleLogin = async () => {
@@ -180,24 +135,7 @@ const handleLogin = async () => {
   }
 }
 
-// 忘记密码处理
-const handleForgotPassword = async () => {
-  if (!forgotFormRef.value) return
 
-  try {
-    await forgotFormRef.value.validate()
-    forgotLoading.value = true
-
-    // TODO: 实现忘记密码API调用
-    ElMessage.success('重置密码邮件已发送，请检查您的邮箱')
-    showForgotPassword.value = false
-    forgotForm.email = ''
-  } catch (error) {
-    console.error('Forgot password error:', error)
-  } finally {
-    forgotLoading.value = false
-  }
-}
 </script>
 
 <style scoped lang="less">

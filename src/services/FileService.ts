@@ -5,6 +5,7 @@ import { AppDataSource } from '../config/database'
 import { StaticResourcePath } from '../entities/StaticResourcePath'
 import { StaticResourceMessage } from '../entities/StaticResourceMessage'
 
+
 export interface FileUploadResult {
   success: boolean
   message: string
@@ -167,11 +168,7 @@ export class FileService {
     userId?: number | null,
     modelInfo?: ModelInfo | null
   ): Promise<FileUploadResult> {
-    const queryRunner = AppDataSource.createQueryRunner()
-    await queryRunner.connect()
-    await queryRunner.startTransaction()
-    
-    try {
+    return await AppDataSource.transaction(async (manager) => {
       const zipBuffer = fs.readFileSync(filePath)
       const zip = new JSZip()
       const zipContent = await zip.loadAsync(zipBuffer)
@@ -183,12 +180,7 @@ export class FileService {
       if (!validationResult.valid) {
         // 删除上传的文件
         fs.unlinkSync(filePath)
-        await queryRunner.rollbackTransaction()
-        return {
-          success: false,
-          message: validationResult.message || '文件验证失败',
-          error: validationResult.message
-        }
+        throw new Error(validationResult.message || '文件验证失败')
       }
       
       // 从文件名中提取hash值（移除.zip后缀）
@@ -221,21 +213,21 @@ export class FileService {
           const staticResourcePath = `/models/${zipHash}/${fileName}`
           
           // 检查是否已存在相同的记录
-          const existingRecord = await queryRunner.manager.findOne(StaticResourcePath, {
+          const existingRecord = await manager.findOne(StaticResourcePath, {
             where: {
               hash: zipHash,
               path: staticResourcePath,
               ext: fileExtension
             }
           })
-          
+
           if (!existingRecord) {
             const staticResource = new StaticResourcePath()
             staticResource.hash = zipHash
             staticResource.path = staticResourcePath
             staticResource.ext = fileExtension
-            
-            await queryRunner.manager.save(staticResource)
+
+            await manager.save(staticResource)
             savedFiles.push(fileName)
           }
         }
@@ -244,13 +236,14 @@ export class FileService {
       // 保存模型信息到StaticResourceMessage表
       if (modelInfo && userId) {
         // 检查是否已存在相同hash的模型信息
-        const existingMessage = await queryRunner.manager.findOne(StaticResourceMessage, {
+        const existingMessage = await manager.findOne(StaticResourceMessage, {
           where: { hash: zipHash }
         })
 
         if (!existingMessage) {
           const staticResourceMessage = new StaticResourceMessage()
           staticResourceMessage.hash = zipHash
+          staticResourceMessage.name = modelInfo.name || null
           staticResourceMessage.size = modelInfo.size
           staticResourceMessage.des = modelInfo.description || null
           staticResourceMessage.createrId = userId
@@ -270,39 +263,33 @@ export class FileService {
             staticResourceMessage.picPath = null
           }
 
-          await queryRunner.manager.save(staticResourceMessage)
+          await manager.save(staticResourceMessage)
           console.log(`✅ 模型信息已保存: ${modelInfo.name} (hash: ${zipHash})`)
         } else {
           console.log(`ℹ️ 模型信息已存在: ${zipHash}`)
         }
       }
 
-      // 提交事务
-      await queryRunner.commitTransaction()
-
       // 删除原始ZIP文件
       fs.unlinkSync(filePath)
-      
+
       return {
         success: true,
-        message: '文件上传并解压成功',
-        extractPath: extractDir,
-        folderName: zipHash,
+        message: `ZIP文件处理完成，保存了 ${savedFiles.length} 个文件`,
+        hash: zipHash,
+        savedFiles: savedFiles,
         files: files.filter(f => !zipContent.files[f].dir),
         originalName: originalName
       }
-    } catch (error) {
+    }).catch((error) => {
       console.error('ZIP处理错误:', error)
-      
-      // 回滚事务
-      await queryRunner.rollbackTransaction()
-      
+
       // 清理已创建的文件
       try {
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath)
         }
-        
+
         // 清理解压的文件夹
         const zipHash = path.basename(originalName, '.zip')
         const extractDir = path.join(path.dirname(filePath), zipHash)
@@ -312,15 +299,13 @@ export class FileService {
       } catch (cleanupError) {
         console.error('清理文件失败:', cleanupError)
       }
-      
+
       return {
         success: false,
         message: 'ZIP文件损坏或格式错误',
-        error: 'ZIP文件损坏或格式错误'
+        error: error instanceof Error ? error.message : 'ZIP文件损坏或格式错误'
       }
-    } finally {
-      await queryRunner.release()
-    }
+    })
   }
 
   /**
@@ -391,6 +376,7 @@ export class FileService {
       const modelList = modelRecords.map(record => ({
         id: record.id,
         hash: record.hash,
+        name: record.name,
         size: record.size,
         description: record.des,
         createdBy: record.creater ? {
@@ -421,22 +407,15 @@ export class FileService {
    * 删除文件
    */
   async deleteFile(hash: string): Promise<FileDeleteResult> {
-    const queryRunner = AppDataSource.createQueryRunner()
-    await queryRunner.connect()
-    await queryRunner.startTransaction()
-    
-    try {
+    return await AppDataSource.transaction(async (manager) => {
       // 从数据库删除相关记录
-      const deleteResult = await queryRunner.manager.delete(StaticResourcePath, { hash: hash })
-      
-      // 提交事务
-      await queryRunner.commitTransaction()
-      
+      const deleteResult = await manager.delete(StaticResourcePath, { hash: hash })
+
       // 删除文件系统中的文件夹
       const folderPath = path.join(this.uploadsDir, hash)
       if (fs.existsSync(folderPath)) {
         const stats = fs.statSync(folderPath)
-        
+
         if (stats.isDirectory()) {
           // 删除文件夹及其内容
           fs.rmSync(folderPath, { recursive: true, force: true })
@@ -445,25 +424,20 @@ export class FileService {
           fs.unlinkSync(folderPath)
         }
       }
-      
+
       return {
         success: true,
         message: '模型文件删除成功',
         deletedRecords: deleteResult.affected || 0
       }
-    } catch (error) {
+    }).catch((error) => {
       console.error('删除文件错误:', error)
-      
-      // 回滚事务
-      await queryRunner.rollbackTransaction()
-      
+
       return {
         success: false,
         error: '删除文件失败'
       }
-    } finally {
-      await queryRunner.release()
-    }
+    })
   }
 }
 

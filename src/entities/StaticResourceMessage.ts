@@ -22,6 +22,9 @@ export class StaticResourceMessage {
   hash!: string | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
+  name!: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
   size!: string | null;
 
   @Column({ name: 'picPath', type: 'varchar', length: 255, nullable: true })
