@@ -60,24 +60,30 @@ export class AuthService {
 
   // 发送注册验证码
   async sendRegisterCode(email: string): Promise<{ success: boolean; message: string }> {
+    const queryRunner = AppDataSource.createQueryRunner()
+    await queryRunner.connect()
+    await queryRunner.startTransaction()
+    
     try {
       // 验证邮箱格式
       if (!this.isValidEmail(email)) {
+        await queryRunner.rollbackTransaction()
         return { success: false, message: '邮箱格式不正确' };
       }
 
       // 检查用户是否已存在
-      const existingUser = await this.userRepository.findOne({
+      const existingUser = await queryRunner.manager.findOne(User, {
         where: { username: email }
       });
 
       if (existingUser) {
+        await queryRunner.rollbackTransaction()
         return { success: false, message: '该邮箱已被注册' };
       }
 
       // 检查是否在60秒内发送过验证码
       const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
-      const recentCode = await this.verificationCodeRepository.findOne({
+      const recentCode = await queryRunner.manager.findOne(VerificationCode, {
         where: {
           email: email,
           create_time: MoreThan(oneMinuteAgo)
@@ -86,6 +92,7 @@ export class AuthService {
       });
 
       if (recentCode) {
+        await queryRunner.rollbackTransaction()
         const remainingTime = Math.ceil((recentCode.create_time.getTime() + 60 * 1000 - Date.now()) / 1000);
         return { 
           success: false, 
@@ -98,7 +105,7 @@ export class AuthService {
       const expireTime = new Date(Date.now() + 10 * 60 * 1000); // 10分钟后过期
 
       // 查找是否有未使用的验证码
-      const existingCode = await this.verificationCodeRepository.findOne({
+      const existingCode = await queryRunner.manager.findOne(VerificationCode, {
         where: {
           email: email,
           is_used: 0,
@@ -112,23 +119,27 @@ export class AuthService {
         existingCode.code = code;
         existingCode.expire_time = expireTime;
         existingCode.update_time = new Date();
-        await this.verificationCodeRepository.save(existingCode);
+        await queryRunner.manager.save(existingCode);
       } else {
         // 创建新验证码记录
-        const verificationCode = this.verificationCodeRepository.create({
+        const verificationCode = queryRunner.manager.create(VerificationCode, {
           email,
           code,
           expire_time: expireTime,
           is_used: 0
         });
-        await this.verificationCodeRepository.save(verificationCode);
+        await queryRunner.manager.save(verificationCode);
       }
 
       // 发送验证码邮件
       const emailSent = await this.emailService.sendVerificationCode(email, code);
       if (!emailSent) {
+        await queryRunner.rollbackTransaction()
         return { success: false, message: '发送验证码邮件失败' };
       }
+
+      // 提交事务
+      await queryRunner.commitTransaction()
 
       return { 
         success: true, 
@@ -137,14 +148,21 @@ export class AuthService {
 
     } catch (error) {
       console.error('Send register code error:', error);
+      await queryRunner.rollbackTransaction()
       return { success: false, message: '发送验证码过程中发生错误' };
+    } finally {
+      await queryRunner.release()
     }
   }
 
   // 验证验证码
   async verifyCode(email: string, code: string): Promise<boolean> {
+    const queryRunner = AppDataSource.createQueryRunner()
+    await queryRunner.connect()
+    await queryRunner.startTransaction()
+    
     try {
-      const verificationCode = await this.verificationCodeRepository.findOne({
+      const verificationCode = await queryRunner.manager.findOne(VerificationCode, {
         where: {
           email,
           code,
@@ -155,17 +173,23 @@ export class AuthService {
       });
 
       if (!verificationCode) {
+        await queryRunner.rollbackTransaction()
         return false;
       }
 
       // 标记验证码为已使用
       verificationCode.is_used = 1;
-      await this.verificationCodeRepository.save(verificationCode);
+      await queryRunner.manager.save(verificationCode);
 
+      // 提交事务
+      await queryRunner.commitTransaction()
       return true;
     } catch (error) {
       console.error('Verify code error:', error);
+      await queryRunner.rollbackTransaction()
       return false;
+    } finally {
+      await queryRunner.release()
     }
   }
 
@@ -256,46 +280,63 @@ export class AuthService {
 
   // 创建用户的通用方法
   private async createUser(email: string, password: string, username: string): Promise<{ success: boolean; message: string; data?: any }> {
-    // 检查邮箱是否已存在
-    const existingEmailUser = await this.userRepository.findOne({
-      where: { username: email }
-    });
+    const queryRunner = AppDataSource.createQueryRunner()
+    await queryRunner.connect()
+    await queryRunner.startTransaction()
+    
+    try {
+      // 检查邮箱是否已存在
+      const existingEmailUser = await queryRunner.manager.findOne(User, {
+        where: { username: email }
+      });
 
-    if (existingEmailUser) {
-      return { success: false, message: '该邮箱已被注册' };
-    }
-
-    // 检查昵称是否已存在
-    const existingNicknameUser = await this.userRepository.findOne({
-      where: { nickname: username }
-    });
-
-    if (existingNicknameUser) {
-      return { success: false, message: '该用户名已被使用' };
-    }
-
-    // 加密密码
-    const hashedPassword = await this.hashPassword(password);
-
-    // 创建用户
-    const user = this.userRepository.create({
-      username: email,
-      password: hashedPassword,
-      nickname: username,
-      verify: 'verified'
-    });
-
-    const savedUser = await this.userRepository.save(user);
-
-    return {
-      success: true,
-      message: '注册成功',
-      data: {
-        userId: savedUser.id,
-        email: savedUser.username,
-        username: savedUser.nickname
+      if (existingEmailUser) {
+        await queryRunner.rollbackTransaction()
+        return { success: false, message: '该邮箱已被注册' };
       }
-    };
+
+      // 检查昵称是否已存在
+      const existingNicknameUser = await queryRunner.manager.findOne(User, {
+        where: { nickname: username }
+      });
+
+      if (existingNicknameUser) {
+        await queryRunner.rollbackTransaction()
+        return { success: false, message: '该用户名已被使用' };
+      }
+
+      // 加密密码
+      const hashedPassword = await this.hashPassword(password);
+
+      // 创建用户
+      const user = queryRunner.manager.create(User, {
+        username: email,
+        password: hashedPassword,
+        nickname: username,
+        verify: 'verified'
+      });
+
+      const savedUser = await queryRunner.manager.save(user);
+
+      // 提交事务
+      await queryRunner.commitTransaction()
+
+      return {
+        success: true,
+        message: '注册成功',
+        data: {
+          userId: savedUser.id,
+          email: savedUser.username,
+          username: savedUser.nickname
+        }
+      };
+    } catch (error) {
+      console.error('Create user error:', error);
+      await queryRunner.rollbackTransaction()
+      return { success: false, message: '创建用户失败' };
+    } finally {
+      await queryRunner.release()
+    }
   }
 
   // 用户登录
@@ -382,7 +423,7 @@ export class AuthService {
         email: user.username,
         username: user.nickname,
         is_verified: user.verify === 'verified',
-        created_at: user.createtime
+        created_at: user.create_time
       };
 
       return {

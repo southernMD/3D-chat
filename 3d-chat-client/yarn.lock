@@ -32,11 +32,6 @@
   resolved "https://registry.yarnpkg.com/@ctrl/tinycolor/-/tinycolor-3.6.1.tgz#b6c75a56a1947cc916ea058772d666a2c8932f31"
   integrity sha512-SITSV6aIXsuVNV3f3O0f2n/cgyEDWoSqtZMYiAmcsYHydcKrOz3gUxB/iXd/Qf08+IZX4KpgNbvUdMBmWz+kcA==
 
-"@dimforge/rapier3d-compat@~0.12.0":
-  version "0.12.0"
-  resolved "https://registry.yarnpkg.com/@dimforge/rapier3d-compat/-/rapier3d-compat-0.12.0.tgz#7b3365e1dfdc5cd957b45afe920b4ac06c7cd389"
-  integrity sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow==
-
 "@element-plus/icons-vue@^2.3.1":
   version "2.3.1"
   resolved "https://registry.yarnpkg.com/@element-plus/icons-vue/-/icons-vue-2.3.1.tgz#1f635ad5fdd5c85ed936481525570e82b5a8307a"
@@ -360,12 +355,11 @@
   resolved "https://registry.yarnpkg.com/@types/stats.js/-/stats.js-0.17.4.tgz#1933e5ff153a23c7664487833198d685c22e791e"
   integrity sha512-jIBvWWShCvlBqBNIZt0KAshWpvSjhkwkEu4ZUcASoAvhmrgAUI2t1dXrjSL4xXVLB4FznPrIsX3nKXFl/Dt4vA==
 
-"@types/three@^0.178.1":
-  version "0.178.1"
-  resolved "https://registry.yarnpkg.com/@types/three/-/three-0.178.1.tgz#c96bbd9331dfb8ca93b89fbd6d97161f89dea18f"
-  integrity sha512-WSabew1mgWgRx2RfLfKY+9h4wyg6U94JfLbZEGU245j/WY2kXqU0MUfghS+3AYMV5ET1VlILAgpy77cB6a3Itw==
+"@types/three@^0.170.0":
+  version "0.170.0"
+  resolved "https://registry.yarnpkg.com/@types/three/-/three-0.170.0.tgz#1fe17693e4e08dd6fd8662542af4c9cba9671620"
+  integrity sha512-CUm2uckq+zkCY7ZbFpviRttY+6f9fvwm6YqSqPfA5K22s9w7R4VnA3rzJse8kHVvuzLcTx+CjNCs2NYe0QFAyg==
   dependencies:
-    "@dimforge/rapier3d-compat" "~0.12.0"
     "@tweenjs/tween.js" "~23.1.3"
     "@types/stats.js" "*"
     "@types/webxr" "*"
@@ -384,9 +378,9 @@
   integrity sha512-oIQLCGWtcFZy2JW77j9k8nHzAOpqMHLQejDA48XXMWH6tjCQHz5RCFz1bzsmROyL6PUm+LLnUiI4BCn221inxA==
 
 "@types/webxr@*":
-  version "0.5.22"
-  resolved "https://registry.yarnpkg.com/@types/webxr/-/webxr-0.5.22.tgz#d8a14c12bbfaaa4a13de21ec2d4a8197b3e1b532"
-  integrity sha512-Vr6Stjv5jPRqH690f5I5GLjVk8GSsoQSYJ2FVd/3jJF7KaqfwPi3ehfBS96mlQ2kPCwZaX6U0rG2+NGHBKkA/A==
+  version "0.5.23"
+  resolved "https://registry.yarnpkg.com/@types/webxr/-/webxr-0.5.23.tgz#fe2b76ffa9600d118f2fcdf855fa93bcf8e79f8c"
+  integrity sha512-GPe4AsfOSpqWd3xA/0gwoKod13ChcfV67trvxaW2krUbgb9gxQjnCx8zGshzMl8LSHZlNH5gQ8LNScsDuc7nGQ==
 
 "@vitejs/plugin-vue@^6.0.0":
   version "6.0.0"
@@ -597,9 +591,9 @@
     vue-demi "*"
 
 "@webgpu/types@*":
-  version "0.1.64"
-  resolved "https://registry.yarnpkg.com/@webgpu/types/-/types-0.1.64.tgz#62c5f9d345d4d270fcf3ecbb111c3b98dcc1aca3"
-  integrity sha512-84kRIAGV46LJTlJZWxShiOrNL30A+9KokD7RB3dRCIqODFjodS5tCD5yyiZ8kIReGVZSDfA3XkkwyyOIF6K62A==
+  version "0.1.65"
+  resolved "https://registry.yarnpkg.com/@webgpu/types/-/types-0.1.65.tgz#11386daeb33a8825df2b664d3e9fcea4e9523ec2"
+  integrity sha512-cYrHab4d6wuVvDW5tdsfI6/o6vcLMDe6w2Citd1oS51Xxu2ycLCnVo4fqwujfKWijrZMInTJIKcXxteoy21nVA==
 
 acorn@^8.14.0, acorn@^8.14.1:
   version "8.15.0"
@@ -1322,10 +1316,10 @@ three-mesh-ui@^6.5.4:
   resolved "https://registry.yarnpkg.com/three-mesh-ui/-/three-mesh-ui-6.5.4.tgz#68f0a5aba4dced0ed168d2574f45d93b55f4fd03"
   integrity sha512-QA2KlHrbj7zGjKqpNXcwvini8g5gOXb44ExdupVpxCqmHln/sWNGOmN0yIa/HjnMGYJWP4M+NchTHvwUp+MWIw==
 
-three@^0.178.0:
-  version "0.178.0"
-  resolved "https://registry.yarnpkg.com/three/-/three-0.178.0.tgz#470fb4bc35bc0782dfe9a2c9b157fcbc1944bc44"
-  integrity sha512-ybFIB0+x8mz0wnZgSGy2MO/WCO6xZhQSZnmfytSPyNpM0sBafGRVhdaj+erYh5U+RhQOAg/eXqw5uVDiM2BjhQ==
+three@0.170.0:
+  version "0.170.0"
+  resolved "https://registry.yarnpkg.com/three/-/three-0.170.0.tgz#6087f97aab79e9e9312f9c89fcef6808642dfbb7"
+  integrity sha512-FQK+LEpYc0fBD+J8g6oSEyyNzjp+Q7Ks1C568WWaoMRLW+TkNNWmenWeGgJjV105Gd+p/2ql1ZcjYvNiPZBhuQ==
 
 tinyglobby@^0.2.12, tinyglobby@^0.2.14:
   version "0.2.14"

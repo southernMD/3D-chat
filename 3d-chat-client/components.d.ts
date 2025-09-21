@@ -21,6 +21,8 @@ declare module 'vue' {
     ElRadioGroup: typeof import('element-plus/es')['ElRadioGroup']
     ElSelect: typeof import('element-plus/es')['ElSelect']
     FileUploader: typeof import('./src/components/FileUploader.vue')['default']
+    ModelInfoForm: typeof import('./src/components/ModelInfoForm.vue')['default']
+    ModelUploadPanel: typeof import('./src/components/ModelUploadPanel.vue')['default']
     ModeSelection: typeof import('./src/components/ModeSelection.vue')['default']
     ParticleBackground: typeof import('./src/components/ParticleBackground.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

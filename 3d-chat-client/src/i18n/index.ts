@@ -230,7 +230,7 @@ const zh = {
   },
   fileUploader: {
     dragDrop: '拖放文件到此处或点击上传',
-    supportedFormats: '支持格式：GLB、GLTF、PMX',
+    supportedFormats: '支持格式：GLB、GLTF、Zip(PMX)',
     formatRequirements: 'GLB/GLTF必须含有walk和stand动作，PMX格式必须添加walk.vmd与stand.vmd动作文件',
     selectFiles: '选择文件',
     uploadList: '上传列表',
@@ -535,7 +535,7 @@ const en = {
   },
   fileUploader: {
     dragDrop: 'Drag and drop files here or click to upload',
-    supportedFormats: 'Supported formats: GLB, GLTF, PMX',
+    supportedFormats: 'Supported formats: GLB, GLTF, Zip(PMX)',
     formatRequirements: 'GLB/GLTF must contain walk and stand animations, PMX format must add walk.vmd and stand.vmd animation files',
     selectFiles: 'Select Files',
     uploadList: 'Upload List',
