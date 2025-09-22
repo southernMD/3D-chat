@@ -15,12 +15,25 @@ export interface Peer {
   rtpCapabilities?: any;
 }
 
+// 房间配置接口
+export interface RoomConfig {
+  name: string;
+  description: string;
+  maxUsers: string;
+  isPrivate: boolean;
+  enableVoice: boolean;
+  enableText: boolean;
+  map: string;
+}
+
 // 房间类型定义
 export interface Room {
   id: string;
   name: string;
   createdAt: Date;
   peers: Map<string, Peer>;
+  config?: RoomConfig;
+  modelHash?: string;
 }
 
 // 房间管理类
@@ -28,17 +41,19 @@ export class RoomManager {
   private rooms: Map<string, Room> = new Map();
 
   // 创建房间
-  createRoom(name: string): Room {
+  createRoom(name: string, config?: RoomConfig, modelHash?: string): Room {
     const roomId = uuidv4();
     const room: Room = {
       id: roomId,
       name: name || `Room ${roomId.substring(0, 8)}`,
       createdAt: new Date(),
       peers: new Map(),
+      config,
+      modelHash,
     };
 
     this.rooms.set(roomId, room);
-    console.log(`Room created: ${room.name} (${roomId})`);
+    console.log(`Room created: ${room.name} (${roomId})${modelHash ? ` with model ${modelHash}` : ''}`);
     return room;
   }
 

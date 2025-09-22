@@ -59,7 +59,22 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: true },
         beforeEnter: (to, from, next) => {
             // 只允许从创建房间页面跳转过来
-            if (from.name === 'create-room') {
+            if (from.name === 'create-room' || from.name === 'mode-selection' && from.query.pingCode?.length !== 0) {
+                next()
+            } else {
+                // 直接访问或从其他页面跳转，重定向到首页
+                next({ name: 'home' })
+            }
+        }
+    },
+    {
+        path: '/chat-room',
+        name: 'chat-room',
+        component: () => import('@/view/ChatRoom.vue'),
+        meta: { requiresAuth: true },
+        beforeEnter: (to, from, next) => {
+            // 只允许从模型选择页面跳转过来
+            if (from.name === 'model-selection') {
                 next()
             } else {
                 // 直接访问或从其他页面跳转，重定向到首页

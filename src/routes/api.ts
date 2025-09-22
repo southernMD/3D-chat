@@ -43,12 +43,48 @@ router.get('/rooms', (req: Request, res: Response) => {
   }
 });
 
+// 检查房间是否存在
+router.get<{ roomId: string }>('/rooms/:roomId/exists', (req: Request<{ roomId: string }>, res: Response) => {
+  try {
+    const { roomId } = req.params;
+    const room = roomManager.getRoom(roomId);
+
+    if (!room) {
+      res.json({
+        status: 'success',
+        data: {
+          exists: false
+        },
+      });
+      return;
+    }
+
+    res.json({
+      status: 'success',
+      data: {
+        exists: true,
+        roomInfo: {
+          id: room.id,
+          name: room.name,
+          peerCount: room.peers.size,
+          createdAt: room.createdAt
+        }
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Internal server error',
+    });
+  }
+});
+
 // 获取特定房间信息
 router.get<{ roomId: string }>('/rooms/:roomId', (req: Request<{ roomId: string }>, res: Response) => {
   try {
     const { roomId } = req.params;
     const room = roomManager.getRoomSummary(roomId);
-    
+
     if (!room) {
       res.status(404).json({
         status: 'error',
@@ -56,7 +92,7 @@ router.get<{ roomId: string }>('/rooms/:roomId', (req: Request<{ roomId: string 
       });
       return;
     }
-    
+
     res.json({
       status: 'success',
       data: { room },

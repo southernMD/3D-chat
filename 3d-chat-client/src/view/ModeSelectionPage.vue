@@ -62,13 +62,14 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { onMounted, onUnmounted } from 'vue'
 import { gsap } from 'gsap'
+// import { showError, showSuccess } from '@/utils/message'
 
 const { t } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
 
 // 选择模式
-const selectMode = (mode: 'create' | 'join' | 'lobby') => {
+const selectMode = async (mode: 'create' | 'join' | 'lobby') => {
   if (mode === 'create') {
     // 检查是否已登录
     if (!authStore.isAuthenticated) {
@@ -82,10 +83,66 @@ const selectMode = (mode: 'create' | 'join' | 'lobby') => {
     // 跳转到房间大厅
     router.push('/lobby')
   } else if (mode === 'join') {
-    // 这里可以添加加入房间的逻辑，比如弹出输入框让用户输入房间ID
-    console.log('Join room mode selected')
-    // 暂时跳转到大厅页面
-    router.push('/lobby')
+    // 检查是否已登录
+    if (!authStore.isAuthenticated) {
+      // 未登录，跳转到登录页面
+      router.push('/login')
+      return
+    }
+
+    // 弹出输入框让用户输入房间ping码
+    try {
+      const { value: pingCode } = await ElMessageBox.prompt(
+        '请输入房间ping码（房间UUID）',
+        '加入房间',
+        {
+          confirmButtonText: '加入',
+          cancelButtonText: '取消',
+          inputPattern: /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i,
+          inputErrorMessage: '请输入有效的房间UUID格式',
+          inputPlaceholder: '例如: 123e4567-e89b-12d3-a456-426614174000'
+        }
+      )
+
+      if (pingCode && pingCode.trim()) {
+        const roomId = pingCode.trim()
+
+        // 先检查房间是否存在 (使用HTTP接口，无需WebRTC连接)
+        try {
+          // 构建HTTP URL
+          const host = import.meta.env.VITE_APP_HOST || 'localhost'
+          const port = import.meta.env.VITE_APP_HOST_PORT || '3000'
+          const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+          const serverUrl = `${protocol}://${host}:${port}`
+
+          const response = await fetch(`${serverUrl}/api/rooms/${roomId}/exists`)
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          }
+
+          const data = await response.json()
+
+          if (data.status === 'success' && data.data.exists) {
+            // 跳转到模型选择页面，并传递ping码
+            router.push({
+              path: '/model-selection',
+              query: {
+                pingCode: roomId
+              }
+            })
+          } else {
+            ElMessage.error('房间不存在或已被删除，请检查房间码是否正确')
+          }
+        } catch (error) {
+          console.error('检查房间失败:', error)
+          ElMessage.error('检查房间失败，请重试')
+        }
+      }
+    } catch (error) {
+      // 用户取消了输入
+      console.log('用户取消了加入房间')
+    }
   }
 }
 

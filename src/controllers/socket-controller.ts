@@ -10,20 +10,33 @@ export const handleConnection = (socket: Socket, io: Server): void => {
   console.log(`Client connected [id=${id}]`);
 
   // 当客户端创建或加入房间
-  socket.on('createOrJoin', async ({ roomId, name }: { roomId?: string, name: string }) => {
+  socket.on('createOrJoin', async (data: {
+    roomId?: string,
+    name: string,
+    roomConfig?: any,
+    modelHash?: string
+  }) => {
     try {
+      const { roomId: providedRoomId, name, roomConfig, modelHash } = data;
       let room;
+      let roomId = providedRoomId;
 
       // 如果没有提供roomId，创建新房间
       if (!roomId) {
-        room = roomManager.createRoom(`${name}'s Room`);
+        const roomName = roomConfig?.name || `${name}'s Room`;
+        room = roomManager.createRoom(roomName, roomConfig, modelHash);
         roomId = room.id;
       } else {
+        // 尝试加入现有房间
         room = roomManager.getRoom(roomId);
-        // 如果房间不存在，创建新房间
         if (!room) {
-          room = roomManager.createRoom(`Room ${roomId}`);
-          roomId = room.id;
+          // 房间不存在，返回错误
+          socket.emit('error', {
+            message: 'Room not found',
+            code: 'ROOM_NOT_FOUND',
+            details: `房间 ${roomId} 不存在或已被删除`
+          });
+          return;
         }
       }
 
@@ -45,6 +58,8 @@ export const handleConnection = (socket: Socket, io: Server): void => {
       socket.emit('joined', {
         roomId,
         peerId,
+        roomConfig,
+        modelHash,
         peers: roomManager.getPeers(roomId)
           .filter(p => p.id !== peerId)
           .map(p => ({
@@ -57,9 +72,10 @@ export const handleConnection = (socket: Socket, io: Server): void => {
       socket.to(roomId).emit('peerJoined', {
         peerId,
         name,
+        modelHash,
       });
 
-      console.log(`Peer ${name} (${peerId}) joined room ${roomId}`);
+      console.log(`Peer ${name} (${peerId}) joined room ${roomId} with model ${modelHash}`);
     } catch (error) {
       console.error('Error in createOrJoin:', error);
       socket.emit('error', { message: 'Internal server error' });
@@ -69,17 +85,23 @@ export const handleConnection = (socket: Socket, io: Server): void => {
   // 离开房间
   socket.on('leave', ({ roomId, peerId }: { roomId: string, peerId: string }) => {
     try {
-      // 从房间移除参与者
+      // 通知房间内其他客户端有成员离开（在移除之前通知）
+      socket.to(roomId).emit('peerLeft', { peerId });
+
+      // 从房间移除参与者（这可能会删除房间如果是最后一个成员）
       const success = roomManager.removePeer(roomId, peerId);
 
       if (success) {
-        // 通知房间内其他客户端有成员离开
-        socket.to(roomId).emit('peerLeft', { peerId });
-
         // 离开socket.io房间
         socket.leave(roomId);
 
         console.log(`Peer ${peerId} left room ${roomId}`);
+
+        // 检查房间是否还存在（可能已被删除）
+        const room = roomManager.getRoom(roomId);
+        if (!room) {
+          console.log(`Room ${roomId} was deleted because it became empty`);
+        }
       }
     } catch (error) {
       console.error('Error in leave:', error);
@@ -478,13 +500,21 @@ export const handleConnection = (socket: Socket, io: Server): void => {
       if (peerInfo) {
         const { roomId, peer } = peerInfo;
 
-        // 从房间移除peer
-        roomManager.removePeer(roomId, peer.id);
-
-        // 通知房间内其他客户端peer离开
+        // 通知房间内其他客户端peer离开（在移除之前通知）
         socket.to(roomId).emit('peerLeft', { peerId: peer.id });
 
-        console.log(`Peer ${peer.name} (${peer.id}) disconnected from room ${roomId}`);
+        // 从房间移除peer（这可能会删除房间如果是最后一个成员）
+        const removed = roomManager.removePeer(roomId, peer.id);
+
+        if (removed) {
+          console.log(`Peer ${peer.name} (${peer.id}) disconnected from room ${roomId}`);
+
+          // 检查房间是否还存在（可能已被删除）
+          const room = roomManager.getRoom(roomId);
+          if (!room) {
+            console.log(`Room ${roomId} was deleted because it became empty`);
+          }
+        }
       }
 
       console.log(`Client disconnected [id=${socket.id}]`);

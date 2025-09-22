@@ -4,7 +4,7 @@
     <div class="main-content">
       <!-- 左侧模型选择区域 -->
       <div class="model-section">
-        <h2 class="section-title">{{ $t('modelSelection.title') }}</h2>
+        <h2 class="section-title">{{ pageTitle }}</h2>
         
         <!-- 搜索和上传区域 -->
         <div class="action-bar">
@@ -128,7 +128,7 @@
               :disabled="!selectedModel"
               @click="confirmModelSelection"
             >
-              <span class="button-text">{{ $t('modelSelection.confirmButton') }}</span>
+              <span class="button-text">{{ confirmButtonText }}</span>
             </button>
           </div>
         </div>
@@ -138,7 +138,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import FileUploader from '@/components/FileUploader.vue'
@@ -150,9 +150,17 @@ import {
   getModelTypeIcon,
   type ModelInfo
 } from '@/api/modelApi'
-import { showError } from '@/utils/message'
+import { showError, showSuccess } from '@/utils/message'
+import { createRoom } from '@/api/roomApi'
+import { useAuthStore } from '@/stores/auth'
+import { useWebRTCStore } from '@/stores/webrtc'
 
 const router = useRouter()
+const authStore = useAuthStore()
+const webrtcStore = useWebRTCStore()
+
+// 检查是否有ping码（从URL参数获取）
+const pingCode = ref<string | null>(null)
 
 // 搜索查询
 const searchQuery = ref('')
@@ -200,6 +208,22 @@ const displayModels = computed((): DisplayModel[] => {
     previewUrl: getModelPreviewUrl(model.picPath),
     hash: model.hash
   }))
+})
+
+// 页面标题
+const pageTitle = computed(() => {
+  if (pingCode.value) {
+    return `加入房间 (${pingCode.value.substring(0, 8)}...)`
+  }
+  return '选择3D模型'
+})
+
+// 确认按钮文本
+const confirmButtonText = computed(() => {
+  if (pingCode.value) {
+    return '加入房间'
+  }
+  return '创建房间'
 })
 
 // 过滤后的模型
@@ -250,7 +274,21 @@ const loadModels = async () => {
 
 // 组件挂载时加载数据
 onMounted(() => {
+  // 检查URL参数中是否有ping码
+  const urlParams = new URLSearchParams(window.location.search)
+  const urlPingCode = urlParams.get('pingCode')
+  if (urlPingCode) {
+    pingCode.value = urlPingCode
+    console.log('检测到ping码:', urlPingCode)
+  }
+
   loadModels()
+})
+
+// 组件销毁时清理资源
+onUnmounted(() => {
+  // WebRTC store会在应用级别管理，这里不需要清理
+  // 如果需要，可以调用 webrtcStore.cleanup()
 })
 
 // 图片加载错误处理
@@ -281,8 +319,10 @@ const handleUploadError = (file: any, error: string) => {
   ElMessage.error(`文件 ${file.name} 上传失败：${error}`)
 }
 
+// 这些回调函数现在由WebRTC store管理，不再需要在组件中定义
+
 // 确认模型选择
-const confirmModelSelection = () => {
+const confirmModelSelection = async () => {
   if (!selectedModel.value) {
     showError('请先选择一个模型')
     return
@@ -294,16 +334,152 @@ const confirmModelSelection = () => {
     return
   }
 
-  console.log(selectedModel.value);
-  console.log(JSON.parse(history.state.mapConfig))
-  
-  
-  // console.log('Selected model:', selected)
-  // ElMessage.success(`已选择模型: ${selected.name}`)
+  // 检查是否是通过ping码加入房间
+  if (pingCode.value) {
+    // 通过ping码加入房间
+    await joinRoomByPingCode(selected)
+    return
+  }
 
-  // TODO: 保存选择的模型并跳转到房间
-  // 这里可以跳转到实际的房间页面或返回房间大厅
-  // router.push('/lobby')
+  // 创建新房间的逻辑
+  let roomConfig
+  try {
+    roomConfig = JSON.parse(history.state.mapConfig)
+  } catch (error) {
+    showError('房间配置无效')
+    return
+  }
+
+  console.log('选择的模型:', selectedModel.value)
+  console.log('房间配置:', roomConfig)
+  console.log('用户信息:', authStore.user)
+
+  try {
+    // 初始化WebRTC管理器
+    console.log('1. 初始化WebRTC管理器...')
+    webrtcStore.initializeWebRTC()
+    console.log('WebRTC管理器初始化完成')
+
+    // 连接到服务器
+    console.log('2. 连接到服务器...')
+    const connected = await webrtcStore.connectToServer()
+    console.log('连接结果:', connected)
+
+    if (!connected) {
+      console.error('服务器连接失败')
+      showError('连接服务器失败')
+      return
+    }
+
+    // 使用真实的用户名
+    const userName = authStore.user?.username || '用户'
+    console.log('3. 准备创建房间，用户名:', userName)
+
+    // 创建并加入房间
+    console.log('4. 创建并加入房间...')
+    const success = await webrtcStore.createAndJoinRoom(
+      roomConfig,
+      selectedModel.value!,
+      selected,
+      userName
+    )
+
+    console.log('房间创建结果:', success)
+
+    if (success) {
+      console.log('5. 房间创建成功，准备跳转...')
+      showSuccess('房间创建成功，正在进入聊天室...')
+
+      // 跳转到聊天室
+      router.push({
+        path: '/chat-room',
+        state: {
+          roomConfig: JSON.stringify(roomConfig),
+          modelHash: selectedModel.value,
+          modelInfo: JSON.stringify(selected)
+        }
+      })
+    } else {
+      console.error('房间创建失败')
+      showError('创建房间失败')
+    }
+
+  } catch (error) {
+    console.error('=== 模型选择确认流程出错 ===', error)
+    showError('创建房间失败，请重试')
+  }
+}
+
+// 通过ping码加入房间
+const joinRoomByPingCode = async (selected: any) => {
+  console.log('通过ping码加入房间:', pingCode.value)
+  console.log('选择的模型:', selectedModel.value)
+  console.log('用户信息:', authStore.user)
+
+  try {
+    // 初始化WebRTC管理器
+    console.log('1. 初始化WebRTC管理器...')
+    webrtcStore.initializeWebRTC()
+    console.log('WebRTC管理器初始化完成')
+
+    // 连接到服务器
+    console.log('2. 连接到服务器...')
+    const connected = await webrtcStore.connectToServer()
+    console.log('连接结果:', connected)
+
+    if (!connected) {
+      console.error('服务器连接失败')
+      showError('连接服务器失败')
+      return
+    }
+
+    // 使用真实的用户名
+    const userName = authStore.user?.username || '用户'
+    console.log('3. 准备加入房间，用户名:', userName)
+
+    // 再次检查房间是否存在（防止在选择模型期间房间被删除）
+    console.log('4. 再次检查房间是否存在...')
+    const roomCheck = await webrtcStore.checkRoomExists(pingCode.value!)
+
+    if (!roomCheck.exists) {
+      showError('房间已不存在或被删除，请重新获取房间码')
+      return
+    }
+
+    // 直接加入房间（使用房间UUID作为ping码）
+    console.log('5. 通过ping码加入房间...')
+    const success = await webrtcStore.joinRoomByUUID(
+      pingCode.value!,
+      selectedModel.value!,
+      selected,
+      userName
+    )
+
+    console.log('加入房间结果:', success)
+
+    if (success) {
+      console.log('6. 成功加入房间，准备跳转...')
+      showSuccess('成功加入房间，正在进入聊天室...')
+
+      // 跳转到聊天室
+      router.push({
+        path: '/chat-room',
+        state: {
+          roomUUID: pingCode.value,
+          modelHash: selectedModel.value,
+          modelInfo: JSON.stringify(selected),
+          joinedByPingCode: true
+        }
+      })
+    } else {
+      console.error('加入房间失败')
+      showError('加入房间失败，请检查ping码是否正确')
+    }
+
+  } catch (error) {
+    console.error('=== 加入房间流程出错 ===', error)
+    showError('加入房间失败，请重试')
+  }
 }
 </script>
 
