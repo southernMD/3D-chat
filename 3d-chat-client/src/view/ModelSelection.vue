@@ -54,8 +54,8 @@
           <div
             v-for="model in filteredModels"
             :key="model.id"
-            :class="['model-card', { selected: selectedModel === model.id }]"
-            @click="selectedModel = model.id"
+            :class="['model-card', { selected: selectedModel === model.hash }]"
+            @click="selectedModel = model.hash"
           >
             <div class="model-preview" :class="`model-${model.type}`">
               <div class="model-thumbnail">
@@ -150,6 +150,7 @@ import {
   getModelTypeIcon,
   type ModelInfo
 } from '@/api/modelApi'
+import { showError } from '@/utils/message'
 
 const router = useRouter()
 
@@ -157,7 +158,7 @@ const router = useRouter()
 const searchQuery = ref('')
 
 // 选中的模型
-const selectedModel = ref<number | null>(null)
+const selectedModel = ref<string | null>(null)
 
 // 模型数据
 const models = ref<ModelInfo[]>([])
@@ -214,7 +215,7 @@ const filteredModels = computed(() => {
 
 // 当前模型信息
 const currentModelInfo = computed(() => {
-  return displayModels.value.find(model => model.id === selectedModel.value) || displayModels.value[0]
+  return displayModels.value.find(model => model.hash === selectedModel.value) || displayModels.value[0]
 })
 
 // 加载模型列表
@@ -230,7 +231,7 @@ const loadModels = async () => {
 
       // 默认选择第一个模型
       if (displayModels.value.length > 0) {
-        selectedModel.value = displayModels.value[0].id
+        selectedModel.value = displayModels.value[0].hash
       }
 
       console.log(`加载了 ${response.data.length} 个模型`)
@@ -283,22 +284,26 @@ const handleUploadError = (file: any, error: string) => {
 // 确认模型选择
 const confirmModelSelection = () => {
   if (!selectedModel.value) {
-    ElMessage.error('请先选择一个模型')
+    showError('请先选择一个模型')
     return
   }
 
-  const selected = displayModels.value.find(model => model.id === selectedModel.value)
+  const selected = displayModels.value.find(model => model.hash === selectedModel.value)
   if (!selected) {
-    ElMessage.error('选择的模型无效')
+    showError('选择的模型无效')
     return
   }
 
-  console.log('Selected model:', selected)
-  ElMessage.success(`已选择模型: ${selected.name}`)
+  console.log(selectedModel.value);
+  console.log(JSON.parse(history.state.mapConfig))
+  
+  
+  // console.log('Selected model:', selected)
+  // ElMessage.success(`已选择模型: ${selected.name}`)
 
   // TODO: 保存选择的模型并跳转到房间
   // 这里可以跳转到实际的房间页面或返回房间大厅
-  router.push('/lobby')
+  // router.push('/lobby')
 }
 </script>
 

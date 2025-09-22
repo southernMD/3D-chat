@@ -321,16 +321,18 @@ const createRoom = async () => {
       map: selectedMap.value
     })
 
-    // 保存房间配置到 sessionStorage
-    sessionStorage.setItem('room_config', JSON.stringify({
-      ...roomConfig,
-      map: selectedMap.value
-    }))
-    
     showSuccess(t('createRoom.roomConfigSaved'))
     
     // 直接跳转到模型选择页面，路由守卫会检查来源
-    router.push('/model-selection')
+    router.push({
+      path: '/model-selection',
+      state:{
+        mapConfig: JSON.stringify({
+          ...roomConfig,
+          map: selectedMap.value
+        })
+      }
+    })
   } catch (error) {
     console.error('Failed to create room:', error)
     showError(t('createRoom.error'))

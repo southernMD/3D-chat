@@ -968,6 +968,32 @@
                 "virtualExpr": "",
                 "virtualType": "",
                 "oldName": "createrId"
+              },
+              {
+                "objectType": "TableField_MYSQL",
+                "name": "name",
+                "type": "varchar",
+                "length": 255,
+                "decimals": -2147483648,
+                "isUnsigned": false,
+                "isZeroFill": false,
+                "setEnumValues": "",
+                "isBinary": false,
+                "charset": "",
+                "collation": "",
+                "isNullable": true,
+                "defaultType": "Others",
+                "defaultValue": "",
+                "isOnUpdateCurrentTimestamp": false,
+                "isAutoInc": false,
+                "comment": "",
+                "columnFormat": "",
+                "storage": "",
+                "isVirtual": false,
+                "isGeneratedAlways": false,
+                "virtualExpr": "",
+                "virtualType": "",
+                "oldName": "name"
               }
             ],
             "indexes": [
