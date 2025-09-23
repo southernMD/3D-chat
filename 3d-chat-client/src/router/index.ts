@@ -83,6 +83,11 @@ const routes: Array<RouteRecordRaw> = [
         }
     },
     {
+        path: '/3d-chat-room',
+        name: '3d-chat-room',
+        component: () => import('@/view/3DChatRoom.vue'),
+    },
+    {
         // 捕获所有未匹配的路由，重定向到首页
         path: '/:pathMatch(.*)*',
         redirect: '/home'

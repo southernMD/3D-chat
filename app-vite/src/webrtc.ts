@@ -70,8 +70,8 @@ export class WebRTCManager {
     
     // 根据环境选择WebSocket连接方式
     const serverUrl = isSecure 
-      ? `wss://${window.location.hostname}:${window.location.port}` 
-      : `ws://${window.location.hostname}:3000`; // 默认端口3000
+      ? `wss://127.0.0.1:${window.location.port}` 
+      : `ws://127.0.0.1:3000`; // 默认端口3000
     
     this.log(`正在连接到服务器：${serverUrl}`);
     this.updateConnectionStatusCallback('connecting');
