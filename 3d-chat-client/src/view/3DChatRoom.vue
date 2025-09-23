@@ -2,13 +2,9 @@
 
 import { ref, onMounted, onUnmounted,nextTick } from 'vue'
 import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GUIManager } from '@/models/managers/GUIManager';
-import { GridHelper } from 'three/src/helpers/GridHelper.js';
-import { Capsule } from 'three/examples/jsm/math/Capsule.js';
 // 导入管理器类
 import { MMDModelManager } from '@/models/managers/MMDModelManager';
-import { TestBoxManager } from '@/models/managers/TestBoxManager';
 import { SceneManager } from '@/models/managers/SceneManager';
 import { ObjectManager } from '@/models/managers/ObjectManager';
 import { BVHPhysics } from '@/physics/BVHPhysics';

@@ -8,13 +8,11 @@ authStore.initAuth()
 
 <template>
   <div class="app-container">
-    <!-- 全局粒子背景 -->
-    <ParticleBackground />
-    
-    <!-- 全局顶部导航栏 -->
-    <TopBar />
-    
-    <!-- 路由视图 -->
+     <template v-show="$route.name !== '3d-chat-room'">
+      <ParticleBackground />
+      <TopBar />
+     </template>
+
     <div class="router-view-container">
       <router-view></router-view>
     </div>
