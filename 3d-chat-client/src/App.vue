@@ -8,11 +8,7 @@ authStore.initAuth()
 
 <template>
   <div class="app-container">
-     <template v-show="$route.name !== '3d-chat-room'">
-      <ParticleBackground />
-      <TopBar />
-     </template>
-
+    <TopBar v-show="$route.name !== '3d-chat-room'"/>
     <div class="router-view-container">
       <router-view></router-view>
     </div>

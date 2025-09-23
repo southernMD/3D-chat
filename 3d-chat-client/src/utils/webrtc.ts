@@ -305,6 +305,9 @@ export class WebRTCManager {
       this.peers.push(newPeer)
       this.peerNames.set(peerId, name)
 
+      // 发送系统通知消息
+      this.addMessageCallback(`${name} 加入了房间`, false, '系统')
+
       // 更新UI
       this.updatePeersListCallback([...this.peers])
     })
@@ -338,8 +341,14 @@ export class WebRTCManager {
       }
 
       // 从成员列表中移除该成员
+      const leavingPeer = this.peers.find(peer => peer.id === peerId)
+      const leavingPeerName = leavingPeer?.name || this.peerNames.get(peerId) || '未知用户'
+
       this.peers = this.peers.filter(peer => peer.id !== peerId)
       this.peerNames.delete(peerId)
+
+      // 发送系统通知消息
+      this.addMessageCallback(`${leavingPeerName} 离开了房间`, false, '系统')
 
       // 更新UI
       this.updatePeersListCallback([...this.peers])

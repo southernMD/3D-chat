@@ -11,6 +11,7 @@ export interface ChatMessage {
   content: string
   timestamp: number
   isOwn: boolean
+  isSystem?: boolean  // 是否为系统消息
   peerId?: string
 }
 
@@ -40,12 +41,16 @@ export const useWebRTCStore = defineStore('webrtc', () => {
 
 
   const addMessage = (content: string, isSent: boolean, senderName?: string) => {
+    // 检查是否为系统消息
+    const isSystemMessage = senderName === '系统'
+
     const newMessage: ChatMessage = {
       id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
       sender: isSent ? (authStore.user?.username || '我') : (senderName || '其他用户'),
       content: content,
       timestamp: Date.now(),
       isOwn: isSent,
+      isSystem: isSystemMessage,
       peerId: isSent ? roomInfo.value?.peerId : undefined
     }
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 
-import { ref, onMounted, onUnmounted,nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import * as THREE from 'three'
 import { GUIManager } from '@/models/managers/GUIManager';
 // 导入管理器类
@@ -11,6 +12,10 @@ import { BVHPhysics } from '@/physics/BVHPhysics';
 import { FPSMonitor } from '@/utils/FPSMonitor';
 import GameUI from '@/components/GameUI.vue';
 import LoadingProgress from '@/components/LoadingProgress.vue';
+// 导入WebRTC store和相关工具
+import { useWebRTCStore } from '@/stores/webrtc';
+import { useAuthStore } from '@/stores/auth';
+import { showError, showSuccess, showInfo } from '@/utils/message';
 
 
 // BVH物理系统已集成到模型中，不再需要CANNON
@@ -29,8 +34,20 @@ let objectManager: ObjectManager
 let guiManager: GUIManager
 let fpsMonitor: FPSMonitor
 
+// WebRTC store和认证store
+const webrtcStore = useWebRTCStore()
+const authStore = useAuthStore()
+const router = useRouter()
+
 // UI状态
 const showGameUI = ref(true)
+
+// WebRTC相关状态
+const isWebRTCConnected = computed(() => webrtcStore.isConnected)
+const roomInfo = computed(() => webrtcStore.roomInfo)
+const peers = computed(() => webrtcStore.peers)
+const messages = computed(() => webrtcStore.messages)
+const microphoneEnabled = ref(false)
 
 // 步骤状态类型
 type StepStatus = 'pending' | 'loading' | 'completed' | 'error'
@@ -60,9 +77,57 @@ const updateLoadingStep = (stepIndex: number, status: StepStatus, message?: stri
 
 let bvhPhysics:BVHPhysics
 
+// WebRTC初始化函数
+const initializeWebRTC = async () => {
+  try {
+    console.log('🌐 检查WebRTC连接状态...')
+
+    // 检查是否已经连接
+    if (webrtcStore.isConnected) {
+      console.log('✅ WebRTC已连接，无需重新初始化')
+      showSuccess('WebRTC连接已建立')
+      return
+    }
+
+    // 检查是否已经初始化
+    if (!webrtcStore.isInitialized) {
+      console.log('🌐 初始化WebRTC管理器...')
+      webrtcStore.initializeWebRTC()
+    }
+
+    // 如果未连接，尝试连接到服务器
+    if (!webrtcStore.isConnected) {
+      console.log('🌐 连接到WebRTC服务器...')
+      const connected = await webrtcStore.connectToServer()
+      if (connected) {
+        console.log('✅ WebRTC服务器连接成功')
+        showSuccess('WebRTC服务器连接成功')
+      } else {
+        console.warn('⚠️ WebRTC服务器连接失败')
+        showError('WebRTC服务器连接失败，聊天功能将不可用')
+      }
+    }
+  } catch (error) {
+    console.error('❌ WebRTC初始化失败:', error)
+    showError('WebRTC初始化失败，聊天功能将不可用')
+  }
+}
+
+
 
 onMounted(async () => {
     try {
+        // 检查WebRTC连接状态（不重新初始化）
+        console.log('🌐 3D聊天室页面已加载')
+        console.log('当前WebRTC状态:', webrtcStore.getStatusInfo())
+
+        if (!webrtcStore.isConnected) {
+            console.warn('⚠️ WebRTC未连接，尝试初始化...')
+            await initializeWebRTC()
+        } else {
+            console.log('✅ WebRTC已连接，房间信息:', webrtcStore.roomInfo)
+        }
+
         // 步骤1: 初始化渲染器
         updateLoadingStep(0, 'loading', '正在创建WebGL渲染器...')
 
@@ -131,6 +196,31 @@ onMounted(async () => {
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
 
+        // 监听WebRTC连接状态变化
+        watch(isWebRTCConnected, (connected) => {
+          console.log('🌐 WebRTC连接状态变化:', connected)
+          if (connected) {
+            showSuccess('WebRTC连接已建立')
+          }
+        })
+
+        // 监听房间信息变化
+        watch(roomInfo, (info) => {
+          if (info) {
+            console.log('🏠 房间信息更新:', info)
+            showSuccess(`已加入房间: ${info.roomId}`)
+          }
+        })
+
+        // 监听成员变化
+        watch(peers, (newPeers, oldPeers) => {
+          if (oldPeers && newPeers.length > oldPeers.length) {
+            showInfo('有新成员加入房间')
+          } else if (oldPeers && newPeers.length < oldPeers.length) {
+            showInfo('有成员离开房间')
+          }
+        })
+
     // 添加右键发射小球事件监听器
     let mouseDownPosition = { x: 0, y: 0 };
 
@@ -187,6 +277,14 @@ onUnmounted(() => {
   // 移除窗口事件监听器
   window.removeEventListener('keydown', handleKeyDown);
   window.removeEventListener('keyup', handleKeyUp);
+
+  // 清理WebRTC连接
+  try {
+    webrtcStore.disconnect()
+    console.log('🌐 WebRTC连接已清理')
+  } catch (error) {
+    console.error('❌ WebRTC清理失败:', error)
+  }
 
   // 清理鸡蛋资源
   if (mmdModelManager && mmdModelManager.isModelLoaded()) {
@@ -311,6 +409,53 @@ function handleKeyUp(event: KeyboardEvent) {
   }
 }
 
+// WebRTC事件处理函数
+const handleSendMessage = (message: string) => {
+  try {
+    const success = webrtcStore.sendMessage(message)
+    if (!success) {
+      showError('消息发送失败，请检查网络连接')
+    }
+  } catch (error) {
+    console.error('发送消息失败:', error)
+    showError('消息发送失败')
+  }
+}
+
+const handleToggleMicrophone = async () => {
+  try {
+    const enabled = await webrtcStore.toggleMicrophone()
+    microphoneEnabled.value = enabled
+    console.log(`麦克风${enabled ? '已开启' : '已关闭'}`)
+    showSuccess(`麦克风${enabled ? '已开启' : '已关闭'}`)
+  } catch (error) {
+    console.error('麦克风操作失败:', error)
+    showError('麦克风操作失败')
+  }
+}
+
+const handleExitRoom = () => {
+  try {
+    webrtcStore.leaveRoom()
+    showInfo('已离开房间')
+    // 跳转到房间大厅
+    router.push('/lobby')
+  } catch (error) {
+    console.error('离开房间失败:', error)
+    showError('离开房间失败')
+  }
+}
+
+const handleCopyRoomCode = (success: boolean, roomCode?: string) => {
+  if (success && roomCode) {
+    showSuccess(`房间码已复制到剪贴板: ${roomCode}`)
+    console.log('📋 房间码复制成功:', roomCode)
+  } else {
+    showError('复制房间码失败，请手动复制')
+    console.error('❌ 房间码复制失败')
+  }
+}
+
 
 </script>
 
@@ -324,7 +469,18 @@ function handleKeyUp(event: KeyboardEvent) {
     />
 
     <!-- 游戏UI界面 -->
-    <GameUI v-show="showGameUI && !isLoading" />
+    <GameUI
+      v-show="showGameUI && !isLoading"
+      :webrtc-connected="isWebRTCConnected"
+      :room-info="roomInfo"
+      :peers="peers"
+      :messages="messages"
+      :microphone-enabled="microphoneEnabled"
+      @send-message="handleSendMessage"
+      @toggle-microphone="handleToggleMicrophone"
+      @exit-room="handleExitRoom"
+      @copy-room-code="handleCopyRoomCode"
+    />
   </div>
 </template>
 

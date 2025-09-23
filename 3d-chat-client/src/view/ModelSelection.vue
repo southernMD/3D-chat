@@ -390,9 +390,9 @@ const confirmModelSelection = async () => {
       console.log('5. 房间创建成功，准备跳转...')
       showSuccess('房间创建成功，正在进入聊天室...')
 
-      // 跳转到聊天室
+      // 跳转到3D聊天室
       router.push({
-        path: '/chat-room',
+        path: '/3d-chat-room',
         state: {
           roomConfig: JSON.stringify(roomConfig),
           modelHash: selectedModel.value,
@@ -461,9 +461,9 @@ const joinRoomByPingCode = async (selected: any) => {
       console.log('6. 成功加入房间，准备跳转...')
       showSuccess('成功加入房间，正在进入聊天室...')
 
-      // 跳转到聊天室
+      // 跳转到3D聊天室
       router.push({
-        path: '/chat-room',
+        path: '/3d-chat-room',
         state: {
           roomUUID: pingCode.value,
           modelHash: selectedModel.value,

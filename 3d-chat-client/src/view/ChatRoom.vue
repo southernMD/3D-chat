@@ -131,15 +131,7 @@ const roomInfo = computed(() => ({
   roomName: webrtcStore.currentRoomConfig?.name || '3D聊天室',
   peerId: webrtcStore.roomInfo?.peerId || ''
 }))
-const roomConfig = computed(() => webrtcStore.currentRoomConfig || {
-  map: '',
-  name: '',
-  description: ''
-})
-const modelInfo = computed(() => webrtcStore.currentModelInfo || {
-  name: '',
-  hash: ''
-})
+
 const peers = computed(() => webrtcStore.peers)
 const messages = computed(() => webrtcStore.messages)
 const newMessage = ref('')

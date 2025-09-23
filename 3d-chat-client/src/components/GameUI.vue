@@ -6,6 +6,10 @@
         <span class="button-icon">🚪</span>
         退出
       </button>
+      <button class="ui-button copy-room-btn" @click.stop="handleCopyRoomCode" :disabled="!roomCode">
+        <span class="button-icon">📋</span>
+        复制房间码
+      </button>
       <button class="ui-button settings-btn" @click.stop="handleSettings">
         <span class="button-icon">⚙️</span>
         设置
@@ -20,6 +24,10 @@
     <div class="online-users">
       <div class="users-header">
         <span class="users-title">在线用户 ({{ onlineUsers.length }})</span>
+        <div class="connection-indicator" :class="{ 'connected': props.webrtcConnected }">
+          <span class="connection-dot"></span>
+          <span class="connection-text">{{ props.webrtcConnected ? '已连接' : '未连接' }}</span>
+        </div>
       </div>
       <div class="users-list">
         <div 
@@ -77,7 +85,8 @@
           @blur="hideChatInput"
           class="lol-chat-input"
           :class="{ 'hidden': !showChatInput }"
-          placeholder="按回车发送消息..."
+          :placeholder="props.webrtcConnected ? '按回车发送消息...' : '未连接到服务器'"
+          :disabled="!props.webrtcConnected"
           maxlength="200"
         />
       </div>
@@ -109,7 +118,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
+
+// Props定义
+interface Props {
+  webrtcConnected?: boolean
+  roomInfo?: any
+  peers?: any[]
+  messages?: any[]
+  microphoneEnabled?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  webrtcConnected: false,
+  roomInfo: null,
+  peers: () => [],
+  messages: () => [],
+  microphoneEnabled: false
+})
+
+// Events定义
+const emit = defineEmits<{
+  sendMessage: [message: string]
+  toggleMicrophone: []
+  exitRoom: []
+  copyRoomCode: [success: boolean, roomCode?: string]
+}>()
 
 // 接口定义
 interface User {
@@ -137,22 +171,77 @@ interface InventoryItem {
   description: string
 }
 
-// 响应式数据
-const onlineUsers = ref<User[]>([
-  { id: '1', name: '玩家1', micOn: true, volume: 75, isSelf: true },
-  { id: '2', name: '玩家2', micOn: false, volume: 0, isSelf: false },
-  { id: '3', name: '玩家3', micOn: true, volume: 60, isSelf: false },
-])
+// 响应式数据 - 现在从WebRTC获取
+const onlineUsers = computed<User[]>(() => {
+  const users: User[] = []
+
+  // 添加自己
+  users.push({
+    id: 'self',
+    name: '我',
+    micOn: props.microphoneEnabled || false,
+    volume: props.microphoneEnabled ? 75 : 0,
+    isSelf: true
+  })
+
+  // 添加其他用户
+  if (props.peers) {
+    props.peers.forEach(peer => {
+      users.push({
+        id: peer.id,
+        name: peer.name,
+        micOn: false, // 其他用户的麦克风状态可以从peer数据获取
+        volume: 0,
+        isSelf: false
+      })
+    })
+  }
+
+  return users
+})
+
+// 房间码计算属性
+const roomCode = computed(() => {
+  return props.roomInfo?.roomId || null
+})
 
 const chatMessagesRef = ref()
 const chatInputRef = ref()
 const showChatInput = ref(false) // 默认隐藏输入框
-const chatMessages = ref<ChatMessage[]>([
-  { id: '1', author: '系统', content: '欢迎进入游戏世界！', timestamp: Date.now() - 120000, isSelf: false, isSystem: true },
-  { id: '2', author: '玩家2', content: '大家好！有人在吗？', timestamp: Date.now() - 90000, isSelf: false, isSystem: false },
-  { id: '3', author: '我', content: '我在这里！', timestamp: Date.now() - 60000, isSelf: true, isSystem: false },
-  { id: '4', author: '玩家3', content: '这个游戏真不错！', timestamp: Date.now() - 30000, isSelf: false, isSystem: false },
-])
+
+// 聊天消息现在从WebRTC获取
+const chatMessages = computed<ChatMessage[]>(() => {
+  const messages: ChatMessage[] = []
+
+  // 添加系统欢迎消息
+  if (props.webrtcConnected) {
+    messages.push({
+      id: 'welcome',
+      author: '系统',
+      content: '欢迎进入3D聊天室！',
+      timestamp: Date.now() - 120000,
+      isSelf: false,
+      isSystem: true
+    })
+  }
+
+  // 添加WebRTC消息
+  if (props.messages) {
+    props.messages.forEach(msg => {
+      messages.push({
+        id: msg.id,
+        author: msg.sender,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        isSelf: msg.isOwn,
+        isSystem: msg.isSystem || false
+      })
+    })
+  }
+
+  // 限制消息数量，只显示最近的50条消息
+  return messages.slice(-50)
+})
 
 const currentMessage = ref('')
 
@@ -166,25 +255,20 @@ const handleGlobalKeydown = (event: KeyboardEvent) => {
 }
 
 onMounted(() => {
-  console.log('💬 聊天消息初始化:', chatMessages.value)
-  console.log('📝 聊天消息数量:', chatMessages.value.length)
+  console.log('💬 GameUI组件已挂载')
 
   // 添加全局键盘监听
   document.addEventListener('keydown', handleGlobalKeydown)
 
-  // 测试添加一条消息
-  setTimeout(() => {
-    const testMessage: ChatMessage = {
-      id: 'test_' + Date.now(),
-      author: '测试',
-      content: '这是一条测试消息，用来验证聊天功能是否正常工作。',
-      timestamp: Date.now(),
-      isSelf: false,
-      isSystem: false
-    }
-    chatMessages.value.push(testMessage)
-    console.log('🧪 添加测试消息:', testMessage)
-  }, 2000)
+  // 监听聊天消息变化，自动滚动到底部
+  watch(chatMessages, () => {
+    nextTick(() => {
+      const chatContainer = document.querySelector('.lol-chat-messages')
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight
+      }
+    })
+  }, { deep: true })
 })
 
 onUnmounted(() => {
@@ -214,8 +298,8 @@ const inventoryItems = ref<InventoryItem[]>(Array.from({ length: 9 }, (_, index)
 
 // 方法
 const handleExit = () => {
-  if (confirm('确定要退出游戏吗？')) {
-    console.log('退出游戏')
+  if (confirm('确定要退出房间吗？')) {
+    emit('exitRoom')
   }
 }
 
@@ -227,26 +311,48 @@ const handleHelp = () => {
   console.log('打开帮助')
 }
 
+const handleCopyRoomCode = async () => {
+  if (!roomCode.value) {
+    console.warn('⚠️ 房间码不存在')
+    emit('copyRoomCode', false)
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(roomCode.value)
+    console.log('📋 房间码已复制:', roomCode.value)
+    emit('copyRoomCode', true, roomCode.value)
+  } catch (error) {
+    console.error('❌ 复制房间码失败:', error)
+    // 降级方案：选择文本
+    try {
+      const textArea = document.createElement('textarea')
+      textArea.value = roomCode.value
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+      console.log('📋 房间码已复制（降级方案）:', roomCode.value)
+      emit('copyRoomCode', true, roomCode.value)
+    } catch (fallbackError) {
+      console.error('❌ 降级复制方案也失败:', fallbackError)
+      emit('copyRoomCode', false)
+    }
+  }
+}
+
 const toggleMic = (userId: string) => {
-  const user = onlineUsers.value.find(u => u.id === userId)
-  if (user && user.isSelf) {
-    user.micOn = !user.micOn
-    user.volume = user.micOn ? 75 : 0
+  // 只允许控制自己的麦克风
+  if (userId === 'self') {
+    emit('toggleMicrophone')
   }
 }
 
 const sendMessage = () => {
   const messageText = currentMessage.value.trim()
-  if (messageText) {
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      author: '我',
-      content: messageText,
-      timestamp: Date.now(),
-      isSelf: true,
-      isSystem: false
-    }
-    chatMessages.value.push(newMessage)
+  if (messageText && props.webrtcConnected) {
+    // 通过emit发送消息到父组件
+    emit('sendMessage', messageText)
 
     // 立即清空输入框并隐藏
     currentMessage.value = ''
@@ -261,38 +367,9 @@ const sendMessage = () => {
     })
 
     console.log('📨 发送消息:', messageText)
-
-    // 模拟其他玩家回复（可选，用于测试）
-    if (Math.random() > 0.7) {
-      setTimeout(() => {
-        const responses = [
-          '收到！',
-          '好的',
-          '了解',
-          '👍',
-          '没问题',
-          '哈哈哈'
-        ]
-        const randomResponse = responses[Math.floor(Math.random() * responses.length)]
-        const botMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          author: '玩家2',
-          content: randomResponse,
-          timestamp: Date.now(),
-          isSelf: false,
-          isSystem: false
-        }
-        chatMessages.value.push(botMessage)
-
-        // 再次滚动到底部
-        nextTick(() => {
-          const chatContainer = document.querySelector('.lol-chat-messages')
-          if (chatContainer) {
-            chatContainer.scrollTop = chatContainer.scrollHeight
-          }
-        })
-      }, 1000 + Math.random() * 2000) // 1-3秒后回复
-    }
+  } else if (messageText && !props.webrtcConnected) {
+    console.warn('⚠️ 无法发送消息：未连接到服务器')
+    // 可以在这里显示一个提示
   }
 }
 
@@ -391,6 +468,30 @@ onMounted(() => {
   transform: translateY(-2px);
 }
 
+.ui-button:disabled {
+  background: rgba(0, 0, 0, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.4);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.ui-button:disabled:hover {
+  background: rgba(0, 0, 0, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: none;
+}
+
+.copy-room-btn {
+  background: rgba(0, 150, 255, 0.3);
+  border-color: rgba(0, 150, 255, 0.6);
+}
+
+.copy-room-btn:hover:not(:disabled) {
+  background: rgba(0, 150, 255, 0.6);
+  border-color: rgba(0, 150, 255, 0.8);
+}
+
 .button-icon {
   font-size: 16px;
 }
@@ -414,12 +515,39 @@ onMounted(() => {
   padding: 15px;
   background: rgba(255, 255, 255, 0.05);
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .users-title {
   color: white;
   font-weight: bold;
   font-size: 16px;
+}
+
+.connection-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff6b6b;
+  transition: background-color 0.3s ease;
+}
+
+.connection-indicator.connected .connection-dot {
+  background: #51cf66;
+}
+
+.connection-text {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
 }
 
 .users-list {

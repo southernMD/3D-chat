@@ -86,6 +86,16 @@ const routes: Array<RouteRecordRaw> = [
         path: '/3d-chat-room',
         name: '3d-chat-room',
         component: () => import('@/view/3DChatRoom.vue'),
+        meta: { requiresAuth: true },
+        beforeEnter: (to, from, next) => {
+            // 只允许从模型选择页面跳转过来
+            if (from.name === 'model-selection' || (from.name === 'mode-selection' && from.query.pingCode?.length !== 0)) {
+                next()
+            } else {
+                // 直接访问或从其他页面跳转，重定向到首页
+                next({ name: 'home' })
+            }
+        }
     },
     {
         // 捕获所有未匹配的路由，重定向到首页
