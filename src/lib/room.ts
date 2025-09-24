@@ -66,7 +66,8 @@ export class RoomManager {
       config,
       modelHash: new Map([[userName, modelHash]]),
     };
-
+    console.log(config.map,"地图是");
+    
     // 如果是学校类型房间，创建SchoolRoom实例
     if (config.map === RoomType.SCHOOL && this.io) {
       room.schoolRoom = new SchoolRoom(roomId, this.io);

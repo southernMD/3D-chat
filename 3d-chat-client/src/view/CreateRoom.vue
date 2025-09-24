@@ -252,7 +252,7 @@ const currentMapInfo = computed(() => {
 })
 
 // 选中的地图
-const selectedMap = ref('space-station')
+const selectedMap = ref('school')
 
 // 最大用户数选项
 const maxUsersOptions: SelectOption[] = [

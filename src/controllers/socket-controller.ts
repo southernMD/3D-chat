@@ -72,6 +72,9 @@ export const handleConnection = (socket: Socket, io: Server): void => {
           })),
       });
 
+      // 单独发送房间配置
+      socket.emit('roomConfig', roomConfig);
+
       // 通知房间内其他客户端有新成员加入
       socket.to(roomId).emit('peerJoined', {
         peerId,

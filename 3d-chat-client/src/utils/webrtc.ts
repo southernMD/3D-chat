@@ -10,7 +10,6 @@ export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'er
 export interface RoomInfo {
   roomId: string
   peerId: string
-  roomConfig:RoomConfig
 }
 
 // 成员信息接口
@@ -133,7 +132,8 @@ export class WebRTCManager {
   private updateRoomInfoCallback: RoomInfoCallback
   private updatePeersListCallback: PeersListCallback
   private addMessageCallback: MessageCallback
-  private getEggPositionsCallback: EggPositionsCallback | undefined 
+  private getEggPositionsCallback: EggPositionsCallback | undefined
+  private updateRoomConfigCallback?: (config: RoomConfig) => void
 
   constructor(
     logCallback: LogCallback,
@@ -289,7 +289,12 @@ export class WebRTCManager {
 
       // 更新UI
       this.updateConnectionStatusCallback('connected', '已加入房间')
-      this.updateRoomInfoCallback({ roomId, peerId, roomConfig })
+      this.updateRoomInfoCallback({ roomId, peerId })
+
+      // 确保roomConfig被设置
+      this.state.roomConfig = roomConfig
+      this.updateRoomConfigCallback?.(roomConfig)
+
       this.updatePeersListCallback([...this.peers])
 
 
@@ -304,6 +309,13 @@ export class WebRTCManager {
 
       // 初始化WebRTC连接
       await this.initializeWebRTC()
+    })
+
+    // 监听房间配置事件
+    this.state.socket.on('roomConfig', (roomConfig: RoomConfig) => {
+      this.log(`收到房间配置: ${JSON.stringify(roomConfig)}`)
+      this.state.roomConfig = roomConfig
+      this.updateRoomConfigCallback?.(roomConfig)
     })
 
     // 监听新成员加入事件
@@ -1174,6 +1186,13 @@ export class WebRTCManager {
       this.state.microphoneEnabled = false
       this.log('麦克风已关闭')
     }
+  }
+
+  /**
+   * 设置房间配置回调
+   */
+  setRoomConfigCallback(callback: (config: RoomConfig) => void) {
+    this.updateRoomConfigCallback = callback
   }
 
   /**

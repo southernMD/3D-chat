@@ -7,6 +7,8 @@ import { BaseModel } from '../architecture/BaseModel';
 import { PHYSICS_CONSTANTS } from '../../constants/PhysicsConstants';
 import { Tree } from '../architecture/Tree';
 import { Egg } from '../Egg';
+import type { EggBroadcastData } from '@/utils/eventBus';
+import { showInfo } from '@/utils/message';
 
 /**
  * 对象管理器 - 统一管理所有静态模型对象
@@ -15,6 +17,9 @@ export class ObjectManager {
   private scene: THREE.Scene;
   private objects: Map<string, BaseModel> = new Map();
   private isCreated = false;
+
+  // 彩蛋管理
+  private eggs: Map<string, THREE.Object3D> = new Map();
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -530,12 +535,118 @@ export class ObjectManager {
     return stats;
   }
 
-  // ==================== 鸡蛋模型管理 ====================
-
   /**
    * 预加载鸡蛋模型（调用Egg类的静态方法）
    */
   async createEgg(): Promise<void> {
     await Egg.createEgg();
+  }
+
+  /**
+   * 处理彩蛋广播事件
+   */
+  handleEggBroadcast = (data: EggBroadcastData) => {
+    console.log('🥚 ObjectManager收到彩蛋广播:', data)
+
+    // 在3D场景中插入彩蛋
+    data.eggs.forEach(egg => {
+      this.insertEggIntoScene(egg.id, egg.x, egg.y, egg.z)
+    })
+
+    showInfo(`场景中新增了 ${data.totalEggs} 个彩蛋！`)
+  }
+
+  /**
+   * 在3D场景中插入彩蛋
+   */
+  private insertEggIntoScene(id: string, x: number, y: number, z: number) {
+    try {
+      // 获取鸡蛋模型实例
+      const eggModel = Egg.getEggInstance()
+      if (!eggModel) {
+        console.error(`❌ 无法获取鸡蛋模型实例，彩蛋 ${id} 创建失败`)
+        return
+      }
+
+      // 设置鸡蛋模型属性
+      eggModel.name = `egg_${id}`
+      eggModel.userData = { type: 'egg', id: id }
+      eggModel.position.set(x, y, z)
+      eggModel.scale.set(1, 1, 1)
+
+      // 添加到场景
+      this.scene.add(eggModel)
+
+      // 设置随机旋转角度
+      eggModel.rotation.x = Math.random() * Math.PI * 2 // 0 到 2π
+      eggModel.rotation.y = Math.random() * Math.PI * 2
+      eggModel.rotation.z = Math.random() * Math.PI * 2
+
+      // 保存到彩蛋集合中（直接保存模型，不是组）
+      this.eggs.set(id, eggModel as any)
+
+      console.log(`🥚 彩蛋 ${id} 已插入场景位置: (${x}, ${y}, ${z})`)
+
+    } catch (error) {
+      console.error(`❌ 插入彩蛋 ${id} 失败:`, error)
+    }
+  }
+
+  /**
+   * 清除指定彩蛋
+   */
+  clearEgg(eggId: string): boolean {
+    try {
+      const eggModel = this.eggs.get(eggId)
+      if (eggModel) {
+        // 从场景中移除
+        this.scene.remove(eggModel)
+
+        // 清理几何体和材质
+        eggModel.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.geometry.dispose()
+            if (Array.isArray(child.material)) {
+              child.material.forEach(material => material.dispose())
+            } else {
+              child.material.dispose()
+            }
+          }
+        })
+
+        // 从集合中移除
+        this.eggs.delete(eggId)
+
+        console.log(`🥚 彩蛋 ${eggId} 已清除`)
+        return true
+      }
+      return false
+    } catch (error) {
+      console.error(`❌ 清除彩蛋 ${eggId} 失败:`, error)
+      return false
+    }
+  }
+
+  /**
+   * 清除所有彩蛋
+   */
+  clearAllEggs() {
+    const eggIds = Array.from(this.eggs.keys())
+    eggIds.forEach(id => this.clearEgg(id))
+    console.log(`🥚 已清除所有彩蛋 (${eggIds.length}个)`)
+  }
+
+  /**
+   * 获取当前彩蛋数量
+   */
+  getEggCount(): number {
+    return this.eggs.size
+  }
+
+  /**
+   * 获取所有彩蛋ID
+   */
+  getEggIds(): string[] {
+    return Array.from(this.eggs.keys())
   }
 }

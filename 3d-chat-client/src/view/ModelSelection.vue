@@ -382,6 +382,7 @@ const confirmModelSelection = async () => {
       selected,
       userName
     )
+    webrtcStore.roomConfig = roomConfig
 
     console.log('房间创建结果:', success)
 

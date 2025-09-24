@@ -4,6 +4,7 @@ import { WebRTCManager, type ConnectionStatus, type RoomInfo, type Peer, type Ro
 import { showError, showSuccess, showInfo } from '@/utils/message'
 import { useAuthStore } from '@/stores/auth'
 import type { EggPosintions } from '@/types/types'
+import { eventBus } from '@/utils/eventBus'
 
 // 消息接口
 export interface ChatMessage {
@@ -27,6 +28,7 @@ export const useWebRTCStore = defineStore('webrtc', () => {
   let webrtcManager: WebRTCManager | null = null
   const connectionStatus = ref<ConnectionStatus>('disconnected')
   const roomInfo = ref<RoomInfo | null>(null)
+  const roomConfig = ref<RoomConfig | null>(null)
   const peers = ref<Peer[]>([])
   const messages = ref<ChatMessage[]>([])
   const isInitialized = ref(false)
@@ -44,7 +46,6 @@ export const useWebRTCStore = defineStore('webrtc', () => {
   const addMessage = (content: string, isSent: boolean, senderName?: string) => {
     // 检查是否为系统消息
     const isSystemMessage = senderName === '系统'
-    debugger
     const newMessage: ChatMessage = {
       id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
       sender: isSent ? (authStore.user?.username || '我') : (senderName || '其他用户'),
@@ -91,11 +92,25 @@ export const useWebRTCStore = defineStore('webrtc', () => {
         addMessage(content, isSent, senderName)
       },
       (eggPositions: EggPosintions) => {
-        addMessage(`啊哈哈鸡蛋来了,生成${eggPositions.totalEggs}个鸡蛋`,false,"系统")
-        console.log(eggPositions,"啊哈哈鸡蛋来了");
+        addMessage(`啊哈哈鸡蛋来了,生成${eggPositions.totalEggs}个鸡蛋`, false, "系统")
+        console.log(eggPositions, "啊哈哈鸡蛋来了");
+
+        // 触发事件总线，通知外部组件处理彩蛋插入
+        eventBus.emit('egg-broadcast', {
+          eggs: eggPositions.eggs,
+          roomId: eggPositions.roomId,
+          totalEggs: eggPositions.totalEggs,
+          remainingEggs: eggPositions.remainingEggs
+        })
       }
     )
-    debugger
+
+    // 设置房间配置回调
+    webrtcManager.setRoomConfigCallback((config: RoomConfig) => {
+      console.log('🔧 收到房间配置回调:', config)
+      roomConfig.value = config
+      console.log('🔧 roomConfig.value 已更新:', roomConfig.value)
+    })
     console.log(roomInfo.value);
     isInitialized.value = true
     console.log('WebRTC管理器已初始化')
@@ -327,6 +342,7 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     currentRoomConfig,
     currentModelHash,
     currentModelInfo,
+    roomConfig,
 
     // 计算属性
     isConnected,

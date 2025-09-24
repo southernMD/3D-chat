@@ -16,6 +16,7 @@ import LoadingProgress from '@/components/LoadingProgress.vue';
 import { useWebRTCStore } from '@/stores/webrtc';
 import { useAuthStore } from '@/stores/auth';
 import { showError, showSuccess, showInfo } from '@/utils/message';
+import { eventBus } from '@/utils/eventBus';
 
 
 // BVH物理系统已集成到模型中，不再需要CANNON
@@ -55,7 +56,7 @@ type StepStatus = 'pending' | 'loading' | 'completed' | 'error'
 // 加载进度状态
 const isLoading = ref(true)
 const currentLoadingMessage = ref('')
-const loadingSteps = ref<Array<{title: string, description: string, status: StepStatus}>>([
+const loadingSteps = ref<Array<{ title: string, description: string, status: StepStatus }>>([
   { title: '初始化渲染器', description: '创建WebGL渲染器和基础配置', status: 'pending' },
   { title: '创建场景', description: '初始化3D场景和相机系统', status: 'pending' },
   { title: '加载MMD模型', description: '加载角色模型和动画数据', status: 'pending' },
@@ -75,7 +76,7 @@ const updateLoadingStep = (stepIndex: number, status: StepStatus, message?: stri
   }
 }
 
-let bvhPhysics:BVHPhysics
+let bvhPhysics: BVHPhysics
 
 // WebRTC初始化函数
 const initializeWebRTC = async () => {
@@ -116,110 +117,111 @@ const initializeWebRTC = async () => {
 
 
 onMounted(async () => {
-    try {
-        // 检查WebRTC连接状态（不重新初始化）
-        console.log('🌐 3D聊天室页面已加载')
-        console.log('当前WebRTC状态:', webrtcStore.getStatusInfo())
+  try {
+    // 检查WebRTC连接状态（不重新初始化）
+    console.log('🌐 3D聊天室页面已加载')
+    console.log('当前WebRTC状态:', webrtcStore.getStatusInfo())
+    debugger
+    if (!webrtcStore.isConnected) {
+      console.warn('⚠️ WebRTC未连接，尝试初始化...')
+      await initializeWebRTC()
+    } else {
+      console.log('✅ WebRTC已连接，房间信息:', webrtcStore.roomInfo)
+      console.log('✅ 房间配置:', webrtcStore.roomConfig)
+    }
 
-        if (!webrtcStore.isConnected) {
-            console.warn('⚠️ WebRTC未连接，尝试初始化...')
-            await initializeWebRTC()
-        } else {
-            console.log('✅ WebRTC已连接，房间信息:', webrtcStore.roomInfo)
-        }
+    // 步骤1: 初始化渲染器
+    updateLoadingStep(0, 'loading', '正在创建WebGL渲染器...')
 
-        // 步骤1: 初始化渲染器
-        updateLoadingStep(0, 'loading', '正在创建WebGL渲染器...')
+    // 初始化场景管理器
+    sceneManager = new SceneManager();
+    sceneManager.createCamera(width, height)
+    scene = sceneManager.getScene();
+    updateLoadingStep(0, 'completed')
 
-        // 初始化场景管理器
-        sceneManager = new SceneManager();
-        sceneManager.createCamera(width, height)
-        scene = sceneManager.getScene();
-        updateLoadingStep(0, 'completed')
+    // 步骤2: 创建场景
+    updateLoadingStep(1, 'loading', '正在初始化3D场景和相机...')
 
-        // 步骤2: 创建场景
-        updateLoadingStep(1, 'loading', '正在初始化3D场景和相机...')
+    // 创建相机和渲染器
+    renderer = sceneManager.createRenderer(dom.value, width, height);
 
-        // 创建相机和渲染器
-        renderer = sceneManager.createRenderer(dom.value, width, height);
+    // 初始化灯光
+    sceneManager.initializeLights();
 
-        // 初始化灯光
-        sceneManager.initializeLights();
-
-        bvhPhysics = new BVHPhysics(scene);
+    bvhPhysics = new BVHPhysics(scene);
 
 
-        // 创建场景控制器
-        sceneManager.createSceneControls();
-        updateLoadingStep(1, 'completed')
+    // 创建场景控制器
+    sceneManager.createSceneControls();
+    updateLoadingStep(1, 'completed')
 
-        updateLoadingStep(2, 'loading', '正在生成地面、墙体等场景元素...')
-        objectManager = new ObjectManager(scene);
-        await objectManager.create();
-        updateLoadingStep(2, 'completed')
+    updateLoadingStep(2, 'loading', '正在生成地面、墙体等场景元素...')
+    objectManager = new ObjectManager(scene);
+    await objectManager.create();
+    updateLoadingStep(2, 'completed')
 
-        // 步骤3: 加载MMD模型
-        updateLoadingStep(3, 'loading', '正在加载角色模型和动画数据...')
-        mmdModelManager = new MMDModelManager(scene, renderer, bvhPhysics);
-        await mmdModelManager.loadModel();
-        updateLoadingStep(3, 'completed')
+    // 步骤3: 加载MMD模型
+    updateLoadingStep(3, 'loading', '正在加载角色模型和动画数据...')
+    mmdModelManager = new MMDModelManager(scene, renderer, bvhPhysics);
+    await mmdModelManager.loadModel();
+    updateLoadingStep(3, 'completed')
 
-        hadRenderCamera = sceneManager.getCamera()
+    hadRenderCamera = sceneManager.getCamera()
 
-        // 初始化FPS监控器
-        fpsMonitor = new FPSMonitor(60)
+    // 初始化FPS监控器
+    fpsMonitor = new FPSMonitor(60)
 
-        // 初始化GUI管理器
-        guiManager = new GUIManager(
-          mmdModelManager,
-          objectManager,
-          sceneManager,
-          bvhPhysics,
-          renderer,
-          fpsMonitor,
-          hadRenderCamera == mmdModelManager.getLookCamera() ? true : false
-        );
+    // 初始化GUI管理器
+    guiManager = new GUIManager(
+      mmdModelManager,
+      objectManager,
+      sceneManager,
+      bvhPhysics,
+      renderer,
+      fpsMonitor,
+      hadRenderCamera == mmdModelManager.getLookCamera() ? true : false
+    );
 
-        nextTick(() => {
-          bvhPhysics.createSeparateColliders(objectManager.getAllObjects());
-          guiManager.syncTrackFromObject();
-        });
+    nextTick(() => {
+      bvhPhysics.createSeparateColliders(objectManager.getAllObjects());
+      guiManager.syncTrackFromObject();
+    });
 
-        // 监听墙体重新创建事件，重新生成BVH碰撞体
-        window.addEventListener('wallsRecreated', () => {
-          nextTick(() => {
-            bvhPhysics.createSeparateColliders(objectManager.getAllObjects());
-          });
-        });
+    // 监听墙体重新创建事件，重新生成BVH碰撞体
+    window.addEventListener('wallsRecreated', () => {
+      nextTick(() => {
+        bvhPhysics.createSeparateColliders(objectManager.getAllObjects());
+      });
+    });
 
-        // 添加窗口事件监听器
-        window.addEventListener('keydown', handleKeyDown);
-        window.addEventListener('keyup', handleKeyUp);
+    // 添加窗口事件监听器
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
 
-        // 监听WebRTC连接状态变化
-        watch(isWebRTCConnected, (connected) => {
-          console.log('🌐 WebRTC连接状态变化:', connected)
-          if (connected) {
-            showSuccess('WebRTC连接已建立')
-          }
-        })
+    // 监听WebRTC连接状态变化
+    watch(isWebRTCConnected, (connected) => {
+      console.log('🌐 WebRTC连接状态变化:', connected)
+      if (connected) {
+        showSuccess('WebRTC连接已建立')
+      }
+    })
 
-        // 监听房间信息变化
-        watch(roomInfo, (info) => {
-          if (info) {
-            console.log('🏠 房间信息更新:', info)
-            showSuccess(`已加入房间: ${info.roomId}`)
-          }
-        })
+    // 监听房间信息变化
+    watch(roomInfo, (info) => {
+      if (info) {
+        console.log('🏠 房间信息更新:', info)
+        showSuccess(`已加入房间: ${info.roomId}`)
+      }
+    })
 
-        // 监听成员变化
-        watch(peers, (newPeers, oldPeers) => {
-          if (oldPeers && newPeers.length > oldPeers.length) {
-            showInfo('有新成员加入房间')
-          } else if (oldPeers && newPeers.length < oldPeers.length) {
-            showInfo('有成员离开房间')
-          }
-        })
+    // 监听成员变化
+    watch(peers, (newPeers, oldPeers) => {
+      if (oldPeers && newPeers.length > oldPeers.length) {
+        showInfo('有新成员加入房间')
+      } else if (oldPeers && newPeers.length < oldPeers.length) {
+        showInfo('有成员离开房间')
+      }
+    })
 
     // 添加右键发射小球事件监听器
     let mouseDownPosition = { x: 0, y: 0 };
@@ -235,7 +237,7 @@ onMounted(async () => {
       if (event.button === 2) { // 右键抬起
         // 检查是否是点击（而不是拖拽）
         const totalDelta = Math.abs(event.clientX - mouseDownPosition.x) +
-                          Math.abs(event.clientY - mouseDownPosition.y);
+          Math.abs(event.clientY - mouseDownPosition.y);
         if (totalDelta > 2) return;
 
         // 计算鼠标在标准化设备坐标中的位置
@@ -258,25 +260,35 @@ onMounted(async () => {
       event.preventDefault();
     });
 
-        // 相机辅助器更新现在在animate函数中处理
-        animate(); // 启动渲染循环
+    // 相机辅助器更新现在在animate函数中处理
+    animate(); // 启动渲染循环
 
-        // 所有步骤完成，隐藏加载界面
-        setTimeout(() => {
-            isLoading.value = false
-            currentLoadingMessage.value = '加载完成！'
-            console.log('🎉 3D场景加载完成！')
-        }, 500)
+    // 所有步骤完成，隐藏加载界面
+    setTimeout(() => {
+      isLoading.value = false
+      currentLoadingMessage.value = '加载完成！'
+      console.log('🎉 3D场景加载完成！')
+    }, 500)
 
-    } catch (error) {
-        console.error('❌ 加载过程中发生错误:', error)
+    // 监听彩蛋广播事件
+    if(webrtcStore.roomConfig?.map === 'school') {
+      eventBus.on('egg-broadcast', objectManager.handleEggBroadcast)
     }
+
+  } catch (error) {
+    console.error('❌ 加载过程中发生错误:', error)
+  }
 })
 
 onUnmounted(() => {
   // 移除窗口事件监听器
   window.removeEventListener('keydown', handleKeyDown);
   window.removeEventListener('keyup', handleKeyUp);
+
+  // 清理事件总线监听器
+  if(webrtcStore.roomConfig?.map === 'school') {
+    eventBus.off('egg-broadcast', objectManager.handleEggBroadcast)
+  }
 
   // 清理WebRTC连接
   try {
@@ -327,7 +339,7 @@ function animate(timestamp?: number) {
 
   // 1. 更新MMD模型（处理用户输入，同步到物理身体）
   if (mmdModelManager) {
-    mmdModelManager.update(1/120);
+    mmdModelManager.update(1 / 120);
   }
 
   // 2. 更新BVH物理系统（集成在模型中）
@@ -339,7 +351,7 @@ function animate(timestamp?: number) {
 
       // 更新发射的鸡蛋物理（传递相机进行视野优化）
       const currentCamera = guiManager.getHadRenderCamera() || hadRenderCamera;
-      model.updateProjectileEggs(1/60, currentCamera);
+      model.updateProjectileEggs(1 / 60, currentCamera);
 
       // 只在需要调试时才更新辅助器（包围盒、胶囊体等）
       // 注释掉这些行可以提高性能
@@ -446,6 +458,8 @@ const handleExitRoom = () => {
   }
 }
 
+
+
 const handleCopyRoomCode = (success: boolean, roomCode?: string) => {
   if (success && roomCode) {
     showSuccess(`房间码已复制到剪贴板: ${roomCode}`)
@@ -462,25 +476,12 @@ const handleCopyRoomCode = (success: boolean, roomCode?: string) => {
 <template>
   <div class="model" ref="dom">
     <!-- 加载进度界面 -->
-    <LoadingProgress
-      :visible="isLoading"
-      :steps="loadingSteps"
-      :current-message="currentLoadingMessage"
-    />
+    <LoadingProgress :visible="isLoading" :steps="loadingSteps" :current-message="currentLoadingMessage" />
 
     <!-- 游戏UI界面 -->
-    <GameUI
-      v-show="showGameUI && !isLoading"
-      :webrtc-connected="isWebRTCConnected"
-      :room-info="roomInfo"
-      :peers="peers"
-      :messages="messages"
-      :microphone-enabled="microphoneEnabled"
-      @send-message="handleSendMessage"
-      @toggle-microphone="handleToggleMicrophone"
-      @exit-room="handleExitRoom"
-      @copy-room-code="handleCopyRoomCode"
-    />
+    <GameUI v-show="showGameUI && !isLoading" :webrtc-connected="isWebRTCConnected" :room-info="roomInfo" :peers="peers"
+      :messages="messages" :microphone-enabled="microphoneEnabled" @send-message="handleSendMessage"
+      @toggle-microphone="handleToggleMicrophone" @exit-room="handleExitRoom" @copy-room-code="handleCopyRoomCode" />
   </div>
 </template>
 
@@ -490,6 +491,4 @@ const handleCopyRoomCode = (success: boolean, roomCode?: string) => {
   width: 100%;
   height: 100vh;
 }
-
-
 </style>
