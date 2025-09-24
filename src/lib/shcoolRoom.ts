@@ -34,6 +34,97 @@ export class SchoolRoom {
   }
 
   /**
+   * 处理清除鸡蛋事件
+   */
+  public handleClearEgg(
+    socket: any,
+    { id, eggId, username, roomId }: { id: number, eggId: string, username: string, roomId: string },
+    callback?: (response: any) => void
+  ): void {
+    try {
+      console.log(`🥚 收到清除鸡蛋请求: eggId=${eggId}, playerId=${id}, username=${username}, roomId=${roomId}`);
+
+      // 查找对应的鸡蛋
+      const egg = this.eggPositions.find(egg => egg.id === eggId);
+      if (!egg) {
+        console.log(`❌ Egg ${eggId} not found in room ${this.roomId}`);
+
+        // 通知客户端重新插入彩蛋
+        socket.emit('reinsertEgg', {
+          eggId: eggId,
+          reason: 'EGG_NOT_FOUND',
+          message: '鸡蛋不存在',
+          position: null
+        });
+
+        if (callback) callback({ success: false, error: '鸡蛋不存在', shouldReinsert: true });
+        return;
+      }
+
+      if (!egg.isMarked) {
+        console.log(`⚠️ Egg ${eggId} is not marked in room ${this.roomId}`);
+
+        // 通知客户端重新插入彩蛋，并返回具体位置
+        socket.emit('reinsertEgg', {
+          eggId: eggId,
+          reason: 'EGG_NOT_MARKED',
+          message: '鸡蛋未被标记',
+          position: {
+            id: egg.id,
+            x: parseFloat(egg.x),
+            y: parseFloat(egg.y),
+            z: parseFloat(egg.z)
+          }
+        });
+
+        if (callback) callback({ success: false, error: '鸡蛋未被标记', shouldReinsert: true });
+        return;
+      }
+
+      // 清除标记
+      egg.isMarked = false;
+
+      // 广播彩蛋被清除的消息
+      this.io.to(this.roomId).emit('eggCleared', {
+        eggId: eggId,
+        clearedBy: id.toString(),
+        timestamp: new Date(),
+        remainingEggs: this.eggPositions.filter(egg => !egg.isMarked).length
+      });
+
+      // 通知客户端成功获得彩蛋
+      socket.emit('eggCollected', {
+        eggId: eggId,
+        playerId: id,
+        username: username,
+        timestamp: new Date(),
+        message: '恭喜你获得了彩蛋！'
+      });
+
+      console.log(`✅ Egg ${eggId} cleared by player ${username}(${id}) in room ${this.roomId}`);
+
+      if (callback) callback({ success: true, collected: true });
+
+    } catch (error) {
+      console.error('❌ 处理清除鸡蛋事件时发生错误:', error);
+
+      // 发生异常时通知客户端重新插入彩蛋
+      socket.emit('reinsertEgg', {
+        eggId: eggId,
+        reason: 'SERVER_ERROR',
+        message: '服务器处理错误',
+        position: null
+      });
+
+      if (callback) callback({
+        success: false,
+        error: error instanceof Error ? error.message : '未知错误',
+        shouldReinsert: true
+      });
+    }
+  }
+
+  /**
    * 启动周期性广播
    */
   public startBroadcast(): void {
@@ -111,6 +202,35 @@ export class SchoolRoom {
     });
 
     console.log(`🥚 Broadcasted ${selectedEggs.length} eggs to room ${this.roomId}, ${this.eggPositions.filter(egg => !egg.isMarked).length} eggs remaining`);
+  }
+
+  /**
+   * 同步所有已标记的彩蛋状态给新加入的用户
+   */
+  public syncEggStatesForNewUser(socketId: string): void {
+    // 获取所有已标记的彩蛋
+    const markedEggs = this.eggPositions.filter(egg => egg.isMarked);
+
+    if (markedEggs.length === 0) {
+      console.log(`📍 No marked eggs to sync for new user in room ${this.roomId}`);
+      return;
+    }
+
+    // 发送已标记的彩蛋状态给新用户
+    this.io.to(socketId).emit('eggBroadcast', {
+      eggs: markedEggs.map(egg => ({
+        id: egg.id,
+        x: parseFloat(egg.x),
+        y: parseFloat(egg.y),
+        z: parseFloat(egg.z),
+      })),
+      roomId: this.roomId,
+      totalEggs: markedEggs.length,
+      remainingEggs: this.eggPositions.filter(egg => !egg.isMarked).length,
+      isSync: true // 标识这是同步消息
+    });
+
+    console.log(`🔄 Synced ${markedEggs.length} marked eggs to new user in room ${this.roomId}`);
   }
 
   /**

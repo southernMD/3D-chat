@@ -2,6 +2,7 @@ import { Device } from 'mediasoup-client'
 import { io, Socket } from 'socket.io-client'
 import type { types as mediasoupTypes } from 'mediasoup-client'
 import type { EggPosintions } from '@/types/types'
+import { eventBus } from '@/utils/eventBus'
 
 // 连接状态类型
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
@@ -297,11 +298,47 @@ export class WebRTCManager {
 
       this.updatePeersListCallback([...this.peers])
 
-
       if(roomConfig.map === 'school'){
         this.state.socket!.on('eggBroadcast', (data:EggPosintions) => {
           console.log(`收到${data}个彩蛋位置`);
           this.getEggPositionsCallback?.(data);
+        });
+
+        // 监听重新插入鸡蛋事件
+        this.state.socket!.on('reinsertEgg', (data: {
+          eggId: string,
+          reason: string,
+          message: string,
+          position: { id: string, x: number, y: number, z: number } | null
+        }) => {
+          console.log(`🥚 收到重新插入鸡蛋请求:`, data);
+          // 通过事件总线传递到3DChatRoom.vue处理
+          eventBus.emit('reinsert-egg', data);
+        });
+
+        // 监听鸡蛋收集成功事件
+        this.state.socket!.on('eggCollected', (data: {
+          eggId: string,
+          playerId: number,
+          username: string,
+          timestamp: Date,
+          message: string
+        }) => {
+          console.log(`🥚 鸡蛋收集成功:`, data);
+          // 通过事件总线传递到3DChatRoom.vue处理
+          eventBus.emit('egg-collected', data);
+        });
+
+        // 监听鸡蛋被清除事件（广播给房间内所有用户）
+        this.state.socket!.on('eggCleared', (data: {
+          eggId: string,
+          clearedBy: string,
+          timestamp: Date,
+          remainingEggs: number
+        }) => {
+          console.log(`🥚 鸡蛋被清除:`, data);
+          // 通过事件总线传递到3DChatRoom.vue处理
+          eventBus.emit('egg-cleared', data);
         });
       }
       this.log(`房间配置: ${JSON.stringify(roomConfig)}`)
@@ -1193,6 +1230,24 @@ export class WebRTCManager {
    */
   setRoomConfigCallback(callback: (config: RoomConfig) => void) {
     this.updateRoomConfigCallback = callback
+  }
+
+  /**
+   * 通知服务器清除鸡蛋标记
+   */
+  clearEgg(eggId: string, id:string ,username: string, roomId: string) {
+    if (!this.state.socket) {
+      console.warn('⚠️ Socket未连接，无法清除鸡蛋标记')
+      return
+    }
+
+    console.log(`🥚 通知服务器清除鸡蛋标记: ${eggId}`)
+    this.state.socket.emit('clearEgg', {
+      id,
+      eggId,
+      username,
+      roomId
+    })
   }
 
   /**

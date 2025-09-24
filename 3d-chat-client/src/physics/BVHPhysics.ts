@@ -11,7 +11,6 @@ import { doorGroups } from '@/models/architecture/doors';
  */
 export class BVHPhysics {
   private scene: THREE.Scene;
-  private collider?: THREE.Mesh; // 保留原有的统一collider
   private visualizer?: MeshBVHHelper;
 
   // 新增：分离的碰撞体组和映射关系
@@ -683,10 +682,7 @@ export class BVHPhysics {
    * 更新可视化设置
    */
   updateVisualization(): void {
-    // 更新统一碰撞体可视化
-    if (this.collider) {
-      this.collider.visible = this.params.displayCollider;
-    }
+ 
 
     if (this.visualizer) {
       this.visualizer.visible = this.params.displayBVH;
@@ -709,11 +705,7 @@ export class BVHPhysics {
    * 清理资源
    */
   dispose(): void {
-    // 清理统一碰撞体
-    if(this.collider){
-      this.collider!.geometry.dispose();
-      this.scene.remove(this.collider!);
-    }
+
     if(this.visualizer){
       this.scene.remove(this.visualizer);
     }
@@ -722,9 +714,6 @@ export class BVHPhysics {
     this.disposeSeparateColliders();
   }
 
-  public getCollider(){
-    return this.collider;
-  }
 
   /**
    * 🥚 为鸡蛋创建BVH碰撞体
@@ -825,7 +814,7 @@ export class BVHPhysics {
    */
   removeEggBVH(eggId: string): void {
     try {
-      const colliderKey = `egg_${eggId}`;
+      const colliderKey = `${eggId}`;
 
       // 移除碰撞体
       const collider = this.colliders.get(colliderKey);

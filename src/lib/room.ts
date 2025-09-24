@@ -55,6 +55,8 @@ export class RoomManager {
     this.io = io;
   }
 
+
+
   // 创建房间
   createRoom(name: string, config: RoomConfig, modelHash: string, userName: string): Room {
     const roomId = uuidv4();

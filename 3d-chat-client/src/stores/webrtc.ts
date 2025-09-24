@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { WebRTCManager, type ConnectionStatus, type RoomInfo, type Peer, type RoomConfig } from '@/utils/webrtc'
 import { showError, showSuccess, showInfo } from '@/utils/message'
 import { useAuthStore } from '@/stores/auth'
@@ -102,6 +102,7 @@ export const useWebRTCStore = defineStore('webrtc', () => {
           totalEggs: eggPositions.totalEggs,
           remainingEggs: eggPositions.remainingEggs
         })
+
       }
     )
 
@@ -332,6 +333,29 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     }
   }
 
+  // 清除鸡蛋标记
+  const clearEgg = (eggId: string, id:string,username: string, roomId: string) => {
+    if (!webrtcManager) {
+      console.warn('⚠️ WebRTC管理器未初始化，无法清除鸡蛋标记')
+      return false
+    }
+
+    try {
+      webrtcManager.clearEgg(eggId, id,username, roomId)
+      return true
+    } catch (error) {
+      console.error('❌ 清除鸡蛋标记失败:', error)
+      return false
+    }
+  }
+
+  const getYouPeer = ():Peer =>{
+    return {
+      id: webrtcManager!.getState().peerId!,
+      name: authStore.user?.username!
+    }
+  }
+
   return {
     // 状态
     connectionStatus,
@@ -360,6 +384,8 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     leaveRoom,
     disconnect,
     cleanup,
-    getStatusInfo
+    getStatusInfo,
+    clearEgg,
+    getYouPeer
   }
 })

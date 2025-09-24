@@ -92,6 +92,12 @@ export abstract class Model {
     };
     this.modelSize = { width: 0, height: 0, depth: 0 };
     this.bvhPhysics = bvhPhysics
+
+    // 监听清理鸡蛋距离映射事件
+    eventBus.on('clear-egg-mapUserPositionDistance', ({ eggId }) => {
+      this.mapUserPositionDistance.delete(eggId);
+      console.log(`🥚 Model: 已清理鸡蛋 ${eggId} 的位置距离映射`);
+    });
   }
 
   // 抽象方法
@@ -609,6 +615,11 @@ export abstract class Model {
 
                     // 通过事件总线通知ObjectManager清除鸡蛋
                     eventBus.emit('egg-clear', { eggId: objectId });
+
+                    // 通过事件总线通知WebRTC清除服务器鸡蛋标记
+                    eventBus.emit('clear-egg-server', {
+                      eggId: objectId,
+                    });
 
                     // 从BVH物理系统中移除鸡蛋碰撞体
                     this.bvhPhysics?.removeEggBVH(objectId)

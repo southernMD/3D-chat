@@ -57,12 +57,14 @@ export const handleConnection = (socket: Socket, io: Server): void => {
         socket.emit('error', { message: 'Failed to join room' });
         return;
       }
+      //加入房间是不传roomConfig的所以roomConfig是null
+      const endRoomCongig = roomConfig ? roomConfig : roomManager.getRoom(roomId)?.config
 
       // 通知客户端已加入房间
       socket.emit('joined', {
         roomId,
         peerId,
-        roomConfig,
+        roomConfig:endRoomCongig,
         modelHash,
         peers: roomManager.getPeers(roomId)
           .filter(p => p.id !== peerId)
@@ -73,7 +75,13 @@ export const handleConnection = (socket: Socket, io: Server): void => {
       });
 
       // 单独发送房间配置
-      socket.emit('roomConfig', roomConfig);
+      socket.emit('roomConfig', endRoomCongig);
+
+      // 如果是学校房间，延迟同步已标记的彩蛋状态给新用户
+      // 延迟确保客户端有足够时间设置事件监听器
+      if (room.schoolRoom) {
+        room.schoolRoom!.syncEggStatesForNewUser(socket.id);
+      }
 
       // 通知房间内其他客户端有新成员加入
       socket.to(roomId).emit('peerJoined', {
@@ -495,6 +503,90 @@ export const handleConnection = (socket: Socket, io: Server): void => {
     } catch (error) {
       console.error('Error in closeDataProducer:', error);
       callback({ error: 'Failed to close data producer' });
+    }
+  });
+
+  // 处理清除鸡蛋标记事件（学校房间专用）
+  socket.on('clearEgg', ({ id, eggId, username, roomId }: {
+    id: number,
+    eggId: string,
+    username: string,
+    roomId: string
+  }, callback) => {
+    try {
+      console.log(`🥚 收到清除鸡蛋请求: eggId=${eggId}, playerId=${id}, username=${username}, roomId=${roomId}`);
+
+      // 获取房间信息
+      const room = roomManager.getRoom(roomId);
+      if (!room) {
+        const error = `房间 ${roomId} 不存在`;
+        console.error(`❌ ${error}`);
+        if (callback) callback({ success: false, error });
+        return;
+      }
+
+      // 检查是否是学校房间
+      if (!room.schoolRoom) {
+        const error = `房间 ${roomId} 不是学校房间`;
+        console.error(`❌ ${error}`);
+        if (callback) callback({ success: false, error });
+        return;
+      }
+
+      // 验证用户是否在对应房间内
+      const peer = room.peers.get(id.toString());
+      if (!peer) {
+        const error = `用户 ${username}(${id}) 不在房间 ${roomId} 内`;
+        console.error(`❌ ${error}`);
+
+        // 通知客户端重新插入彩蛋（用户不在房间内，可能是非法操作）
+        socket.emit('reinsertEgg', {
+          eggId: eggId,
+          reason: 'USER_NOT_IN_ROOM',
+          message: '用户不在对应房间内',
+          position: null
+        });
+
+        if (callback) callback({ success: false, error, shouldReinsert: true });
+        return;
+      }
+
+      // 验证用户的socket连接是否匹配
+      if (peer.socketId !== socket.id) {
+        const error = `用户 ${username}(${id}) 的socket连接不匹配`;
+        console.error(`❌ ${error}`);
+
+        // 通知客户端重新插入彩蛋（socket不匹配，可能是非法操作）
+        socket.emit('reinsertEgg', {
+          eggId: eggId,
+          reason: 'SOCKET_MISMATCH',
+          message: 'Socket连接不匹配',
+          position: null
+        });
+
+        if (callback) callback({ success: false, error, shouldReinsert: true });
+        return;
+      }
+
+      // 调用学校房间的处理方法
+      room.schoolRoom.handleClearEgg(socket, { id, eggId, username, roomId }, callback);
+
+    } catch (error) {
+      console.error('❌ 处理清除鸡蛋事件时发生错误:', error);
+
+      // 发生异常时通知客户端重新插入彩蛋
+      socket.emit('reinsertEgg', {
+        eggId: eggId,
+        reason: 'SERVER_ERROR',
+        message: '服务器处理错误',
+        position: null
+      });
+
+      if (callback) callback({
+        success: false,
+        error: error instanceof Error ? error.message : '未知错误',
+        shouldReinsert: true
+      });
     }
   });
 

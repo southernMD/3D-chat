@@ -5,6 +5,10 @@ export interface EventBusEvents {
   'egg-broadcast': EggBroadcastData
   'egg-cleared': EggClearedData
   'egg-clear': EggClearData
+  'clear-egg-server': ClearEggServerData
+  'reinsert-egg': ReinsertEggData
+  'egg-collected': EggCollectedData
+  'clear-egg-mapUserPositionDistance': ClearEggDistanceMapData
 }
 
 export interface EggBroadcastData {
@@ -27,6 +31,31 @@ export interface EggClearedData {
 }
 
 export interface EggClearData {
+  eggId: string
+}
+
+export interface ClearEggServerData {
+  eggId: string
+  // username: string
+  // roomId: string
+}
+
+export interface ReinsertEggData {
+  eggId: string
+  reason: string
+  message: string
+  position: { id: string, x: number, y: number, z: number } | null
+}
+
+export interface EggCollectedData {
+  eggId: string
+  playerId: number
+  username: string
+  timestamp: Date
+  message: string
+}
+
+export interface ClearEggDistanceMapData {
   eggId: string
 }
 

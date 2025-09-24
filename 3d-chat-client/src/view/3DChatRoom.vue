@@ -17,6 +17,7 @@ import { useWebRTCStore } from '@/stores/webrtc';
 import { useAuthStore } from '@/stores/auth';
 import { showError, showSuccess, showInfo } from '@/utils/message';
 import { eventBus } from '@/utils/eventBus';
+import { WebRTCManager } from '@/utils/webrtc';
 
 
 // BVH物理系统已集成到模型中，不再需要CANNON
@@ -270,20 +271,78 @@ onMounted(async () => {
     }, 500)
 
     // 监听彩蛋广播事件
-    if(webrtcStore.roomConfig?.map === 'school') {
+    debugger
+    if (webrtcStore.roomConfig?.map === 'school') {
       eggBroadcastHandler = (data) => {
-        // 创建鸡蛋模型
-        const createdEggs = objectManager.createEggBroadcast(data)
+        debugger
+        if (data.isSync) {
+          console.log(`🔄 收到彩蛋状态同步: ${data.totalEggs}个已标记的鸡蛋`)
+        } else {
+          console.log(`📡 收到彩蛋广播: ${data.totalEggs}个新鸡蛋`)
+        }
 
-        // 为每个创建的鸡蛋创建BVH碰撞体
-        createdEggs.forEach(egg => {
-          const bvhCollider = bvhPhysics.createEggBVH(egg.id, egg.model)
-          if (bvhCollider) {
-            console.log(`🥚 鸡蛋 ${egg.id} BVH碰撞体创建成功`)
-          }
-        })
+        // 创建鸡蛋模型
+        setTimeout(() => { 
+          console.log("创建鸡蛋模型");
+          
+          const createdEggs = objectManager.createEggBroadcast(data)
+
+          // 为每个创建的鸡蛋创建BVH碰撞体
+          createdEggs.forEach(egg => {
+            const bvhCollider = bvhPhysics.createEggBVH(egg.id, egg.model)
+            if (bvhCollider) {
+              console.log(`🥚 鸡蛋 ${egg.id} BVH碰撞体创建成功`)
+            }
+          })
+        }, 1500)
       }
       eventBus.on('egg-broadcast', eggBroadcastHandler)
+
+      // 监听清除鸡蛋服务器事件
+      eventBus.on('clear-egg-server', ({ eggId }) => {
+        console.log('🥚 收到清除鸡蛋服务器请求:', eggId)
+        // 通过WebRTC通知服务器清除鸡蛋标记
+        const uPeer = webrtcStore.getYouPeer()
+        webrtcStore.clearEgg(eggId, uPeer.id, uPeer.name!, webrtcStore.roomInfo?.roomId!)
+      })
+
+      // 监听重新插入鸡蛋事件
+      eventBus.on('reinsert-egg', ({ eggId, reason, message, position }) => {
+        console.log('🥚 收到重新插入鸡蛋请求:', { eggId, reason, message, position })
+
+        // 如果有具体位置信息，重新插入鸡蛋到场景中
+        if (position) {
+          const createdEgg = objectManager.insertEggIntoScene(position.id, position.x, position.y, position.z)
+          if (createdEgg) {
+            // 为重新插入的鸡蛋创建BVH碰撞体
+            const bvhCollider = bvhPhysics.createEggBVH(position.id, createdEgg)
+            if (bvhCollider) {
+              console.log(`🥚 重新插入的鸡蛋 ${position.id} BVH碰撞体创建成功`)
+            }
+          }
+        }
+      })
+
+      // 监听鸡蛋收集成功事件
+      eventBus.on('egg-collected', ({ eggId, playerId, username, message }) => {
+        console.log('🎉 鸡蛋收集成功:', { eggId, playerId, username, message })
+
+        // 显示成功提示消息给用户
+        // TODO: 这里可以添加UI提示，显示获得彩蛋的成功消息
+        console.log(`🎉 ${message}`)
+      })
+
+      // 监听鸡蛋被清除事件（房间内广播）
+      eventBus.on('egg-cleared', ({ eggId}) => {
+        eventBus.emit('egg-clear', { eggId});
+        // 从BVH物理系统中移除鸡蛋碰撞体
+        bvhPhysics?.removeEggBVH(eggId)
+
+        // 清理本地映射
+        bvhPhysics.getColliders()!.delete(eggId)
+        // 通过事件总线通知Model清理位置距离映射
+        eventBus.emit('clear-egg-mapUserPositionDistance', { eggId })
+      })
     }
 
   } catch (error) {
@@ -297,7 +356,7 @@ onUnmounted(() => {
   window.removeEventListener('keyup', handleKeyUp);
 
   // 清理事件总线监听器
-  if(webrtcStore.roomConfig?.map === 'school' && eggBroadcastHandler) {
+  if (webrtcStore.roomConfig?.map === 'school' && eggBroadcastHandler) {
     eventBus.off('egg-broadcast', eggBroadcastHandler)
     eggBroadcastHandler = null
   }
