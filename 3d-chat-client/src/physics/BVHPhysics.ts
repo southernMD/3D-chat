@@ -800,14 +800,14 @@ export class BVHPhysics {
       this.scene.add(colliderMesh);
 
       // 存储碰撞体
-      this.colliders.set(`egg_${eggId}`, colliderMesh);
+      this.colliders.set(`${eggId}`, colliderMesh);
 
       // 创建BVH可视化器
       if (this.params.displayBVH) {
         const visualizer = new MeshBVHHelper(colliderMesh, this.params.visualizeDepth);
         visualizer.visible = this.params.displayBVH;
         this.scene.add(visualizer);
-        this.visualizers.set(`egg_${eggId}`, visualizer);
+        this.visualizers.set(`${eggId}`, visualizer);
       }
 
       console.log(`✅ 鸡蛋 ${eggId} BVH碰撞体创建成功，包含 ${meshCount} 个网格`);
@@ -859,7 +859,7 @@ export class BVHPhysics {
    * @returns 碰撞体网格或null
    */
   getEggBVH(eggId: string): THREE.Mesh | null {
-    return this.colliders.get(`egg_${eggId}`) || null;
+    return this.colliders.get(`${eggId}`) || null;
   }
 
   /**

@@ -7,7 +7,8 @@ import { BaseModel } from '../architecture/BaseModel';
 import { PHYSICS_CONSTANTS } from '../../constants/PhysicsConstants';
 import { Tree } from '../architecture/Tree';
 import { Egg } from '../Egg';
-import type { EggBroadcastData } from '@/utils/eventBus';
+import type { EggBroadcastData, EggClearData } from '@/utils/eventBus';
+import { eventBus } from '@/utils/eventBus';
 
 /**
  * 对象管理器 - 统一管理所有静态模型对象
@@ -22,6 +23,9 @@ export class ObjectManager {
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
+
+    // 监听鸡蛋清除事件
+    eventBus.on('egg-clear', this.handleEggClear);
   }
 
   async create(): Promise<void> {
@@ -562,6 +566,19 @@ export class ObjectManager {
   }
 
   /**
+   * 处理鸡蛋清除事件
+   */
+  handleEggClear = (data: EggClearData) => {
+    console.log('🥚 ObjectManager收到鸡蛋清除请求:', data.eggId);
+    const success = this.clearEgg(data.eggId);
+    if (success) {
+      console.log(`🥚 鸡蛋 ${data.eggId} 已成功清除`);
+    } else {
+      console.warn(`⚠️ 鸡蛋 ${data.eggId} 清除失败`);
+    }
+  }
+
+  /**
    * 在3D场景中插入彩蛋
    * @returns 创建的鸡蛋模型或null
    */
@@ -606,6 +623,7 @@ export class ObjectManager {
    */
   clearEgg(eggId: string): boolean {
     try {
+      console.log(this.eggs,eggId);
       const eggModel = this.eggs.get(eggId)
       if (eggModel) {
         // 从场景中移除

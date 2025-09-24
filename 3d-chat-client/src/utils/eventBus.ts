@@ -4,6 +4,7 @@ import { ref } from 'vue'
 export interface EventBusEvents {
   'egg-broadcast': EggBroadcastData
   'egg-cleared': EggClearedData
+  'egg-clear': EggClearData
 }
 
 export interface EggBroadcastData {
@@ -23,6 +24,10 @@ export interface EggClearedData {
   clearedBy: string
   timestamp: Date
   remainingEggs: number
+}
+
+export interface EggClearData {
+  eggId: string
 }
 
 // 事件总线实现

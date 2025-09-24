@@ -17,7 +17,7 @@ export class SchoolRoom {
   private eggPositions: EggPosition[];
   private broadcastInterval: NodeJS.Timeout | null = null;
   private readonly BROADCAST_INTERVAL = 10000; // 30秒广播一次
-  private readonly MAX_EGGS_PER_BROADCAST = 3; // 每次最多广播3个彩蛋
+  private readonly MAX_EGGS_PER_BROADCAST = 10; // 每次最多广播3个彩蛋
 
   constructor(roomId: string, io: Server) {
     this.roomId = roomId;

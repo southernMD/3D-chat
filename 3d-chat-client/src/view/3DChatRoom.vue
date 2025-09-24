@@ -121,7 +121,6 @@ onMounted(async () => {
     // 检查WebRTC连接状态（不重新初始化）
     console.log('🌐 3D聊天室页面已加载')
     console.log('当前WebRTC状态:', webrtcStore.getStatusInfo())
-    debugger
     if (!webrtcStore.isConnected) {
       console.warn('⚠️ WebRTC未连接，尝试初始化...')
       await initializeWebRTC()

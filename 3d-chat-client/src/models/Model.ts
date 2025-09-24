@@ -6,6 +6,7 @@ import { Egg } from './Egg';
 import { KeyBoardMessageManager } from '@/ImperativeComponents/keyBoardMessage';
 import { doorGroups } from './architecture/doors';
 import { filterColliders } from '@/utils/filterColliders';
+import { eventBus } from '@/utils/eventBus';
 // 基础模型类 - 完全基于BVH物理系统
 export abstract class Model {
   abstract mesh: THREE.Object3D;
@@ -128,7 +129,7 @@ export abstract class Model {
 
     // 计算胶囊体参数 - 完全贴合模型
     // 半径设为模型宽度和深度中较大值的一半
-    const radius = Math.max(Math.max(dimensions.width, dimensions.depth) / 4,6);
+    const radius = Math.max(Math.max(dimensions.width, dimensions.depth) / 4, 6);
 
     // 确保半径不为0或NaN
     const safeRadius = Math.max(0.1, radius || 0.1);
@@ -247,7 +248,7 @@ export abstract class Model {
   /**
    * 使用BVH进行碰撞检测和物理更新（参考characterMovement.js）
    */
-  handleBVHPhysics(delta: number,screen:THREE.Scene): void {
+  handleBVHPhysics(delta: number, screen: THREE.Scene): void {
     if (!this.bvhPhysics || !this.mesh || !this.playerCapsule || !this.capsuleParams) {
       console.log('❌ BVH物理系统组件缺失:', {
         bvhPhysics: !!this.bvhPhysics,
@@ -285,7 +286,7 @@ export abstract class Model {
     this.mesh.updateMatrixWorld();
 
     // 使用新的分离碰撞体检测
-    this.performSeparateCollidersDetection(delta,screen);
+    this.performSeparateCollidersDetection(delta, screen);
 
     // // 简单的地面检测
     // if (this.mesh.position.y < 0) {
@@ -434,14 +435,14 @@ export abstract class Model {
   /**
    * 主更新方法
    */
-  updateMovement(screen:THREE.Scene): void {
-    this.handleBVHPhysics(this.delta,screen);
+  updateMovement(screen: THREE.Scene): void {
+    this.handleBVHPhysics(this.delta, screen);
   }
 
   /**
    * 对分离的碰撞体组执行碰撞检测
    */
-  private performSeparateCollidersDetection(delta: number,screen:THREE.Scene): void {
+  private performSeparateCollidersDetection(delta: number, screen: THREE.Scene): void {
     if (!this.bvhPhysics) return;
 
     const colliders = this.bvhPhysics.getColliders();
@@ -466,8 +467,14 @@ export abstract class Model {
     let hasCollision = false;
     let collisionInfo: Array<{ objectId: string; object: any; deltaVector: THREE.Vector3 }> = [];
 
-    filterColliders(colliders,this.mapUserPositionDistance,this.mesh.position)
+    filterColliders(colliders, this.mapUserPositionDistance, this.mesh.position)
 
+    // if(Math.random() < 0.05){
+    //   console.log(this.mapUserPositionDistance);
+    // }
+    if(KeyBoardMessageManager.isActive() && this.mapUserPositionDistance.get(KeyBoardMessageManager.getActiveMeshName()!)){
+      KeyBoardMessageManager.hide();
+    }
     this.mapUserPositionDistance.forEach((collider, objectId) => {
       if (!collider.geometry || !(collider.geometry as any).boundsTree) return;
       // 重置临时变量
@@ -502,7 +509,7 @@ export abstract class Model {
 
           const distance = tri.closestPointToSegment(tempSegment, triPoint, capsulePoint);
           if (distance < capsuleInfo.radius) {
-            if (objectId.startsWith("school-door-G") && collider.userData?.isOpen === true)return;
+            if (objectId.startsWith("school-door-G") && collider.userData?.isOpen === true) return;
             const depth = capsuleInfo.radius - distance;
             const direction = capsulePoint.sub(triPoint).normalize();
 
@@ -510,68 +517,69 @@ export abstract class Model {
             tempSegment.end.addScaledVector(direction, depth);
             colliderHasCollision = true;
 
-            // 🚀 早期退出优化：如果已经有足够的碰撞信息，可以提前退出
+            // 早期退出优化：如果已经有足够的碰撞信息，可以提前退出
             // 对于性能敏感的场景，可以在检测到第一个碰撞后就退出
             // return true; // 取消注释以启用早期退出
-          }else{
-            const doorName = objectId.split('school-door-')[1];
-            const doorNearName = doorGroups.get(doorName)?.[0] as string;
-            if(objectId.startsWith('school-door-G') && distance < 10){
-              // 先找到要删除的对象
+          } else {
+            if (objectId.startsWith('school-door-G')) {
+              const doorName = objectId.split('school-door-')[1];
+              const doorNearName = doorGroups.get(doorName)?.[0] as string;
+              if (distance < 10) {
+                // 先找到要删除的对象
                 // 只在没有活跃实例或当前门不同且不是当前门的相邻门时才显示提示
-                if(!KeyBoardMessageManager.isActive() ||
-                 KeyBoardMessageManager.getActiveMeshName() !== doorName &&
-                 KeyBoardMessageManager.getActiveMeshName() !== doorNearName
-                ){
-                  if(collider.userData.isOpen === false){
+                if (!KeyBoardMessageManager.isActive() ||
+                  KeyBoardMessageManager.getActiveMeshName() !== doorName &&
+                  KeyBoardMessageManager.getActiveMeshName() !== doorNearName
+                ) {
+                  if (collider.userData.isOpen === false) {
                     KeyBoardMessageManager.show({
                       targetKey: 'F',
                       message: '打开门',
                       visible: true,
                       hideDelay: 2000,
-                      activeMeshName:doorName,
-                      onKeyPress:()=>{
+                      activeMeshName: doorName,
+                      onKeyPress: () => {
                         collider.userData.isOpen = true;
-                        if(doorNearName) colliders.get(`school-door-${doorNearName}`)!.userData.isOpen = true;
+                        if (doorNearName) colliders.get(`school-door-${doorNearName}`)!.userData.isOpen = true;
                         const child = this.mapDoorNameMesh.get(doorName)
                         const childNear = this.mapDoorNameMesh.get(doorNearName)
-                        if(child)child.visible = false
-                        if(childNear)childNear.visible = false
-                        if(!child || !childNear){
+                        if (child) child.visible = false
+                        if (childNear) childNear.visible = false
+                        if (!child || !childNear) {
                           screen.traverse((child) => {
-                            if(child.name === doorName){
+                            if (child.name === doorName) {
                               child.visible = false;
-                              this.mapDoorNameMesh.set(doorName,child as THREE.Mesh)
-                            }else if(child.name === doorNearName){
+                              this.mapDoorNameMesh.set(doorName, child as THREE.Mesh)
+                            } else if (child.name === doorNearName) {
                               child.visible = false;
-                              this.mapDoorNameMesh.set(doorNearName,child as THREE.Mesh)
+                              this.mapDoorNameMesh.set(doorNearName, child as THREE.Mesh)
                             }
                           });
                         }
                       }
                     });
-                  }else{
+                  } else {
                     KeyBoardMessageManager.show({
                       targetKey: 'F',
                       message: '关上门',
                       visible: true,
                       hideDelay: 2000,
-                      activeMeshName:doorName,
-                      onKeyPress:()=>{
+                      activeMeshName: doorName,
+                      onKeyPress: () => {
                         collider.userData.isOpen = false;
-                        if(doorNearName) colliders.get(`school-door-${doorNearName}`)!.userData.isOpen = false;
+                        if (doorNearName) colliders.get(`school-door-${doorNearName}`)!.userData.isOpen = false;
                         const child = this.mapDoorNameMesh.get(doorName)
                         const childNear = this.mapDoorNameMesh.get(doorNearName)
-                        if(child)child.visible = true
-                        if(childNear)childNear.visible = true
-                        if(!child || !childNear){
+                        if (child) child.visible = true
+                        if (childNear) childNear.visible = true
+                        if (!child || !childNear) {
                           screen.traverse((child) => {
-                            if(child.name === doorName){
+                            if (child.name === doorName) {
                               child.visible = true;
-                              this.mapDoorNameMesh.set(doorName,child as THREE.Mesh)
-                            }else if(child.name === doorNearName){
+                              this.mapDoorNameMesh.set(doorName, child as THREE.Mesh)
+                            } else if (child.name === doorNearName) {
                               child.visible = true;
-                              this.mapDoorNameMesh.set(doorNearName,child as THREE.Mesh)
+                              this.mapDoorNameMesh.set(doorNearName, child as THREE.Mesh)
                             }
                           });
                         }
@@ -579,15 +587,48 @@ export abstract class Model {
                     });
                   }
                 }
-            }else if(KeyBoardMessageManager.isActive() && distance >= 20){
-              const activeMeshName = KeyBoardMessageManager.getActiveMeshName();
-              const correspondingDoor = activeMeshName ? doorGroups.get(activeMeshName)?.[0] : undefined;
-              if(doorName === activeMeshName || (correspondingDoor && doorName === correspondingDoor)){
+              } else if (KeyBoardMessageManager.isActive() && distance >= 20) {
+                const activeMeshName = KeyBoardMessageManager.getActiveMeshName();
+                const correspondingDoor = activeMeshName ? doorGroups.get(activeMeshName)?.[0] : undefined;
+                if (doorName === activeMeshName || (correspondingDoor && activeMeshName === correspondingDoor)) {
+                  KeyBoardMessageManager.hide();
+                  KeyBoardMessageManager.setActiveMeshName('');
+                }
+              }
+            }else if(objectId.startsWith('egg')){
+              if(distance < 10 && !KeyBoardMessageManager.isActive()){
+                KeyBoardMessageManager.show({
+                  targetKey: 'F',
+                  message: '拾取',
+                  visible: true,
+                  hideDelay: 2000,
+                  activeMeshName: objectId,
+                  onKeyPress: () => {
+                    console.log('拾取鸡蛋', objectId);
+                    KeyBoardMessageManager.hide();
+
+                    // 通过事件总线通知ObjectManager清除鸡蛋
+                    eventBus.emit('egg-clear', { eggId: objectId });
+
+                    // 从BVH物理系统中移除鸡蛋碰撞体
+                    this.bvhPhysics?.removeEggBVH(objectId)
+
+                    // 清理本地映射
+                    colliders.delete(objectId)
+                    this.mapUserPositionDistance.delete(objectId)
+                  }
+                });
+              }else if(distance > 20 && KeyBoardMessageManager.isActive() && (KeyBoardMessageManager.getActiveMeshName() === objectId || !this.mapUserPositionDistance.get(KeyBoardMessageManager.getActiveMeshName()!))){
                 KeyBoardMessageManager.hide();
-                KeyBoardMessageManager.setActiveMeshName('');
               }
             }
           }
+          // console.log(KeyBoardMessageManager.getActiveMeshName(),"???<");
+          // console.log(this.mapUserPositionDistance.get(KeyBoardMessageManager.getActiveMeshName()!),"???<");
+          
+          // if(KeyBoardMessageManager.isActive() && this.mapUserPositionDistance.get(KeyBoardMessageManager.getActiveMeshName()!)){
+          //   KeyBoardMessageManager.hide();
+          // }
         }
       });
       this.playerIsOnGround = totalDeltaVector.y > Math.abs(delta * this.playerVelocity.y * 0.25);
@@ -754,7 +795,7 @@ export abstract class Model {
 
     // 添加控制器变化事件监听器
     controls.addEventListener('change', this.cameraControlsChangeHandler);
-    controls.addEventListener('change', ()=>{
+    controls.addEventListener('change', () => {
       // const polarAngle = controls.getPolarAngle();
       // console.log(`当前仰角: ${polarAngle} 弧度 (约 ${THREE.MathUtils.radToDeg(polarAngle)} 度)`);
     });
@@ -938,7 +979,7 @@ export abstract class Model {
     for (let i = 0; i < this.eggs.length; i++) {
       const egg = this.eggs[i];
       const isSuccess = egg.updateProjectileEgg(delta, camera);
-      if(!isSuccess){
+      if (!isSuccess) {
         egg.removeEgg();
         this.eggs.splice(i, 1);
         i--;
