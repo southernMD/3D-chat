@@ -1,7 +1,7 @@
 import { Socket, Server } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import { mediasoupHandler } from '../lib/mediasoup';
-import { roomManager } from '../lib/room';
+import { Room, roomManager } from '../lib/room';
 
 // 处理Socket.IO连接
 export const handleConnection = (socket: Socket, io: Server): void => {
@@ -12,23 +12,23 @@ export const handleConnection = (socket: Socket, io: Server): void => {
   // 当客户端创建或加入房间
   socket.on('createOrJoin', async (data: {
     roomId?: string,
-    name: string,
-    roomConfig?: any,
-    modelHash?: string
+    userName: string,
+    roomConfig: any,
+    modelHash: string
   }) => {
     try {
-      const { roomId: providedRoomId, name, roomConfig, modelHash } = data;
-      let room;
+      const { roomId: providedRoomId, userName, roomConfig, modelHash } = data;
+      let room:Room | null;
       let roomId = providedRoomId;
 
       // 如果没有提供roomId，创建新房间
       if (!roomId) {
-        const roomName = roomConfig?.name || `${name}'s Room`;
-        room = roomManager.createRoom(roomName, roomConfig, modelHash);
+        const roomName = roomConfig?.name || `${userName}'s Room`;
+        room = roomManager.createRoom(roomName, roomConfig, modelHash,userName);
         roomId = room.id;
       } else {
         // 尝试加入现有房间
-        room = roomManager.getRoom(roomId);
+        room = roomManager.joinRoom(roomId, modelHash, userName)
         if (!room) {
           // 房间不存在，返回错误
           socket.emit('error', {
@@ -37,6 +37,7 @@ export const handleConnection = (socket: Socket, io: Server): void => {
             details: `房间 ${roomId} 不存在或已被删除`
           });
           return;
+          ;
         }
       }
 
@@ -47,7 +48,7 @@ export const handleConnection = (socket: Socket, io: Server): void => {
       socket.join(roomId);
 
       // 添加参与者到房间
-      const peer = roomManager.addPeer(roomId, peerId, socket.id, name);
+      const peer = roomManager.addPeer(roomId, peerId, socket.id, userName);
 
       if (!peer) {
         socket.emit('error', { message: 'Failed to join room' });
@@ -71,11 +72,11 @@ export const handleConnection = (socket: Socket, io: Server): void => {
       // 通知房间内其他客户端有新成员加入
       socket.to(roomId).emit('peerJoined', {
         peerId,
-        name,
+        userName,
         modelHash,
       });
 
-      console.log(`Peer ${name} (${peerId}) joined room ${roomId} with model ${modelHash}`);
+      console.log(`Peer ${userName} (${peerId}) joined room ${roomId} with model ${modelHash}`);
     } catch (error) {
       console.error('Error in createOrJoin:', error);
       socket.emit('error', { message: 'Internal server error' });

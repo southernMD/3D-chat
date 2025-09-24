@@ -292,21 +292,21 @@ export class WebRTCManager {
     })
 
     // 监听新成员加入事件
-    this.state.socket.on('peerJoined', ({ peerId, name, modelHash }) => {
-      this.log(`新成员加入: ${name} (${peerId})`)
+    this.state.socket.on('peerJoined', ({ peerId, userName, modelHash }) => {
+      this.log(`新成员加入: ${userName} (${peerId})`)
 
       // 添加到成员列表
       const newPeer: Peer = {
         id: peerId,
-        name: name
+        name: userName
       }
 
       // 更新内部成员列表
       this.peers.push(newPeer)
-      this.peerNames.set(peerId, name)
+      this.peerNames.set(peerId, userName)
 
       // 发送系统通知消息
-      this.addMessageCallback(`${name} 加入了房间`, false, '系统')
+      this.addMessageCallback(`${userName} 加入了房间`, false, '系统')
 
       // 更新UI
       this.updatePeersListCallback([...this.peers])
@@ -609,7 +609,7 @@ export class WebRTCManager {
     this.state.socket.emit('createOrJoin', {
       roomConfig,
       modelHash,
-      name: userName
+      userName: userName
     })
   }
 
@@ -827,7 +827,7 @@ export class WebRTCManager {
     this.state.socket.emit('createOrJoin', {
       roomId: roomUUID,  // 直接使用UUID作为房间ID
       modelHash,
-      name: userName,
+      userName: userName,
       roomConfig: null  // 加入现有房间不需要配置
     })
   }

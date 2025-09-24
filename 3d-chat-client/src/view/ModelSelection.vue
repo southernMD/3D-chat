@@ -151,7 +151,6 @@ import {
   type ModelInfo
 } from '@/api/modelApi'
 import { showError, showSuccess } from '@/utils/message'
-import { createRoom } from '@/api/roomApi'
 import { useAuthStore } from '@/stores/auth'
 import { useWebRTCStore } from '@/stores/webrtc'
 

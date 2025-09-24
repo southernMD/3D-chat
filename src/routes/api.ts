@@ -111,38 +111,38 @@ interface CreateRoomRequestBody {
   name: string;
 }
 
-// 修改POST /rooms路由
-router.post<{}, {}, CreateRoomRequestBody>('/rooms', (req: Request<{}, {}, CreateRoomRequestBody>, res: Response) => {
-  try {
-    const { name } = req.body;
+// // 修改POST /rooms路由
+// router.post<{}, {}, CreateRoomRequestBody>('/rooms', (req: Request<{}, {}, CreateRoomRequestBody>, res: Response) => {
+//   try {
+//     const { name } = req.body;
     
-    if (!name) {
-      res.status(400).json({
-        status: 'error',
-        message: 'Room name is required',
-      });
-      return;
-    }
+//     if (!name) {
+//       res.status(400).json({
+//         status: 'error',
+//         message: 'Room name is required',
+//       });
+//       return;
+//     }
     
-    const room = roomManager.createRoom(name);
+//     const room = roomManager.createRoom(name);
     
-    res.status(201).json({
-      status: 'success',
-      data: { 
-        room: {
-          id: room.id,
-          name: room.name,
-          createdAt: room.createdAt,
-        }
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
-  }
-});
+//     res.status(201).json({
+//       status: 'success',
+//       data: { 
+//         room: {
+//           id: room.id,
+//           name: room.name,
+//           createdAt: room.createdAt,
+//         }
+//       },
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       status: 'error',
+//       message: 'Internal server error',
+//     });
+//   }
+// });
 
 // 删除房间
 router.delete<{ roomId: string }>('/rooms/:roomId', (req: Request<{ roomId: string }>, res: Response) => {

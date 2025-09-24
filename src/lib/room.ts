@@ -33,7 +33,7 @@ export interface Room {
   createdAt: Date;
   peers: Map<string, Peer>;
   config?: RoomConfig;
-  modelHash?: string;
+  modelHash?: Map<string, string>;
 }
 
 // 房间管理类
@@ -41,7 +41,7 @@ export class RoomManager {
   private rooms: Map<string, Room> = new Map();
 
   // 创建房间
-  createRoom(name: string, config?: RoomConfig, modelHash?: string): Room {
+  createRoom(name: string, config: RoomConfig, modelHash: string,userName:string): Room {
     const roomId = uuidv4();
     const room: Room = {
       id: roomId,
@@ -49,11 +49,20 @@ export class RoomManager {
       createdAt: new Date(),
       peers: new Map(),
       config,
-      modelHash,
+      modelHash:new Map([[userName,modelHash]]),
     };
 
     this.rooms.set(roomId, room);
     console.log(`Room created: ${room.name} (${roomId})${modelHash ? ` with model ${modelHash}` : ''}`);
+    return room;
+  }
+
+  //加入房间
+  joinRoom(name: string, modelHash: string,userName:string): Room | null{
+    const room = this.rooms.get(name);
+    if(!room) return null;
+    room.modelHash?.set(userName,modelHash);
+    console.log(`Room join: ${room.name} ${userName}`);
     return room;
   }
 

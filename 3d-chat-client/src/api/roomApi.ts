@@ -50,19 +50,19 @@ export interface RoomListResponse {
 /**
  * 创建房间
  */
-export const createRoom = async (config: RoomConfig): Promise<ApiResponse<CreateRoomResponse>> => {
-  try {
-    const response = await post<ApiResponse<CreateRoomResponse>>('/api/rooms', config)
-    return response
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.message || '创建房间失败',
-      data: undefined,
-      message: error.message || '创建房间失败',
-    }
-  }
-}
+// export const createRoom = async (config: RoomConfig): Promise<ApiResponse<CreateRoomResponse>> => {
+//   try {
+//     const response = await post<ApiResponse<CreateRoomResponse>>('/api/rooms', config)
+//     return response
+//   } catch (error: any) {
+//     return {
+//       success: false,
+//       error: error.message || '创建房间失败',
+//       data: undefined,
+//       message: error.message || '创建房间失败',
+//     }
+//   }
+// }
 
 /**
  * 获取房间列表
