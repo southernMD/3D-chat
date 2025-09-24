@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { WebRTCManager, type ConnectionStatus, type RoomInfo, type Peer, type RoomConfig } from '@/utils/webrtc'
 import { showError, showSuccess, showInfo } from '@/utils/message'
 import { useAuthStore } from '@/stores/auth'
+import type { EggPosintions } from '@/types/types'
 
 // 消息接口
 export interface ChatMessage {
@@ -43,7 +44,7 @@ export const useWebRTCStore = defineStore('webrtc', () => {
   const addMessage = (content: string, isSent: boolean, senderName?: string) => {
     // 检查是否为系统消息
     const isSystemMessage = senderName === '系统'
-
+    debugger
     const newMessage: ChatMessage = {
       id: Date.now().toString() + Math.random().toString(36).substring(2, 11),
       sender: isSent ? (authStore.user?.username || '我') : (senderName || '其他用户'),
@@ -88,9 +89,14 @@ export const useWebRTCStore = defineStore('webrtc', () => {
       },
       (content: string, isSent: boolean, senderName?: string) => {
         addMessage(content, isSent, senderName)
+      },
+      (eggPositions: EggPosintions) => {
+        addMessage(`啊哈哈鸡蛋来了,生成${eggPositions.totalEggs}个鸡蛋`,false,"系统")
+        console.log(eggPositions,"啊哈哈鸡蛋来了");
       }
     )
-
+    debugger
+    console.log(roomInfo.value);
     isInitialized.value = true
     console.log('WebRTC管理器已初始化')
   }

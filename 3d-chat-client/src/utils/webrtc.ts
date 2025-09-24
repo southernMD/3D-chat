@@ -1,6 +1,7 @@
 import { Device } from 'mediasoup-client'
 import { io, Socket } from 'socket.io-client'
 import type { types as mediasoupTypes } from 'mediasoup-client'
+import type { EggPosintions } from '@/types/types'
 
 // 连接状态类型
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
@@ -9,6 +10,7 @@ export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'er
 export interface RoomInfo {
   roomId: string
   peerId: string
+  roomConfig:RoomConfig
 }
 
 // 成员信息接口
@@ -94,6 +96,7 @@ export interface AppState {
   roomId: string | null
   peerId: string | null
   serverUrl: string | null
+  roomConfig: RoomConfig | null
 }
 
 // 日志回调类型
@@ -102,7 +105,7 @@ type ConnectionStatusCallback = (status: ConnectionStatus, message?: string) => 
 type RoomInfoCallback = (info: RoomInfo) => void
 type PeersListCallback = (peers: Peer[]) => void
 type MessageCallback = (content: string, isSent: boolean, senderName?: string) => void
-
+type EggPositionsCallback = (positions: EggPosintions) => void | undefined
 export class WebRTCManager {
   private state: AppState = {
     socket: null,
@@ -117,7 +120,8 @@ export class WebRTCManager {
     microphoneEnabled: false,
     roomId: null,
     peerId: null,
-    serverUrl: null
+    serverUrl: null,
+    roomConfig: null
   }
 
   // 维护成员列表和名字映射
@@ -129,19 +133,22 @@ export class WebRTCManager {
   private updateRoomInfoCallback: RoomInfoCallback
   private updatePeersListCallback: PeersListCallback
   private addMessageCallback: MessageCallback
+  private getEggPositionsCallback: EggPositionsCallback | undefined 
 
   constructor(
     logCallback: LogCallback,
     updateConnectionStatusCallback: ConnectionStatusCallback,
     updateRoomInfoCallback: RoomInfoCallback,
     updatePeersListCallback: PeersListCallback,
-    addMessageCallback: MessageCallback
+    addMessageCallback: MessageCallback,
+    getEggPositionsCallback?:EggPositionsCallback
   ) {
     this.logCallback = logCallback
     this.updateConnectionStatusCallback = updateConnectionStatusCallback
     this.updateRoomInfoCallback = updateRoomInfoCallback
     this.updatePeersListCallback = updatePeersListCallback
     this.addMessageCallback = addMessageCallback
+    this.getEggPositionsCallback = getEggPositionsCallback
   }
 
   private log(message: string): void {
@@ -271,6 +278,7 @@ export class WebRTCManager {
       // 更新状态
       this.state.roomId = roomId
       this.state.peerId = peerId
+      this.state.roomConfig = roomConfig
 
       // 初始化成员列表
       this.peers = peers || []
@@ -281,9 +289,16 @@ export class WebRTCManager {
 
       // 更新UI
       this.updateConnectionStatusCallback('connected', '已加入房间')
-      this.updateRoomInfoCallback({ roomId, peerId })
+      this.updateRoomInfoCallback({ roomId, peerId, roomConfig })
       this.updatePeersListCallback([...this.peers])
 
+
+      if(roomConfig.map === 'school'){
+        this.state.socket!.on('eggBroadcast', (data:EggPosintions) => {
+          console.log(`收到${data}个彩蛋位置`);
+          this.getEggPositionsCallback?.(data);
+        });
+      }
       this.log(`房间配置: ${JSON.stringify(roomConfig)}`)
       this.log(`模型Hash: ${modelHash}`)
 

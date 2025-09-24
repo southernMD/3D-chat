@@ -1,4 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
+import { SchoolRoom } from './shcoolRoom';
+import { Server } from 'socket.io';
 
 // 参与者类型定义
 export interface Peer {
@@ -15,6 +17,12 @@ export interface Peer {
   rtpCapabilities?: any;
 }
 
+// 房间类型枚举
+export enum RoomType {
+  DEFAULT = 'default',
+  SCHOOL = 'school'
+}
+
 // 房间配置接口
 export interface RoomConfig {
   name: string;
@@ -23,7 +31,7 @@ export interface RoomConfig {
   isPrivate: boolean;
   enableVoice: boolean;
   enableText: boolean;
-  map: string;
+  map: RoomType;
 }
 
 // 房间类型定义
@@ -34,14 +42,21 @@ export interface Room {
   peers: Map<string, Peer>;
   config?: RoomConfig;
   modelHash?: Map<string, string>;
+  schoolRoom?: SchoolRoom; // 学校房间实例（仅当房间类型为school时存在）
 }
 
 // 房间管理类
 export class RoomManager {
   private rooms: Map<string, Room> = new Map();
+  private io: Server | null = null;
+
+  // 设置Socket.IO实例
+  setIO(io: Server): void {
+    this.io = io;
+  }
 
   // 创建房间
-  createRoom(name: string, config: RoomConfig, modelHash: string,userName:string): Room {
+  createRoom(name: string, config: RoomConfig, modelHash: string, userName: string): Room {
     const roomId = uuidv4();
     const room: Room = {
       id: roomId,
@@ -49,11 +64,20 @@ export class RoomManager {
       createdAt: new Date(),
       peers: new Map(),
       config,
-      modelHash:new Map([[userName,modelHash]]),
+      modelHash: new Map([[userName, modelHash]]),
     };
+
+    // 如果是学校类型房间，创建SchoolRoom实例
+    if (config.map === RoomType.SCHOOL && this.io) {
+      room.schoolRoom = new SchoolRoom(roomId, this.io);
+      room.schoolRoom.startBroadcast();
+      console.log(`🏫 School room features enabled for room ${roomId}`);
+    }
 
     this.rooms.set(roomId, room);
     console.log(`Room created: ${room.name} (${roomId})${modelHash ? ` with model ${modelHash}` : ''}`);
+
+
     return room;
   }
 
@@ -79,6 +103,14 @@ export class RoomManager {
   // 删除房间
   deleteRoom(roomId: string): boolean {
     if (this.rooms.has(roomId)) {
+      const room = this.rooms.get(roomId);
+
+      // 如果是学校房间，清理SchoolRoom实例
+      if (room?.schoolRoom) {
+        room.schoolRoom.destroy();
+        console.log(`🏫 School room instance destroyed for room ${roomId}`);
+      }
+
       this.rooms.delete(roomId);
       console.log(`Room deleted: ${roomId}`);
       return true;

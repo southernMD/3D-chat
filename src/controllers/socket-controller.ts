@@ -1,7 +1,7 @@
 import { Socket, Server } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import { mediasoupHandler } from '../lib/mediasoup';
-import { Room, roomManager } from '../lib/room';
+import { Room, RoomConfig, roomManager } from '../lib/room';
 
 // 处理Socket.IO连接
 export const handleConnection = (socket: Socket, io: Server): void => {
@@ -9,11 +9,14 @@ export const handleConnection = (socket: Socket, io: Server): void => {
 
   console.log(`Client connected [id=${id}]`);
 
+  // 确保roomManager有IO实例的引用
+  roomManager.setIO(io);
+
   // 当客户端创建或加入房间
   socket.on('createOrJoin', async (data: {
     roomId?: string,
     userName: string,
-    roomConfig: any,
+    roomConfig: RoomConfig,
     modelHash: string
   }) => {
     try {
