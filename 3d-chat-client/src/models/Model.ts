@@ -655,8 +655,6 @@ export abstract class Model {
     });
   }
 
-
-
   /**
    * 获取BVH物理系统状态
    */
@@ -691,7 +689,6 @@ export abstract class Model {
     console.log(`   BVH物理系统: ${status.hasPhysics ? '已初始化' : '未初始化'}`);
   }
 
-  // ==================== 相机系统方法 ====================
 
   /**
    * 创建跟随相机 - 创建一个跟随模型的相机

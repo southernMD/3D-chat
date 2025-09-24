@@ -22,9 +22,9 @@ private eggAnimations: Map<string, () => void> = new Map();
 
 #### 核心方法
 
-##### 1. handleEggBroadcast (公共方法)
+##### 1. createEggBroadcast (公共方法)
 ```typescript
-handleEggBroadcast = (data: EggBroadcastData) => {
+createEggBroadcast = (data: EggBroadcastData) => {
   console.log('🥚 ObjectManager收到彩蛋广播:', data)
   
   // 在3D场景中插入彩蛋
@@ -52,25 +52,25 @@ handleEggBroadcast = (data: EggBroadcastData) => {
 ### 2. 3DChatRoom.vue 修改
 
 #### 移除的内容
-- `handleEggBroadcast` 函数
+- `createEggBroadcast` 函数
 - `insertEggIntoScene` 函数
 - `EggBroadcastData` 类型导入
 
 #### 修改的内容
 ```typescript
 // 修改前
-eventBus.on('egg-broadcast', handleEggBroadcast)
+eventBus.on('egg-broadcast', createEggBroadcast)
 
 // 修改后
 if(webrtcStore.roomConfig?.map === 'school') {
-  eventBus.on('egg-broadcast', objectManager.handleEggBroadcast)
+  eventBus.on('egg-broadcast', objectManager.createEggBroadcast)
 }
 ```
 
 ```typescript
 // 清理事件监听器
 if(webrtcStore.roomConfig?.map === 'school') {
-  eventBus.off('egg-broadcast', objectManager.handleEggBroadcast)
+  eventBus.off('egg-broadcast', objectManager.createEggBroadcast)
 }
 ```
 
@@ -130,7 +130,7 @@ console.log('当前彩蛋数量:', objectManager.getEggCount())
 
 ### 事件流程
 ```
-服务器广播 → WebRTC接收 → 事件总线 → ObjectManager.handleEggBroadcast → 3D场景更新
+服务器广播 → WebRTC接收 → 事件总线 → ObjectManager.createEggBroadcast → 3D场景更新
 ```
 
 ## 性能优化

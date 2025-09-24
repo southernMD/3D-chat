@@ -63,13 +63,13 @@ onMounted(async () => {
   // ... 其他初始化代码
   
   // 监听彩蛋广播事件
-  eventBus.on('egg-broadcast', handleEggBroadcast)
+  eventBus.on('egg-broadcast', createEggBroadcast)
 })
 
 // 在onUnmounted中清理事件监听
 onUnmounted(() => {
   // 清理事件总线监听器
-  eventBus.off('egg-broadcast', handleEggBroadcast)
+  eventBus.off('egg-broadcast', createEggBroadcast)
 })
 ```
 
@@ -78,7 +78,7 @@ onUnmounted(() => {
 ### 1. 彩蛋广播处理函数
 
 ```typescript
-const handleEggBroadcast = (data: EggBroadcastData) => {
+const createEggBroadcast = (data: EggBroadcastData) => {
   console.log('🥚 收到彩蛋广播:', data)
   
   // 在3D场景中插入彩蛋

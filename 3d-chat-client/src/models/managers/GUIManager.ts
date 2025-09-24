@@ -159,6 +159,33 @@ export class GUIManager {
           });
 
           console.log(`   🏫 学校建筑碰撞体: ${schoolColliderCount} 个，当前可见: ${visibleCount} 个`);
+
+          // 控制鸡蛋BVH可视化
+          let eggColliderCount = 0;
+          let eggVisibleCount = 0;
+
+          colliders.forEach((collider, objectId) => {
+            if (objectId.startsWith('egg_')) {
+              eggColliderCount++;
+              collider.visible = this.physicsVisualizationControl.displayBVH;
+
+              // 设置鸡蛋碰撞体颜色为黄色
+              if (collider.material && (collider.material as any).color) {
+                (collider.material as any).color.setHex(0xFFFF00); // 黄色
+                if (Array.isArray(collider.material)) {
+                  collider.material.forEach(mat => mat.needsUpdate = true);
+                } else {
+                  (collider.material as any).needsUpdate = true;
+                }
+              }
+
+              if (collider.visible) eggVisibleCount++;
+            }
+          });
+
+          if (eggColliderCount > 0) {
+            console.log(`   🥚 鸡蛋碰撞体: ${eggColliderCount} 个，当前可见: ${eggVisibleCount} 个`);
+          }
         }
 
         // 控制墙体的BVH可视化

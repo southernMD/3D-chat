@@ -725,4 +725,163 @@ export class BVHPhysics {
   public getCollider(){
     return this.collider;
   }
+
+  /**
+   * 🥚 为鸡蛋创建BVH碰撞体
+   * @param eggId 鸡蛋ID
+   * @param eggModel 鸡蛋3D模型
+   * @returns 创建的碰撞体网格
+   */
+  createEggBVH(eggId: string, eggModel: THREE.Object3D): THREE.Mesh | null {
+    try {
+      console.log(`🥚 开始为鸡蛋 ${eggId} 创建BVH碰撞体...`);
+
+      // 创建鸡蛋碰撞组
+      const eggCollisionGroup = new THREE.Group();
+      let meshCount = 0;
+
+      // 遍历鸡蛋模型，收集所有网格
+      eggModel.traverse((child: THREE.Object3D) => {
+        if (child instanceof THREE.Mesh && child.geometry) {
+          // 克隆网格并应用世界变换
+          const clonedMesh = child.clone();
+          clonedMesh.geometry = child.geometry.clone();
+
+          // 应用鸡蛋模型的世界变换矩阵
+          child.updateMatrixWorld(true);
+          clonedMesh.applyMatrix4(child.matrixWorld);
+
+          // 添加到鸡蛋碰撞组
+          eggCollisionGroup.add(clonedMesh);
+          meshCount++;
+        }
+      });
+
+      if (meshCount === 0) {
+        console.warn(`⚠️ 鸡蛋 ${eggId} 没有可碰撞的网格`);
+        return null;
+      }
+
+      // 使用StaticGeometryGenerator合并几何体
+      const staticGenerator = new StaticGeometryGenerator(eggCollisionGroup);
+      staticGenerator.attributes = ['position'];
+
+      const mergedGeometry = staticGenerator.generate();
+      if (!mergedGeometry) {
+        console.error(`❌ 鸡蛋 ${eggId} 几何体合并失败`);
+        return null;
+      }
+
+      // 创建碰撞体网格
+      const colliderMaterial = new THREE.MeshBasicMaterial({
+        transparent: true,
+        opacity: 0.3,
+        color: 0x00ff00,
+        wireframe: true
+      });
+
+      const colliderMesh = new THREE.Mesh(mergedGeometry, colliderMaterial);
+      colliderMesh.name = `egg_collider_${eggId}`;
+      colliderMesh.userData = { type: 'egg_collider', eggId: eggId };
+
+      // 创建BVH
+      const bvh = new MeshBVH(mergedGeometry);
+      mergedGeometry.boundsTree = bvh;
+
+      // 设置碰撞体位置（与鸡蛋模型相同）
+      colliderMesh.position.copy(eggModel.position);
+      colliderMesh.rotation.copy(eggModel.rotation);
+      colliderMesh.scale.copy(eggModel.scale);
+
+      // 默认隐藏碰撞体
+      colliderMesh.visible = this.params.displayCollider;
+
+      // 添加到场景
+      this.scene.add(colliderMesh);
+
+      // 存储碰撞体
+      this.colliders.set(`egg_${eggId}`, colliderMesh);
+
+      // 创建BVH可视化器
+      if (this.params.displayBVH) {
+        const visualizer = new MeshBVHHelper(colliderMesh, this.params.visualizeDepth);
+        visualizer.visible = this.params.displayBVH;
+        this.scene.add(visualizer);
+        this.visualizers.set(`egg_${eggId}`, visualizer);
+      }
+
+      console.log(`✅ 鸡蛋 ${eggId} BVH碰撞体创建成功，包含 ${meshCount} 个网格`);
+      return colliderMesh;
+
+    } catch (error) {
+      console.error(`❌ 鸡蛋 ${eggId} BVH创建失败:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * 🥚 移除鸡蛋的BVH碰撞体
+   * @param eggId 鸡蛋ID
+   */
+  removeEggBVH(eggId: string): void {
+    try {
+      const colliderKey = `egg_${eggId}`;
+
+      // 移除碰撞体
+      const collider = this.colliders.get(colliderKey);
+      if (collider) {
+        this.scene.remove(collider);
+        collider.geometry.dispose();
+        if (Array.isArray(collider.material)) {
+          collider.material.forEach(mat => mat.dispose());
+        } else {
+          collider.material.dispose();
+        }
+        this.colliders.delete(colliderKey);
+      }
+
+      // 移除可视化器
+      const visualizer = this.visualizers.get(colliderKey);
+      if (visualizer) {
+        this.scene.remove(visualizer);
+        this.visualizers.delete(colliderKey);
+      }
+
+      console.log(`🥚 鸡蛋 ${eggId} BVH碰撞体已移除`);
+    } catch (error) {
+      console.error(`❌ 移除鸡蛋 ${eggId} BVH失败:`, error);
+    }
+  }
+
+  /**
+   * 🥚 获取鸡蛋的BVH碰撞体
+   * @param eggId 鸡蛋ID
+   * @returns 碰撞体网格或null
+   */
+  getEggBVH(eggId: string): THREE.Mesh | null {
+    return this.colliders.get(`egg_${eggId}`) || null;
+  }
+
+  /**
+   * 🥚 检查是否与鸡蛋发生碰撞
+   * @param position 检查位置
+   * @param radius 检查半径
+   * @returns 碰撞的鸡蛋ID数组
+   */
+  checkEggCollisions(position: THREE.Vector3, radius: number = 1): string[] {
+    const collidedEggs: string[] = [];
+
+    this.colliders.forEach((collider, key) => {
+      if (key.startsWith('egg_')) {
+        const eggId = key.replace('egg_', '');
+        const distance = position.distanceTo(collider.position);
+
+        if (distance <= radius + 2) { // 2是鸡蛋的大致半径
+          collidedEggs.push(eggId);
+        }
+      }
+    });
+
+    return collidedEggs;
+  }
 }

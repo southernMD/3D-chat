@@ -8,7 +8,6 @@ import { PHYSICS_CONSTANTS } from '../../constants/PhysicsConstants';
 import { Tree } from '../architecture/Tree';
 import { Egg } from '../Egg';
 import type { EggBroadcastData } from '@/utils/eventBus';
-import { showInfo } from '@/utils/message';
 
 /**
  * 对象管理器 - 统一管理所有静态模型对象
@@ -544,28 +543,35 @@ export class ObjectManager {
 
   /**
    * 处理彩蛋广播事件
+   * @returns 创建的鸡蛋信息数组
    */
-  handleEggBroadcast = (data: EggBroadcastData) => {
+  createEggBroadcast = (data: EggBroadcastData): Array<{id: string, model: THREE.Object3D}> => {
     console.log('🥚 ObjectManager收到彩蛋广播:', data)
+
+    const createdEggs: Array<{id: string, model: THREE.Object3D}> = []
 
     // 在3D场景中插入彩蛋
     data.eggs.forEach(egg => {
-      this.insertEggIntoScene(egg.id, egg.x, egg.y, egg.z)
+      const eggModel = this.insertEggIntoScene(egg.id, egg.x, egg.y, egg.z)
+      if (eggModel) {
+        createdEggs.push({ id: egg.id, model: eggModel })
+      }
     })
 
-    showInfo(`场景中新增了 ${data.totalEggs} 个彩蛋！`)
+    return createdEggs
   }
 
   /**
    * 在3D场景中插入彩蛋
+   * @returns 创建的鸡蛋模型或null
    */
-  private insertEggIntoScene(id: string, x: number, y: number, z: number) {
+  private insertEggIntoScene(id: string, x: number, y: number, z: number): THREE.Object3D | null {
     try {
       // 获取鸡蛋模型实例
       const eggModel = Egg.getEggInstance()
       if (!eggModel) {
         console.error(`❌ 无法获取鸡蛋模型实例，彩蛋 ${id} 创建失败`)
-        return
+        return null
       }
 
       // 设置鸡蛋模型属性
@@ -578,17 +584,20 @@ export class ObjectManager {
       this.scene.add(eggModel)
 
       // 设置随机旋转角度
-      eggModel.rotation.x = Math.random() * Math.PI * 2 // 0 到 2π
-      eggModel.rotation.y = Math.random() * Math.PI * 2
-      eggModel.rotation.z = Math.random() * Math.PI * 2
+      // eggModel.rotation.x = Math.random() * Math.PI * 2 // 0 到 2π
+      // eggModel.rotation.y = Math.random() * Math.PI * 2
+      // eggModel.rotation.z = Math.random() * Math.PI * 2
 
       // 保存到彩蛋集合中（直接保存模型，不是组）
       this.eggs.set(id, eggModel as any)
 
       console.log(`🥚 彩蛋 ${id} 已插入场景位置: (${x}, ${y}, ${z})`)
 
+      return eggModel
+
     } catch (error) {
       console.error(`❌ 插入彩蛋 ${id} 失败:`, error)
+      return null
     }
   }
 

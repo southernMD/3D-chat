@@ -78,6 +78,9 @@ const updateLoadingStep = (stepIndex: number, status: StepStatus, message?: stri
 
 let bvhPhysics: BVHPhysics
 
+// 鸡蛋广播事件处理函数
+let eggBroadcastHandler: ((data: any) => void) | null = null
+
 // WebRTC初始化函数
 const initializeWebRTC = async () => {
   try {
@@ -113,9 +116,6 @@ const initializeWebRTC = async () => {
     showError('WebRTC初始化失败，聊天功能将不可用')
   }
 }
-
-
-
 onMounted(async () => {
   try {
     // 检查WebRTC连接状态（不重新初始化）
@@ -272,7 +272,19 @@ onMounted(async () => {
 
     // 监听彩蛋广播事件
     if(webrtcStore.roomConfig?.map === 'school') {
-      eventBus.on('egg-broadcast', objectManager.handleEggBroadcast)
+      eggBroadcastHandler = (data) => {
+        // 创建鸡蛋模型
+        const createdEggs = objectManager.createEggBroadcast(data)
+
+        // 为每个创建的鸡蛋创建BVH碰撞体
+        createdEggs.forEach(egg => {
+          const bvhCollider = bvhPhysics.createEggBVH(egg.id, egg.model)
+          if (bvhCollider) {
+            console.log(`🥚 鸡蛋 ${egg.id} BVH碰撞体创建成功`)
+          }
+        })
+      }
+      eventBus.on('egg-broadcast', eggBroadcastHandler)
     }
 
   } catch (error) {
@@ -286,8 +298,9 @@ onUnmounted(() => {
   window.removeEventListener('keyup', handleKeyUp);
 
   // 清理事件总线监听器
-  if(webrtcStore.roomConfig?.map === 'school') {
-    eventBus.off('egg-broadcast', objectManager.handleEggBroadcast)
+  if(webrtcStore.roomConfig?.map === 'school' && eggBroadcastHandler) {
+    eventBus.off('egg-broadcast', eggBroadcastHandler)
+    eggBroadcastHandler = null
   }
 
   // 清理WebRTC连接
