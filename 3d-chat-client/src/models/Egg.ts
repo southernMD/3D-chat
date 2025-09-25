@@ -260,7 +260,6 @@ export class Egg {
         const brokenEgg = Egg.getBrokenEggInstance();
 
         if (!brokenEgg) {
-            console.warn('❌ 无法获取破碎鸡蛋模型，使用备用效果');
             this.createBrokenEggEffect(position);
             return;
         }

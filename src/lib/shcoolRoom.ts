@@ -41,42 +41,19 @@ export class SchoolRoom {
     { id, eggId, username, roomId }: { id: number, eggId: string, username: string, roomId: string },
     callback?: (response: any) => void
   ): void {
+    const egg = this.eggPositions.find(egg => egg.id === eggId);
     try {
       console.log(`🥚 收到清除鸡蛋请求: eggId=${eggId}, playerId=${id}, username=${username}, roomId=${roomId}`);
 
       // 查找对应的鸡蛋
-      const egg = this.eggPositions.find(egg => egg.id === eggId);
       if (!egg) {
         console.log(`❌ Egg ${eggId} not found in room ${this.roomId}`);
-
-        // 通知客户端重新插入彩蛋
-        socket.emit('reinsertEgg', {
-          eggId: eggId,
-          reason: 'EGG_NOT_FOUND',
-          message: '鸡蛋不存在',
-          position: null
-        });
-
         if (callback) callback({ success: false, error: '鸡蛋不存在', shouldReinsert: true });
         return;
       }
 
       if (!egg.isMarked) {
         console.log(`⚠️ Egg ${eggId} is not marked in room ${this.roomId}`);
-
-        // 通知客户端重新插入彩蛋，并返回具体位置
-        socket.emit('reinsertEgg', {
-          eggId: eggId,
-          reason: 'EGG_NOT_MARKED',
-          message: '鸡蛋未被标记',
-          position: {
-            id: egg.id,
-            x: parseFloat(egg.x),
-            y: parseFloat(egg.y),
-            z: parseFloat(egg.z)
-          }
-        });
-
         if (callback) callback({ success: false, error: '鸡蛋未被标记', shouldReinsert: true });
         return;
       }
@@ -109,13 +86,15 @@ export class SchoolRoom {
       console.error('❌ 处理清除鸡蛋事件时发生错误:', error);
 
       // 发生异常时通知客户端重新插入彩蛋
-      socket.emit('reinsertEgg', {
-        eggId: eggId,
-        reason: 'SERVER_ERROR',
-        message: '服务器处理错误',
-        position: null
-      });
-
+      //当鸡蛋没有被标记时，客户端会收到重新插入鸡蛋的请求
+      if(egg && !egg.isMarked){
+        socket.emit('reinsertEgg', {
+          eggId: eggId,
+          reason: 'SERVER_ERROR',
+          message: '服务器处理错误',
+          position: null
+        });
+      }
       if (callback) callback({
         success: false,
         error: error instanceof Error ? error.message : '未知错误',

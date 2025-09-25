@@ -280,17 +280,15 @@ const selectedSlot = ref(0)
 // 初始化物品栏（9个槽位，类似MC）
 const inventoryItems = ref<InventoryItem[]>(Array.from({ length: 9 }, (_, index) => {
   const itemData = [
-    { name: '钻石剑', icon: '⚔️', description: '锋利的钻石剑，攻击力很高' },
-    { name: '生命药水', icon: '🧪', description: '恢复生命值的神奇药水' },
-    { name: '面包', icon: '🍞', description: '美味的面包，可以恢复饥饿值' }
+    { name: '鸡蛋', icon: '🥚', description: '没有特殊效果的投掷物' },
   ]
 
   return {
-    id: index < 3 ? `item_${index}` : null,
-    name: index < 3 ? itemData[index].name : '',
-    icon: index < 3 ? itemData[index].icon : '',
-    count: index < 3 ? Math.floor(Math.random() * 64) + 1 : 0,
-    description: index < 3 ? itemData[index].description : ''
+    id: index < 1 ? `item_${index}` : null,
+    name: index < 1 ? itemData[index].name : '',
+    icon: index < 1? itemData[index].icon : '',
+    count: index < 1 ? 0 : 0,
+    description: index < 1 ? itemData[index].description : ''
   }
 }))
 

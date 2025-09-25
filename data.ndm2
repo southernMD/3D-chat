@@ -1061,6 +1061,132 @@
             ],
             "triggers": [],
             "tablePartitions": []
+          },
+          {
+            "objectType": "Table_MYSQL",
+            "name": "equipment",
+            "comment": "",
+            "engine": "",
+            "characterSet": "",
+            "collation": "",
+            "autoIncrement": 0,
+            "tablespace": "",
+            "storage": "",
+            "insertMethod": "",
+            "connection": "",
+            "checksum": false,
+            "rowFormat": "",
+            "avgRowLength": 0,
+            "maxRows": 0,
+            "minRows": 0,
+            "keyBlockSize": 0,
+            "packKeys": "",
+            "delayKeyWrite": false,
+            "dataDirectory": "",
+            "indexDirectory": "",
+            "statsAutoRecalc": "",
+            "statsPersistent": "",
+            "statsSamplePages": 0,
+            "union": "",
+            "pageCheckSum": false,
+            "transactional": false,
+            "compression": "",
+            "oldName": "",
+            "encryption": false,
+            "createOptions": "",
+            "createTime": "",
+            "checkTime": "",
+            "dataFree": 0,
+            "dataLength": 0,
+            "indexLength": 0,
+            "maxDataLength": 0,
+            "rows": 0,
+            "updateTime": "",
+            "DDL": "",
+            "partitionBy": "",
+            "partitionByExpr": "",
+            "partitions": 0,
+            "partitionKeyAlgorithm": "",
+            "subPartitionBy": "",
+            "subPartitionByExpr": "",
+            "subPartitions": 0,
+            "subPartitionKeyAlgorithm": "",
+            "fields": [
+              {
+                "objectType": "TableField_MYSQL",
+                "name": "id",
+                "type": "int",
+                "length": 11,
+                "decimals": -2147483648,
+                "isUnsigned": false,
+                "isZeroFill": false,
+                "setEnumValues": "",
+                "isBinary": false,
+                "charset": "",
+                "collation": "",
+                "isNullable": true,
+                "defaultType": "Others",
+                "defaultValue": "",
+                "isOnUpdateCurrentTimestamp": false,
+                "isAutoInc": false,
+                "comment": "",
+                "columnFormat": "",
+                "storage": "",
+                "isVirtual": false,
+                "isGeneratedAlways": false,
+                "virtualExpr": "",
+                "virtualType": "",
+                "oldName": "id"
+              },
+              {
+                "objectType": "TableField_MYSQL",
+                "name": "egg",
+                "type": "bigint",
+                "length": 255,
+                "decimals": -2147483648,
+                "isUnsigned": false,
+                "isZeroFill": false,
+                "setEnumValues": "",
+                "isBinary": false,
+                "charset": "",
+                "collation": "",
+                "isNullable": true,
+                "defaultType": "Others",
+                "defaultValue": "",
+                "isOnUpdateCurrentTimestamp": false,
+                "isAutoInc": false,
+                "comment": "",
+                "columnFormat": "",
+                "storage": "",
+                "isVirtual": false,
+                "isGeneratedAlways": false,
+                "virtualExpr": "",
+                "virtualType": "",
+                "oldName": "egg"
+              }
+            ],
+            "indexes": [],
+            "foreignKeys": [
+              {
+                "objectType": "ForeignKey_MYSQL",
+                "name": "fk_equipment_users_1",
+                "fields": [
+                  "id"
+                ],
+                "referenceSchema": "chat",
+                "referenceTable": "users",
+                "referenceFields": [
+                  "id"
+                ],
+                "onDelete": "",
+                "onUpdate": "",
+                "sourceCardinality": "NoneRelationship",
+                "targetCardinality": "NoneRelationship",
+                "oldName": ""
+              }
+            ],
+            "triggers": [],
+            "tablePartitions": []
           }
         ],
         "views": []
@@ -1144,6 +1270,22 @@
             "b": 192,
             "a": 1
           }
+        },
+        {
+          "type": "table",
+          "schemaName": "chat",
+          "tableName": "equipment",
+          "x": 260,
+          "y": 360,
+          "width": 200,
+          "height": 200,
+          "isBold": false,
+          "titleColor": {
+            "r": 55,
+            "g": 131,
+            "b": 192,
+            "a": 1
+          }
         }
       ],
       "layers": [],
@@ -1210,6 +1352,44 @@
             "x": 162,
             "y": 242,
             "width": 343,
+            "height": 30,
+            "fontName": "Arial Unicode MS",
+            "fontSize": 14,
+            "fontColor": {
+              "r": 51,
+              "g": 51,
+              "b": 51,
+              "a": 1
+            },
+            "isFontBold": false,
+            "isFontItalic": false,
+            "isVisible": false
+          }
+        },
+        {
+          "name": "fk_equipment_users_1",
+          "sourceTableName": "equipment",
+          "sourceSchemaName": "chat",
+          "lineWidth": 1,
+          "visible": true,
+          "vertices": [
+            {
+              "x": 245,
+              "y": 460
+            },
+            {
+              "x": 130,
+              "y": 460
+            },
+            {
+              "x": 130,
+              "y": 235
+            }
+          ],
+          "label": {
+            "x": 101,
+            "y": 422,
+            "width": 154,
             "height": 30,
             "fontName": "Arial Unicode MS",
             "fontSize": 14,
