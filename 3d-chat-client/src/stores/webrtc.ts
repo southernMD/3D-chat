@@ -67,7 +67,7 @@ export const useWebRTCStore = defineStore('webrtc', () => {
 
 
   // 初始化WebRTC管理器
-  const initializeWebRTC = () => {
+  const initializeWebRTCManager = () => {
     if (webrtcManager) {
       console.warn('WebRTC管理器已经初始化')
       return
@@ -120,7 +120,7 @@ export const useWebRTCStore = defineStore('webrtc', () => {
   // 连接到服务器
   const connectToServer = async (): Promise<boolean> => {
     if (!webrtcManager) {
-      initializeWebRTC()
+      initializeWebRTCManager()
     }
 
     try {
@@ -374,7 +374,7 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     onlineCount,
 
     // 方法
-    initializeWebRTC,
+    initializeWebRTCManager,
     connectToServer,
     createAndJoinRoom,
     checkRoomExists,

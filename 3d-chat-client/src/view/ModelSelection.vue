@@ -356,7 +356,7 @@ const confirmModelSelection = async () => {
   try {
     // 初始化WebRTC管理器
     console.log('1. 初始化WebRTC管理器...')
-    webrtcStore.initializeWebRTC()
+    webrtcStore.initializeWebRTCManager()
     console.log('WebRTC管理器初始化完成')
 
     // 连接到服务器
@@ -419,7 +419,7 @@ const joinRoomByPingCode = async (selected: any) => {
   try {
     // 初始化WebRTC管理器
     console.log('1. 初始化WebRTC管理器...')
-    webrtcStore.initializeWebRTC()
+    webrtcStore.initializeWebRTCManager()
     console.log('WebRTC管理器初始化完成')
 
     // 连接到服务器
