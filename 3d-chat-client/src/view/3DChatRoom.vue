@@ -49,6 +49,32 @@ const userEquipment = ref({
   egg: 0 // 鸡蛋数量
 })
 
+// 当前选中的物品槽位（从GameUI组件获取）
+const selectedSlot = ref(0)
+
+// 检查是否可以发射鸡蛋
+const canShootEgg = () => {
+  // 检查当前选中的槽位是否是鸡蛋（槽位0）
+  if (selectedSlot.value !== 0) {
+    console.log('⚠️ 当前未选中鸡蛋，无法发射');
+    return false;
+  }
+
+  // 检查鸡蛋数量是否大于0
+  if (userEquipment.value.egg <= 0) {
+    console.log('⚠️ 鸡蛋数量不足，无法发射');
+    return false;
+  }
+
+  return true;
+}
+
+// 处理来自GameUI的槽位选择事件
+const handleSlotSelection = (slotIndex: number) => {
+  selectedSlot.value = slotIndex;
+  console.log(`🎯 选中物品槽位: ${slotIndex}`);
+}
+
 // WebRTC相关状态
 const isWebRTCConnected = computed(() => webrtcStore.isConnected)
 const roomInfo = computed(() => webrtcStore.roomInfo)
@@ -245,6 +271,11 @@ onMounted(async () => {
           Math.abs(event.clientY - mouseDownPosition.y);
         if (totalDelta > 2) return;
 
+        // 检查是否可以发射鸡蛋
+        if (!canShootEgg()) {
+          return;
+        }
+
         // 计算鼠标在标准化设备坐标中的位置
         const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
         const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -255,6 +286,9 @@ onMounted(async () => {
           const currentCamera = guiManager.getHadRenderCamera() || hadRenderCamera;
           if (model && currentCamera) {
             model.shootEgg(currentCamera, scene, mouseX, mouseY);
+            // 消耗1个鸡蛋
+            webrtcStore.modifyEggQuantity(-1);
+            console.log('🥚🚀 发射鸡蛋，库存-1');
           }
         }
       }
@@ -573,8 +607,9 @@ const handleCopyRoomCode = (success: boolean, roomCode?: string) => {
     <!-- 游戏UI界面 -->
     <GameUI v-show="showGameUI && !isLoading" :webrtc-connected="isWebRTCConnected" :room-info="roomInfo" :peers="peers"
       :messages="messages" :microphone-enabled="microphoneEnabled" :user-equipment="userEquipment"
+      :selected-slot="selectedSlot"
       @send-message="handleSendMessage" @toggle-microphone="handleToggleMicrophone" @exit-room="handleExitRoom"
-      @copy-room-code="handleCopyRoomCode" />
+      @copy-room-code="handleCopyRoomCode" @slot-selection="handleSlotSelection" />
   </div>
 </template>
 

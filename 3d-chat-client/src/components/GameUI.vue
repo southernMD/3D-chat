@@ -107,7 +107,7 @@
         >
           <div v-if="item.id" class="item-icon">
             <span class="item-emoji">{{ item.icon }}</span>
-            <span v-if="item.count > 1" class="item-count">{{ item.count }}</span>
+            <span v-if="item.count >= 0" class="item-count">{{ item.count }}</span>
           </div>
           <div class="slot-number">{{ index + 1 }}</div>
         </div>
@@ -130,6 +130,7 @@ interface Props {
   userEquipment?: {
     egg: number
   }
+  selectedSlot?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -138,7 +139,8 @@ const props = withDefaults(defineProps<Props>(), {
   peers: () => [],
   messages: () => [],
   microphoneEnabled: false,
-  userEquipment: () => ({ egg: 0 })
+  userEquipment: () => ({ egg: 0 }),
+  selectedSlot: 0
 })
 
 // Events定义
@@ -147,6 +149,7 @@ const emit = defineEmits<{
   toggleMicrophone: []
   exitRoom: []
   copyRoomCode: [success: boolean, roomCode?: string]
+  slotSelection: [slotIndex: number]
 }>()
 
 // 接口定义
@@ -279,7 +282,8 @@ onUnmounted(() => {
   // 清理全局键盘监听
   document.removeEventListener('keydown', handleGlobalKeydown)
 })
-const selectedSlot = ref(0)
+// 使用父组件传递的选中槽位，如果没有传递则默认为0
+const selectedSlot = computed(() => props.selectedSlot || 0)
 
 // 物品配置
 const itemConfigs = [
@@ -408,7 +412,7 @@ const sendMessage = () => {
 }
 
 const selectSlot = (index: number) => {
-  selectedSlot.value = index
+  emit('slotSelection', index)
 }
 
 const formatTime = (timestamp: number) => {
@@ -444,7 +448,7 @@ onMounted(() => {
     if (event.code >= 'Digit1' && event.code <= 'Digit9') {
       const slotIndex = parseInt(event.code.replace('Digit', '')) - 1
       if (slotIndex < inventoryItems.value.length) {
-        selectedSlot.value = slotIndex
+        emit('slotSelection', slotIndex)
       }
     }
   }
