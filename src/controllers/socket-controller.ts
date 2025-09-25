@@ -2,15 +2,55 @@ import { Socket, Server } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import { mediasoupHandler } from '../lib/mediasoup';
 import { Room, RoomConfig, roomManager } from '../lib/room';
+import { AuthService } from '../services/AuthService';
+
+// 扩展Socket接口以包含用户信息
+interface AuthenticatedSocket extends Socket {
+  userId?: number;
+  userEmail?: string;
+}
 
 // 处理Socket.IO连接
-export const handleConnection = (socket: Socket, io: Server): void => {
+export const handleConnection = (socket: AuthenticatedSocket, io: Server): void => {
   const { id } = socket;
 
   console.log(`Client connected [id=${id}]`);
 
   // 确保roomManager有IO实例的引用
   roomManager.setIO(io);
+
+  // 处理用户认证
+  socket.on('authenticate', async (data: { token: string }) => {
+    try {
+      const authService = new AuthService();
+      const verifyResult = await authService.verifyToken(data.token);
+      console.log("socket 用户认证",verifyResult.data);
+      if (verifyResult.success && verifyResult.data) {
+        socket.userId = verifyResult.data.userId;
+        socket.userEmail = verifyResult.data.email;
+
+        socket.emit('authenticated', {
+          success: true,
+          userId: socket.userId,
+          message: '认证成功'
+        });
+
+        console.log(`🔐 用户认证成功: ${socket.userEmail}(${socket.userId}) - Socket: ${socket.id}`);
+      } else {
+        socket.emit('authenticated', {
+          success: false,
+          message: '认证失败'
+        });
+        console.log(`❌ 用户认证失败: Socket ${socket.id}`);
+      }
+    } catch (error) {
+      console.error('Socket认证错误:', error);
+      socket.emit('authenticated', {
+        success: false,
+        message: '认证过程中发生错误'
+      });
+    }
+  });
 
   // 当客户端创建或加入房间
   socket.on('createOrJoin', async (data: {
@@ -50,8 +90,8 @@ export const handleConnection = (socket: Socket, io: Server): void => {
       // 将客户端加入房间
       socket.join(roomId);
 
-      // 添加参与者到房间
-      const peer = roomManager.addPeer(roomId, peerId, socket.id, userName);
+      // 添加参与者到房间 (传递认证的用户ID)
+      const peer = roomManager.addPeer(roomId, peerId, socket.id, userName, socket.userId);
 
       if (!peer) {
         socket.emit('error', { message: 'Failed to join room' });
@@ -77,7 +117,7 @@ export const handleConnection = (socket: Socket, io: Server): void => {
       // 单独发送房间配置
       socket.emit('roomConfig', endRoomCongig);
 
-      // 如果是学校房间，延迟同步已标记的彩蛋状态给新用户
+      // 如果是学校房间，延迟同步已标记的鸡蛋状态给新用户
       // 延迟确保客户端有足够时间设置事件监听器
       if (room.schoolRoom) {
         room.schoolRoom!.syncEggStatesForNewUser(socket.id);
@@ -539,7 +579,7 @@ export const handleConnection = (socket: Socket, io: Server): void => {
         const error = `用户 ${username}(${id}) 不在房间 ${roomId} 内`;
         console.error(`❌ ${error}`);
 
-        // 通知客户端重新插入彩蛋（用户不在房间内，可能是非法操作）
+        // 通知客户端重新插入鸡蛋（用户不在房间内，可能是非法操作）
         socket.emit('reinsertEgg', {
           eggId: eggId,
           reason: 'USER_NOT_IN_ROOM',
@@ -556,7 +596,7 @@ export const handleConnection = (socket: Socket, io: Server): void => {
         const error = `用户 ${username}(${id}) 的socket连接不匹配`;
         console.error(`❌ ${error}`);
 
-        // 通知客户端重新插入彩蛋（socket不匹配，可能是非法操作）
+        // 通知客户端重新插入鸡蛋（socket不匹配，可能是非法操作）
         socket.emit('reinsertEgg', {
           eggId: eggId,
           reason: 'SOCKET_MISMATCH',
@@ -569,12 +609,12 @@ export const handleConnection = (socket: Socket, io: Server): void => {
       }
 
       // 调用学校房间的处理方法
-      room.schoolRoom.handleClearEgg(socket, { id, eggId, username, roomId }, callback);
+      room.schoolRoom.handleClearEgg(socket, { id, eggId, username, roomId }, callback, roomManager);
 
     } catch (error) {
       console.error('❌ 处理清除鸡蛋事件时发生错误:', error);
 
-      // 发生异常时通知客户端重新插入彩蛋
+      // 发生异常时通知客户端重新插入鸡蛋
       socket.emit('reinsertEgg', {
         eggId: eggId,
         reason: 'SERVER_ERROR',
@@ -586,6 +626,76 @@ export const handleConnection = (socket: Socket, io: Server): void => {
         success: false,
         error: error instanceof Error ? error.message : '未知错误',
         shouldReinsert: true
+      });
+    }
+  });
+
+  // 处理获取用户装备事件
+  socket.on('getUserEquipment', ({ roomId, peerId }: { roomId: string, peerId: string }) => {
+    try {
+      console.log(`📦 获取用户装备请求: roomId=${roomId}, peerId=${peerId}`);
+
+      const userEquipment = roomManager.getUserEquipment(roomId, peerId);
+      if (userEquipment) {
+        socket.emit('userEquipment', {
+          success: true,
+          data: userEquipment
+        });
+        console.log(`✅ 用户装备已发送: ${userEquipment.username}`);
+      } else {
+        socket.emit('userEquipment', {
+          success: false,
+          message: '用户装备不存在'
+        });
+        console.log(`❌ 用户装备不存在: ${peerId}`);
+      }
+    } catch (error) {
+      console.error('❌ 获取用户装备时发生错误:', error);
+      socket.emit('userEquipment', {
+        success: false,
+        message: '获取装备失败'
+      });
+    }
+  });
+
+  // 处理修改鸡蛋数量事件（统一处理增减和设置）
+  socket.on('modifyEggQuantity', ({
+    roomId,
+    peerId,
+    change
+  }: {
+    roomId: string,
+    peerId: string,
+    change: number
+  }) => {
+    try {
+      if (change > 0) {
+        console.log(`➕ 增加鸡蛋: ${peerId} +${change}`);
+      } else if (change < 0) {
+        console.log(`➖ 减少鸡蛋: ${peerId} ${change}`);
+      } else {
+        console.log(`🔄 鸡蛋数量不变: ${peerId}`);
+      }
+
+      const success = roomManager.modifyUserEggQuantity(roomId, peerId, change);
+
+      // 获取更新后的数量
+      const room = roomManager.getRoom(roomId);
+      const updatedEquipment = room?.userEquipments.get(peerId);
+      const newQuantity = updatedEquipment?.egg || 0;
+
+      socket.emit('eggQuantityChanged', {
+        success,
+        quantity: newQuantity,
+        message: success ? '鸡蛋数量修改成功' : '鸡蛋数量修改失败'
+      });
+
+    } catch (error) {
+      console.error('❌ 修改鸡蛋数量时发生错误:', error);
+      socket.emit('eggQuantityChanged', {
+        success: false,
+        quantity: 0,
+        message: '修改鸡蛋数量失败'
       });
     }
   });

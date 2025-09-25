@@ -44,6 +44,11 @@ const router = useRouter()
 // UI状态
 const showGameUI = ref(true)
 
+// 用户装备状态
+const userEquipment = ref({
+  egg: 0 // 鸡蛋数量
+})
+
 // WebRTC相关状态
 const isWebRTCConnected = computed(() => webrtcStore.isConnected)
 const roomInfo = computed(() => webrtcStore.roomInfo)
@@ -97,7 +102,7 @@ const initializeWebRTC = async () => {
     // 检查是否已经初始化
     if (!webrtcStore.isInitialized) {
       console.log('🌐 初始化WebRTC管理器...')
-      webrtcStore.initializeWebRTC()
+      webrtcStore.initializeWebRTCManager()
     }
 
     // 如果未连接，尝试连接到服务器
@@ -270,13 +275,17 @@ onMounted(async () => {
       console.log('🎉 3D场景加载完成！')
     }, 500)
 
-    // 监听彩蛋广播事件
+    setupEquipmentBusListeners()
+
+    //获取装备
+    webrtcStore.getUserEquipment()
+    // 监听鸡蛋广播事件
     if (webrtcStore.roomConfig?.map === 'school') {
       eggBroadcastHandler = (data) => {
         if (data.isSync) {
-          console.log(`🔄 收到彩蛋状态同步: ${data.totalEggs}个已标记的鸡蛋`)
+          console.log(`🔄 收到鸡蛋状态同步: ${data.totalEggs}个已标记的鸡蛋`)
         } else {
-          console.log(`📡 收到彩蛋广播: ${data.totalEggs}个新鸡蛋`)
+          console.log(`📡 收到鸡蛋广播: ${data.totalEggs}个新鸡蛋`)
         }
 
         // 创建鸡蛋模型
@@ -322,11 +331,10 @@ onMounted(async () => {
       })
 
       // 监听鸡蛋收集成功事件
-      eventBus.on('egg-collected', ({ eggId, playerId, username, message }) => {
-        console.log('🎉 鸡蛋收集成功:', { eggId, playerId, username, message })
-
-        // 显示成功提示消息给用户
-        // TODO: 这里可以添加UI提示，显示获得彩蛋的成功消息
+      eventBus.on('egg-collected', ({ message }) => {
+        // 服务端已经自动增加了装备，这里只显示消息
+        userEquipment.value.egg++
+        showSuccess(message)
         console.log(`🎉 ${message}`)
       })
 
@@ -347,6 +355,21 @@ onMounted(async () => {
     console.error('❌ 加载过程中发生错误:', error)
   }
 })
+
+// 监听装备相关的事件总线事件
+const setupEquipmentBusListeners = () => {
+  // 监听用户装备数据更新
+  eventBus.on('user-equipment-updated', (data: { egg: number }) => {
+    userEquipment.value.egg = data.egg
+    console.log(`📦 用户装备已更新: 鸡蛋 x${userEquipment.value.egg}`)
+  })
+
+  // 监听鸡蛋数量更新成功
+  eventBus.on('egg-quantity-updated', (data: { quantity: number }) => {
+    userEquipment.value.egg = data.quantity
+    console.log(`✅ 鸡蛋数量更新成功: ${data.quantity}`)
+  })
+}
 
 onUnmounted(() => {
   // 移除窗口事件监听器
@@ -549,8 +572,9 @@ const handleCopyRoomCode = (success: boolean, roomCode?: string) => {
 
     <!-- 游戏UI界面 -->
     <GameUI v-show="showGameUI && !isLoading" :webrtc-connected="isWebRTCConnected" :room-info="roomInfo" :peers="peers"
-      :messages="messages" :microphone-enabled="microphoneEnabled" @send-message="handleSendMessage"
-      @toggle-microphone="handleToggleMicrophone" @exit-room="handleExitRoom" @copy-room-code="handleCopyRoomCode" />
+      :messages="messages" :microphone-enabled="microphoneEnabled" :user-equipment="userEquipment"
+      @send-message="handleSendMessage" @toggle-microphone="handleToggleMicrophone" @exit-room="handleExitRoom"
+      @copy-room-code="handleCopyRoomCode" />
   </div>
 </template>
 

@@ -41,6 +41,48 @@ export const useWebRTCStore = defineStore('webrtc', () => {
   const isInRoom = computed(() => !!roomInfo.value?.roomId)
   const onlineCount = computed(() => peers.value.length + (isInRoom.value ? 1 : 0))
 
+  // 获取Socket实例
+  const getSocket = () => {
+    return webrtcManager?.getSocket() || null
+  }
+
+  // 装备相关函数
+  const getUserEquipment = () => {
+    if (!webrtcManager || !isConnected.value || !roomInfo.value) {
+      console.warn('⚠️ WebRTC未连接或房间信息不存在，无法获取用户装备')
+      return
+    }
+
+    console.log('📦 请求获取用户装备...')
+    const socket = webrtcManager.getSocket()
+    socket?.emit('getUserEquipment', {
+      roomId: roomInfo.value.roomId,
+      peerId: roomInfo.value.peerId
+    })
+  }
+
+  const modifyEggQuantity = (change: number) => {
+    if (!webrtcManager || !isConnected.value || !roomInfo.value) {
+      console.warn('⚠️ WebRTC未连接或房间信息不存在，无法修改鸡蛋数量')
+      return
+    }
+
+    if (change > 0) {
+      console.log(`➕ 增加鸡蛋: +${change}`)
+    } else if (change < 0) {
+      console.log(`➖ 减少鸡蛋: ${change}`)
+    } else {
+      console.log(`🔄 鸡蛋数量不变: ${change}`)
+    }
+
+    const socket = webrtcManager.getSocket()
+    socket?.emit('modifyEggQuantity', {
+      roomId: roomInfo.value.roomId,
+      peerId: roomInfo.value.peerId,
+      change: change
+    })
+  }
+
 
 
   const addMessage = (content: string, isSent: boolean, senderName?: string) => {
@@ -95,7 +137,7 @@ export const useWebRTCStore = defineStore('webrtc', () => {
         addMessage(`啊哈哈鸡蛋来了,生成${eggPositions.totalEggs}个鸡蛋`, false, "系统")
         console.log(eggPositions, "啊哈哈鸡蛋来了");
 
-        // 触发事件总线，通知外部组件处理彩蛋插入
+        // 触发事件总线，通知外部组件处理鸡蛋插入
         eventBus.emit('egg-broadcast', {
           eggs: eggPositions.eggs,
           roomId: eggPositions.roomId,
@@ -386,6 +428,10 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     cleanup,
     getStatusInfo,
     clearEgg,
-    getYouPeer
+    getYouPeer,
+    getSocket,
+    // 装备相关方法
+    getUserEquipment,
+    modifyEggQuantity
   }
 })

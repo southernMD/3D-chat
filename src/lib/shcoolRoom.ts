@@ -1,7 +1,7 @@
 import { Server } from 'socket.io';
 import { eggPosition } from '../utils/eggPositions';
 
-// 彩蛋位置接口
+// 鸡蛋位置接口
 export interface EggPosition {
   x: string;
   y: string;
@@ -17,13 +17,13 @@ export class SchoolRoom {
   private eggPositions: EggPosition[];
   private broadcastInterval: NodeJS.Timeout | null = null;
   private readonly BROADCAST_INTERVAL = 10000; // 30秒广播一次
-  private readonly MAX_EGGS_PER_BROADCAST = 10; // 每次最多广播3个彩蛋
+  private readonly MAX_EGGS_PER_BROADCAST = 10; // 每次最多广播3个鸡蛋
 
   constructor(roomId: string, io: Server) {
     this.roomId = roomId;
     this.io = io;
 
-    // 初始化彩蛋位置，添加唯一ID和标记状态
+    // 初始化鸡蛋位置，添加唯一ID和标记状态
     this.eggPositions = eggPosition.map((pos, index) => ({
       ...pos,
       id: `egg_${index}_${Date.now()}`,
@@ -39,7 +39,8 @@ export class SchoolRoom {
   public handleClearEgg(
     socket: any,
     { id, eggId, username, roomId }: { id: number, eggId: string, username: string, roomId: string },
-    callback?: (response: any) => void
+    callback?: (response: any) => void,
+    roomManager?: any
   ): void {
     const egg = this.eggPositions.find(egg => egg.id === eggId);
     try {
@@ -61,7 +62,13 @@ export class SchoolRoom {
       // 清除标记
       egg.isMarked = false;
 
-      // 广播彩蛋被清除的消息
+      // 增加用户装备中的鸡蛋数量
+      if (roomManager) {
+        const success = roomManager.modifyUserEggQuantity(roomId, id.toString(), 1);
+        console.log(`🥚 ${success ? '成功' : '失败'}为用户 ${username}(${id}) 增加鸡蛋装备`);
+      }
+
+      // 广播鸡蛋被清除的消息
       this.io.to(this.roomId).emit('eggCleared', {
         eggId: eggId,
         clearedBy: id.toString(),
@@ -69,13 +76,13 @@ export class SchoolRoom {
         remainingEggs: this.eggPositions.filter(egg => !egg.isMarked).length
       });
 
-      // 通知客户端成功获得彩蛋
+      // 通知客户端成功获得鸡蛋（不需要客户端再手动增加装备）
       socket.emit('eggCollected', {
         eggId: eggId,
         playerId: id,
         username: username,
         timestamp: new Date(),
-        message: '恭喜你获得了彩蛋！'
+        message: '恭喜你获得了鸡蛋！'
       });
 
       console.log(`✅ Egg ${eggId} cleared by player ${username}(${id}) in room ${this.roomId}`);
@@ -85,7 +92,7 @@ export class SchoolRoom {
     } catch (error) {
       console.error('❌ 处理清除鸡蛋事件时发生错误:', error);
 
-      // 发生异常时通知客户端重新插入彩蛋
+      // 发生异常时通知客户端重新插入鸡蛋
       //当鸡蛋没有被标记时，客户端会收到重新插入鸡蛋的请求
       if(egg && !egg.isMarked){
         socket.emit('reinsertEgg', {
@@ -135,10 +142,10 @@ export class SchoolRoom {
   }
 
   /**
-   * 广播彩蛋位置
+   * 广播鸡蛋位置
    */
   private broadcastEggs(): void {
-    // 获取未标记的彩蛋位置
+    // 获取未标记的鸡蛋位置
     const unmarkedEggs = this.eggPositions.filter(egg => !egg.isMarked);
 
     if (unmarkedEggs.length === 0) {
@@ -146,14 +153,14 @@ export class SchoolRoom {
       return;
     }
 
-    // 随机选择要广播的彩蛋数量（不超过最大值和可用数量）
+    // 随机选择要广播的鸡蛋数量（不超过最大值和可用数量）
     const eggCount = Math.min(
       this.MAX_EGGS_PER_BROADCAST,
       unmarkedEggs.length,
       Math.floor(Math.random() * this.MAX_EGGS_PER_BROADCAST) + 1
     );
 
-    // 随机选择彩蛋
+    // 随机选择鸡蛋
     const selectedEggs: EggPosition[] = [];
     const availableEggs = [...unmarkedEggs];
 
@@ -184,10 +191,10 @@ export class SchoolRoom {
   }
 
   /**
-   * 同步所有已标记的彩蛋状态给新加入的用户
+   * 同步所有已标记的鸡蛋状态给新加入的用户
    */
   public syncEggStatesForNewUser(socketId: string): void {
-    // 获取所有已标记的彩蛋
+    // 获取所有已标记的鸡蛋
     const markedEggs = this.eggPositions.filter(egg => egg.isMarked);
 
     if (markedEggs.length === 0) {
@@ -195,7 +202,7 @@ export class SchoolRoom {
       return;
     }
 
-    // 发送已标记的彩蛋状态给新用户
+    // 发送已标记的鸡蛋状态给新用户
     this.io.to(socketId).emit('eggBroadcast', {
       eggs: markedEggs.map(egg => ({
         id: egg.id,
@@ -213,7 +220,7 @@ export class SchoolRoom {
   }
 
   /**
-   * 客户端消除彩蛋标记
+   * 客户端消除鸡蛋标记
    */
   public clearEggMark(eggId: string, playerId: string): boolean {
     const egg = this.eggPositions.find(egg => egg.id === eggId);
@@ -231,7 +238,7 @@ export class SchoolRoom {
     // 清除标记
     egg.isMarked = false;
 
-    // 广播彩蛋被清除的消息
+    // 广播鸡蛋被清除的消息
     this.io.to(this.roomId).emit('eggCleared', {
       eggId: eggId,
       clearedBy: playerId,
@@ -263,7 +270,7 @@ export class SchoolRoom {
 //   }
 
 //   /**
-//    * 重置所有彩蛋标记（管理员功能）
+//    * 重置所有鸡蛋标记（管理员功能）
 //    */
 //   public resetAllEggs(): void {
 //     this.eggPositions.forEach(egg => {

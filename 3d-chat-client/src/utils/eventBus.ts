@@ -9,6 +9,9 @@ export interface EventBusEvents {
   'reinsert-egg': ReinsertEggData
   'egg-collected': EggCollectedData
   'clear-egg-mapUserPositionDistance': ClearEggDistanceMapData
+  // 装备相关事件
+  'user-equipment-updated': UserEquipmentUpdatedData
+  'egg-quantity-updated': EggQuantityUpdatedData
 }
 
 export interface EggBroadcastData {
@@ -57,6 +60,15 @@ export interface EggCollectedData {
 
 export interface ClearEggDistanceMapData {
   eggId: string
+}
+
+// 装备相关接口
+export interface UserEquipmentUpdatedData {
+  egg: number
+}
+
+export interface EggQuantityUpdatedData {
+  quantity: number
 }
 
 // 事件总线实现

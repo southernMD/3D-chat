@@ -127,6 +127,9 @@ interface Props {
   peers?: any[]
   messages?: any[]
   microphoneEnabled?: boolean
+  userEquipment?: {
+    egg: number
+  }
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -134,7 +137,8 @@ const props = withDefaults(defineProps<Props>(), {
   roomInfo: null,
   peers: () => [],
   messages: () => [],
-  microphoneEnabled: false
+  microphoneEnabled: false,
+  userEquipment: () => ({ egg: 0 })
 })
 
 // Events定义
@@ -277,20 +281,52 @@ onUnmounted(() => {
 })
 const selectedSlot = ref(0)
 
+// 物品配置
+const itemConfigs = [
+  { id: 'egg', name: '鸡蛋', icon: '🥚', description: '没有特殊效果的投掷物', equipmentKey: 'egg' },
+  // 可以在这里添加更多物品配置
+]
+
 // 初始化物品栏（9个槽位，类似MC）
 const inventoryItems = ref<InventoryItem[]>(Array.from({ length: 9 }, (_, index) => {
-  const itemData = [
-    { name: '鸡蛋', icon: '🥚', description: '没有特殊效果的投掷物' },
-  ]
+  const itemConfig = itemConfigs[index]
 
-  return {
-    id: index < 1 ? `item_${index}` : null,
-    name: index < 1 ? itemData[index].name : '',
-    icon: index < 1? itemData[index].icon : '',
-    count: index < 1 ? 0 : 0,
-    description: index < 1 ? itemData[index].description : ''
+  if (itemConfig) {
+    return {
+      id: itemConfig.id,
+      name: itemConfig.name,
+      icon: itemConfig.icon,
+      count: props.userEquipment?.[itemConfig.equipmentKey as keyof typeof props.userEquipment] || 0,
+      description: itemConfig.description
+    }
+  } else {
+    // 空槽位
+    return {
+      id: null,
+      name: '',
+      icon: '',
+      count: 0,
+      description: ''
+    }
   }
 }))
+
+// 监听装备数据变化，更新库存
+watch(() => props.userEquipment, (newEquipment) => {
+  if (!newEquipment) return
+
+  // 遍历所有物品槽位，更新对应的装备数量
+  inventoryItems.value.forEach((item, index) => {
+    const itemConfig = itemConfigs[index]
+    if (itemConfig && item.id === itemConfig.id) {
+      const newCount = newEquipment[itemConfig.equipmentKey as keyof typeof newEquipment] || 0
+      if (item.count !== newCount) {
+        item.count = newCount
+        console.log(`🎒 库存更新: ${itemConfig.name} = ${newCount}`)
+      }
+    }
+  })
+}, { immediate: true, deep: true })
 
 
 

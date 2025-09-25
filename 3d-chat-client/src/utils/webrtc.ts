@@ -165,6 +165,13 @@ export class WebRTCManager {
   }
 
   /**
+   * 获取Socket实例
+   */
+  public getSocket() {
+    return this.state.socket
+  }
+
+  /**
    * 连接到Socket.IO服务器
    */
   public async connectSocket(): Promise<void> {
@@ -224,6 +231,50 @@ export class WebRTCManager {
   }
 
   /**
+   * 用户认证
+   */
+  private authenticateUser(): void {
+    if (!this.state.socket) return
+
+    // 获取认证token
+    const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')
+
+    if (token) {
+      this.log('🔐 发送用户认证信息...')
+      this.state.socket.emit('authenticate', { token })
+    } else {
+      this.log('⚠️ 未找到认证token，跳过用户认证')
+    }
+  }
+
+  /**
+   * 设置装备相关的Socket监听
+   */
+  private setupEquipmentSocketListeners(): void {
+    if (!this.state.socket) return
+
+    // 监听用户装备数据
+    this.state.socket.on('userEquipment', (data: { success: boolean, data?: any, message?: string }) => {
+      if (data.success && data.data) {
+        console.log(`📦 收到用户装备数据: 鸡蛋 x${data.data.egg || 0}`)
+        eventBus.emit('user-equipment-updated', { egg: data.data.egg || 0 })
+      } else {
+        console.error('❌ 获取用户装备失败:', data.message)
+      }
+    })
+
+    // 监听鸡蛋数量变化结果
+    this.state.socket.on('eggQuantityChanged', (data: { success: boolean, quantity?: number, message: string }) => {
+      if (data.success && data.quantity !== undefined) {
+        console.log(`✅ 鸡蛋数量修改成功: ${data.quantity}`)
+        eventBus.emit('egg-quantity-updated', { quantity: data.quantity })
+      } else {
+        console.error('❌ 鸡蛋数量修改失败:', data.message)
+      }
+    })
+  }
+
+  /**
    * 设置Socket事件监听
    */
   private setupSocketEvents(resolve?: () => void, reject?: (error: Error) => void): void {
@@ -233,6 +284,9 @@ export class WebRTCManager {
     this.state.socket.on('connect', () => {
       this.log('已连接到Socket.IO服务器')
       this.updateConnectionStatusCallback('connected', '已连接到服务器')
+
+      // 连接成功后进行用户认证
+      this.authenticateUser()
 
       // 如果有resolve回调，说明是在等待连接建立
       if (resolve) {
@@ -256,6 +310,15 @@ export class WebRTCManager {
       this.log('与Socket.IO服务器断开连接')
       this.updateConnectionStatusCallback('disconnected', '与服务器断开连接')
       this.cleanupResources()
+    })
+
+    // 监听认证结果
+    this.state.socket.on('authenticated', (data: { success: boolean, userId?: number, message: string }) => {
+      if (data.success) {
+        this.log(`🔐 用户认证成功: userId=${data.userId}`)
+      } else {
+        this.log(`❌ 用户认证失败: ${data.message}`)
+      }
     })
 
     // 监听服务器错误事件
@@ -300,7 +363,7 @@ export class WebRTCManager {
 
       if(roomConfig.map === 'school'){
         this.state.socket!.on('eggBroadcast', (data:EggPosintions) => {
-          console.log(`收到${data}个彩蛋位置`);
+          console.log(`收到${data}个鸡蛋位置`);
           this.getEggPositionsCallback?.(data);
         });
 
@@ -343,6 +406,9 @@ export class WebRTCManager {
       }
       this.log(`房间配置: ${JSON.stringify(roomConfig)}`)
       this.log(`模型Hash: ${modelHash}`)
+
+      // 设置装备相关的Socket监听
+      this.setupEquipmentSocketListeners()
 
       // 初始化WebRTC连接
       await this.initializeWebRTC()

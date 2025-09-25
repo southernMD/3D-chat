@@ -1,12 +1,14 @@
 import { v4 as uuidv4 } from 'uuid';
 import { SchoolRoom } from './shcoolRoom';
 import { Server } from 'socket.io';
+import { equipmentManager } from './equipmentManager';
 
 // 参与者类型定义
 export interface Peer {
   id: string;
   socketId: string;
   name: string;
+  userId?: number; // 用户在数据库中的真实ID
   joinedAt: Date;
   lastActivity: Date;
   transports: string[];
@@ -34,6 +36,14 @@ export interface RoomConfig {
   map: RoomType;
 }
 
+// 用户装备接口 (基于实际的Equipment实体)
+export interface UserEquipment {
+  id: number;        // 用户ID
+  username: string;  // 用户名
+  egg: number;       // 鸡蛋数量
+  lastUpdated: Date; // 最后更新时间
+}
+
 // 房间类型定义
 export interface Room {
   id: string;
@@ -43,6 +53,7 @@ export interface Room {
   config?: RoomConfig;
   modelHash?: Map<string, string>;
   schoolRoom?: SchoolRoom; // 学校房间实例（仅当房间类型为school时存在）
+  userEquipments: Map<string, UserEquipment>; // 房间内用户装备列表
 }
 
 // 房间管理类
@@ -67,6 +78,7 @@ export class RoomManager {
       peers: new Map(),
       config,
       modelHash: new Map([[userName, modelHash]]),
+      userEquipments: new Map(), // 初始化用户装备列表
     };
     console.log(config.map,"地图是");
     
@@ -103,10 +115,55 @@ export class RoomManager {
     return Array.from(this.rooms.values());
   }
 
+  // 获取用户装备
+  getUserEquipment(roomId: string, peerId: string): UserEquipment | undefined {
+    const room = this.rooms.get(roomId);
+    if (!room) {
+      return undefined;
+    }
+    return room.userEquipments.get(peerId);
+  }
+
+  // 修改用户鸡蛋数量（正数增加，负数减少）
+  modifyUserEggQuantity(roomId: string, peerId: string, change: number): boolean {
+    const userEquipment = this.getUserEquipment(roomId, peerId);
+    if (!userEquipment) {
+      console.error(`❌ 用户装备不存在: ${peerId} in room ${roomId}`);
+      return false;
+    }
+
+    return equipmentManager.modifyEggQuantity(userEquipment, change);
+  }
+
+  // 从用户移除鸡蛋
+  removeEggsFromUser(roomId: string, peerId: string, quantity: number): boolean {
+    const userEquipment = this.getUserEquipment(roomId, peerId);
+    if (!userEquipment) {
+      console.error(`❌ 用户装备不存在: ${peerId} in room ${roomId}`);
+      return false;
+    }
+
+    return equipmentManager.removeEggs(userEquipment, quantity);
+  }
+
+  // 获取房间内所有用户装备
+  getRoomEquipments(roomId: string): Map<string, UserEquipment> | undefined {
+    const room = this.rooms.get(roomId);
+    if (!room) {
+      return undefined;
+    }
+    return room.userEquipments;
+  }
+
   // 删除房间
   deleteRoom(roomId: string): boolean {
     if (this.rooms.has(roomId)) {
       const room = this.rooms.get(roomId);
+
+      // 保存房间内所有用户装备
+      if (room && room.userEquipments.size > 0) {
+        this.saveAllRoomEquipmentsAsync(roomId, room.userEquipments);
+      }
 
       // 如果是学校房间，清理SchoolRoom实例
       if (room?.schoolRoom) {
@@ -121,8 +178,18 @@ export class RoomManager {
     return false;
   }
 
+  // 异步保存房间内所有用户装备
+  private async saveAllRoomEquipmentsAsync(roomId: string, userEquipments: Map<string, UserEquipment>): Promise<void> {
+    try {
+      console.log(`🏠 房间删除时保存所有用户装备: ${roomId}`);
+      await equipmentManager.saveRoomEquipments(userEquipments, roomId);
+    } catch (error) {
+      console.error(`❌ 保存房间装备失败: ${roomId}`, error);
+    }
+  }
+
   // 添加参与者到房间
-  addPeer(roomId: string, peerId: string, socketId: string, name: string): Peer | null {
+  addPeer(roomId: string, peerId: string, socketId: string, name: string, userId?: number): Peer | null {
     const room = this.rooms.get(roomId);
     if (!room) {
       return null;
@@ -132,6 +199,7 @@ export class RoomManager {
       id: peerId,
       socketId,
       name: name || `Peer ${peerId.substring(0, 8)}`,
+      userId, // 用户数据库ID
       joinedAt: new Date(),
       lastActivity: new Date(),
       transports: [],
@@ -142,8 +210,37 @@ export class RoomManager {
     };
 
     room.peers.set(peerId, peer);
+
+    // 异步加载用户装备 (使用真实的用户ID)
+    if (userId) {
+      this.loadUserEquipmentAsync(roomId, peerId, name, userId);
+    } else {
+      console.warn(`⚠️ 用户 ${name}(${peerId}) 没有提供数据库ID，跳过装备加载`);
+    }
+
     console.log(`Peer ${peer.name} (${peerId}) joined room ${roomId}`);
     return peer;
+  }
+
+  // 异步加载用户装备
+  private async loadUserEquipmentAsync(roomId: string, peerId: string, name: string, userId: number): Promise<void> {
+    try {
+      const room = this.rooms.get(roomId);
+      if (!room) {
+        console.error(`❌ 房间 ${roomId} 不存在，无法加载用户装备`);
+        return;
+      }
+
+      // 从数据库加载用户装备 (使用真实的用户ID)
+      const userEquipment = await equipmentManager.loadUserEquipment(userId.toString(), name);
+
+      // 将装备添加到房间的装备列表中 (使用peerId作为key)
+      room.userEquipments.set(peerId, userEquipment);
+
+      console.log(`📦 用户装备已加载到房间: ${name}(userId:${userId}, peerId:${peerId}) -> ${roomId}`);
+    } catch (error) {
+      console.error(`❌ 加载用户装备失败: ${name}(userId:${userId}, peerId:${peerId})`, error);
+    }
   }
 
   // 从房间移除参与者
@@ -155,18 +252,46 @@ export class RoomManager {
 
     if (room.peers.has(peerId)) {
       const peer = room.peers.get(peerId);
+
+      // 异步保存用户装备
+      this.saveUserEquipmentAsync(roomId, peerId);
+
       room.peers.delete(peerId);
       console.log(`Peer ${peer?.name} (${peerId}) left room ${roomId}`);
-      
+
       // 如果房间为空，删除房间
       if (room.peers.size === 0) {
         this.deleteRoom(roomId);
         console.log(`Room ${roomId} deleted because it's empty`);
       }
-      
+
       return true;
     }
     return false;
+  }
+
+  // 异步保存用户装备
+  private async saveUserEquipmentAsync(roomId: string, peerId: string): Promise<void> {
+    try {
+      const room = this.rooms.get(roomId);
+      if (!room) {
+        console.error(`❌ 房间 ${roomId} 不存在，无法保存用户装备`);
+        return;
+      }
+
+      const userEquipment = room.userEquipments.get(peerId);
+      if (userEquipment) {
+        // 保存用户装备到数据库
+        await equipmentManager.saveUserEquipment(userEquipment);
+
+        // 从房间装备列表中移除
+        room.userEquipments.delete(peerId);
+
+        console.log(`💾 用户装备已保存并从房间移除: ${userEquipment.username}(${peerId})`);
+      }
+    } catch (error) {
+      console.error(`❌ 保存用户装备失败: ${peerId}`, error);
+    }
   }
 
   // 获取参与者

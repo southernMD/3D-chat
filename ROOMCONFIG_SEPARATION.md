@@ -169,7 +169,7 @@ console.log('地图类型:', roomConfig.value?.map)
 ```typescript
 // 检查是否为学校地图
 if (roomConfig.value?.map === 'school') {
-  // 启用彩蛋功能
+  // 启用鸡蛋功能
   enableEggFeatures()
 }
 ```
@@ -192,7 +192,7 @@ if (roomConfig.value?.map === 'school') {
 1. 创建房间并加入
 2. 检查roomInfo是否只包含roomId和peerId
 3. 检查roomConfig是否正确接收配置信息
-4. 验证彩蛋功能在school地图中正常工作
+4. 验证鸡蛋功能在school地图中正常工作
 5. 确认用户列表和消息功能正常
 
 ### 预期结果

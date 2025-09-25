@@ -4,6 +4,7 @@ import { VerificationCode } from '../entities/VerificationCode';
 import { StaticResourcePath } from '../entities/StaticResourcePath';
 import { StaticResourceMessage } from '../entities/StaticResourceMessage';
 import { config } from './config';
+import { Equipment } from '../entities/Equipment';
 
 export const AppDataSource = new DataSource({
   type: 'mysql',
@@ -12,9 +13,9 @@ export const AppDataSource = new DataSource({
   username: config.database.user,
   password: config.database.password,
   database: config.database.database,
-  synchronize: true, // 开发环境自动同步表结构
+  synchronize: false, // 开发环境自动同步表结构
   logging: false,
-  entities: [User, VerificationCode, StaticResourcePath, StaticResourceMessage],
+  entities: [User, VerificationCode, StaticResourcePath, StaticResourceMessage,Equipment],
   migrations: [],
   subscribers: [],
 });

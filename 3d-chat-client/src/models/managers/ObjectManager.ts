@@ -18,7 +18,7 @@ export class ObjectManager {
   private objects: Map<string, BaseModel> = new Map();
   private isCreated = false;
 
-  // 彩蛋管理
+  // 鸡蛋管理
   private eggs: Map<string, THREE.Object3D> = new Map();
 
   constructor(scene: THREE.Scene) {
@@ -546,15 +546,15 @@ export class ObjectManager {
   }
 
   /**
-   * 处理彩蛋广播事件
+   * 处理鸡蛋广播事件
    * @returns 创建的鸡蛋信息数组
    */
   createEggBroadcast = (data: EggBroadcastData): Array<{id: string, model: THREE.Object3D}> => {
-    console.log('🥚 ObjectManager收到彩蛋广播:', data)
+    console.log('🥚 ObjectManager收到鸡蛋广播:', data)
 
     const createdEggs: Array<{id: string, model: THREE.Object3D}> = []
 
-    // 在3D场景中插入彩蛋
+    // 在3D场景中插入鸡蛋
     data.eggs.forEach(egg => {
       const eggModel = this.insertEggIntoScene(egg.id, egg.x, egg.y, egg.z)
       if (eggModel) {
@@ -579,7 +579,7 @@ export class ObjectManager {
   }
 
   /**
-   * 在3D场景中插入彩蛋
+   * 在3D场景中插入鸡蛋
    * @returns 创建的鸡蛋模型或null
    */
   public insertEggIntoScene(id: string, x: number, y: number, z: number): THREE.Object3D | null {
@@ -587,7 +587,7 @@ export class ObjectManager {
       // 获取鸡蛋模型实例
       const eggModel = Egg.getEggInstance()
       if (!eggModel) {
-        console.error(`❌ 无法获取鸡蛋模型实例，彩蛋 ${id} 创建失败`)
+        console.error(`❌ 无法获取鸡蛋模型实例，鸡蛋 ${id} 创建失败`)
         return null
       }
       // 设置鸡蛋模型属性
@@ -604,21 +604,21 @@ export class ObjectManager {
       // eggModel.rotation.y = Math.random() * Math.PI * 2
       // eggModel.rotation.z = Math.random() * Math.PI * 2
 
-      // 保存到彩蛋集合中（直接保存模型，不是组）
+      // 保存到鸡蛋集合中（直接保存模型，不是组）
       this.eggs.set(id, eggModel as any)
 
-      console.log(`🥚 彩蛋 ${id} 已插入场景位置: (${x}, ${y}, ${z})`)
+      console.log(`🥚 鸡蛋 ${id} 已插入场景位置: (${x}, ${y}, ${z})`)
 
       return eggModel
 
     } catch (error) {
-      console.error(`❌ 插入彩蛋 ${id} 失败:`, error)
+      console.error(`❌ 插入鸡蛋 ${id} 失败:`, error)
       return null
     }
   }
 
   /**
-   * 清除指定彩蛋
+   * 清除指定鸡蛋
    */
   clearEgg(eggId: string): boolean {
     try {
@@ -643,34 +643,34 @@ export class ObjectManager {
         // 从集合中移除
         this.eggs.delete(eggId)
 
-        console.log(`🥚 彩蛋 ${eggId} 已清除`)
+        console.log(`🥚 鸡蛋 ${eggId} 已清除`)
         return true
       }
       return false
     } catch (error) {
-      console.error(`❌ 清除彩蛋 ${eggId} 失败:`, error)
+      console.error(`❌ 清除鸡蛋 ${eggId} 失败:`, error)
       return false
     }
   }
 
   /**
-   * 清除所有彩蛋
+   * 清除所有鸡蛋
    */
   clearAllEggs() {
     const eggIds = Array.from(this.eggs.keys())
     eggIds.forEach(id => this.clearEgg(id))
-    console.log(`🥚 已清除所有彩蛋 (${eggIds.length}个)`)
+    console.log(`🥚 已清除所有鸡蛋 (${eggIds.length}个)`)
   }
 
   /**
-   * 获取当前彩蛋数量
+   * 获取当前鸡蛋数量
    */
   getEggCount(): number {
     return this.eggs.size
   }
 
   /**
-   * 获取所有彩蛋ID
+   * 获取所有鸡蛋ID
    */
   getEggIds(): string[] {
     return Array.from(this.eggs.keys())
