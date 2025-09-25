@@ -590,7 +590,6 @@ export class ObjectManager {
         console.error(`❌ 无法获取鸡蛋模型实例，彩蛋 ${id} 创建失败`)
         return null
       }
-      debugger
       // 设置鸡蛋模型属性
       eggModel.name = `egg_${id}`
       eggModel.userData = { type: 'egg', id: id }

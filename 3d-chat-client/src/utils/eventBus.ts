@@ -62,6 +62,7 @@ export interface ClearEggDistanceMapData {
 // 事件总线实现
 class EventBus {
   private events: Map<string, Function[]> = new Map()
+  private messageCache: Map<string, any> = new Map() // 消息缓存
 
   // 监听事件
   on<K extends keyof EventBusEvents>(event: K, callback: (data: EventBusEvents[K]) => void): void {
@@ -69,6 +70,15 @@ class EventBus {
       this.events.set(event, [])
     }
     this.events.get(event)!.push(callback)
+
+    // 检查是否有缓存的消息，如果有则立即触发
+    if (this.messageCache.has(event)) {
+      const cachedData = this.messageCache.get(event)
+      console.log(`🔄 EventBus: 发现缓存消息 ${event}，立即触发`)
+      callback(cachedData)
+      // 触发后清除缓存
+      this.messageCache.delete(event)
+    }
   }
 
   // 移除事件监听
@@ -85,14 +95,49 @@ class EventBus {
   // 触发事件
   emit<K extends keyof EventBusEvents>(event: K, data: EventBusEvents[K]): void {
     const callbacks = this.events.get(event)
-    if (callbacks) {
+    if (callbacks && callbacks.length > 0) {
+      // 有监听器，直接触发
       callbacks.forEach(callback => callback(data))
+      console.log(`📡 EventBus: 事件 ${event} 已触发，监听器数量: ${callbacks.length}`)
+    } else {
+      // 没有监听器，缓存消息
+      this.messageCache.set(event, data)
+      console.log(`💾 EventBus: 事件 ${event} 无监听器，已缓存`)
     }
   }
 
-  // 清除所有事件监听
+  // 主动请求最近一次状态
+  getLatestState<K extends keyof EventBusEvents>(event: K): EventBusEvents[K] | null {
+    const cachedData = this.messageCache.get(event)
+    if (cachedData) {
+      console.log(`🔍 EventBus: 获取缓存状态 ${event}`)
+      return cachedData
+    }
+    return null
+  }
+
+  // 清除指定事件的缓存
+  clearCache<K extends keyof EventBusEvents>(event: K): void {
+    if (this.messageCache.has(event)) {
+      this.messageCache.delete(event)
+      console.log(`🗑️ EventBus: 已清除事件 ${event} 的缓存`)
+    }
+  }
+
+  // 清除所有事件监听和缓存
   clear(): void {
     this.events.clear()
+    this.messageCache.clear()
+    console.log(`🧹 EventBus: 已清除所有事件监听器和缓存`)
+  }
+
+  // 获取缓存状态（调试用）
+  getCacheInfo(): { [key: string]: any } {
+    const cacheInfo: { [key: string]: any } = {}
+    this.messageCache.forEach((value, key) => {
+      cacheInfo[key] = value
+    })
+    return cacheInfo
   }
 }
 

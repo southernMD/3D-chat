@@ -271,10 +271,8 @@ onMounted(async () => {
     }, 500)
 
     // 监听彩蛋广播事件
-    debugger
     if (webrtcStore.roomConfig?.map === 'school') {
       eggBroadcastHandler = (data) => {
-        debugger
         if (data.isSync) {
           console.log(`🔄 收到彩蛋状态同步: ${data.totalEggs}个已标记的鸡蛋`)
         } else {
