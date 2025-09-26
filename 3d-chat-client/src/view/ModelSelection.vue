@@ -147,7 +147,6 @@ import {
   formatFileSize,
   formatDate,
   getModelPreviewUrl,
-  getModelTypeIcon,
   type ModelInfo
 } from '@/api/modelApi'
 import { showError, showSuccess } from '@/utils/message'
@@ -182,7 +181,6 @@ interface DisplayModel {
   name: string
   category: string
   type: string
-  icon: string
   size: string
   description: string
   features: string[]
@@ -198,7 +196,6 @@ const displayModels = computed((): DisplayModel[] => {
     name: model.name || `模型_${model.hash.substring(0, 8)}`,
     category: '',
     type: 'uploaded',
-    icon: getModelTypeIcon(model.hash),
     size: formatFileSize(model.size),
     description: model.description || '用户上传的3D模型',
     features: [],

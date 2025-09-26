@@ -17,8 +17,25 @@ export interface ModelInfo {
   picPath: string | null
 }
 
+// 资源文件信息接口
+export interface ResourceInfo {
+  id: number
+  path: string
+  ext: string
+  createTime: string
+  updateTime: string
+}
+
+// 模型详细信息接口
+export interface ModelDetailInfo {
+  resources: ResourceInfo[]
+  totalResources: number
+  resourceTypes: string[]
+}
+
 // API响应接口
 export interface ModelListResponse extends ApiResponse<ModelInfo[]> {}
+export interface ModelDetailResponse extends ApiResponse<ModelDetailInfo> {}
 
 // 获取模型列表
 export const getModelList = async (): Promise<ModelListResponse> => {
@@ -77,11 +94,33 @@ export const getModelPreviewUrl = (picPath: string | null): string => {
   return picPath
 }
 
-// 根据文件扩展名获取模型类型图标
-export const getModelTypeIcon = (_hash: string): string => {
-  // 这里可以根据实际需求来判断模型类型
-  // 暂时返回默认图标
-  return '🎭'
-}
+// 根据hash获取模型文件路径列表
+export const getModelFilePathByHash = async (hash: string)=> {
+  try {
+    const response = await get<ModelDetailResponse>(`/file/models/${hash}`)
 
+    if (!response.success || !response.data) {
+      return {
+        success: false,
+        error: response.error || '获取模型信息失败'
+      }
+    }
+    const modelDetail = response.data
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+    response.data.resources = modelDetail.resources.map((resource) => {
+      resource.path = `${baseUrl.replace('/api', '')}${resource.path}`
+      return resource
+    })
+
+    return response
+  } catch (error) {
+    console.error('获取模型文件路径失败:', error)
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : '获取模型详细信息失败',
+      error: error instanceof Error ? error.message : '获取模型详细信息失败',
+      data: null
+    }
+  }
+}
 

@@ -18,6 +18,7 @@ import { useAuthStore } from '@/stores/auth';
 import { showError, showSuccess, showInfo } from '@/utils/message';
 import { eventBus } from '@/utils/eventBus';
 import { WebRTCManager } from '@/utils/webrtc';
+import { getModelFilePathByHash } from '@/api/modelApi';
 
 
 // BVH物理系统已集成到模型中，不再需要CANNON
@@ -150,6 +151,13 @@ const initializeWebRTC = async () => {
 }
 onMounted(async () => {
   try {
+    const modelPathRes = await getModelFilePathByHash(history.state.modelHash)
+
+    if(modelPathRes.success){
+      
+    }else{
+      throw new Error('模型文件路径获取失败')
+    }
     // 检查WebRTC连接状态（不重新初始化）
     console.log('🌐 3D聊天室页面已加载')
     console.log('当前WebRTC状态:', webrtcStore.getStatusInfo())
@@ -194,7 +202,7 @@ onMounted(async () => {
     // 步骤3: 加载MMD模型
     updateLoadingStep(3, 'loading', '正在加载角色模型和动画数据...')
     mmdModelManager = new MMDModelManager(scene, renderer, bvhPhysics);
-    await mmdModelManager.loadModel();
+    await mmdModelManager.loadModel(history.state.modelHash);
     updateLoadingStep(3, 'completed')
 
     hadRenderCamera = sceneManager.getCamera()
@@ -387,6 +395,8 @@ onMounted(async () => {
 
   } catch (error) {
     console.error('❌ 加载过程中发生错误:', error)
+    showError('加载过程中发生错误')
+    router.back()
   }
 })
 

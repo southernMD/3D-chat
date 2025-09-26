@@ -404,6 +404,47 @@ export class FileService {
   }
 
   /**
+   * 根据hash获取模型详细信息
+   */
+  async getModelByHash(hash: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      // 查询该hash对应的所有资源文件
+      const resourcePaths = await this.staticResourceRepository.find({
+        where: { hash },
+        order: {
+          create_time: 'ASC'
+        }
+      })
+
+      const modelDetail = {
+        // 资源文件列表
+        resources: resourcePaths.map(resource => ({
+          id: resource.id,
+          path: resource.path,
+          ext: resource.ext,
+          createTime: resource.create_time,
+          updateTime: resource.update_time
+        })),
+
+        // 统计信息
+        totalResources: resourcePaths.length,
+        resourceTypes: [...new Set(resourcePaths.map(r => r.ext))]
+      }
+
+      return {
+        success: true,
+        data: modelDetail
+      }
+    } catch (error) {
+      console.error('根据hash获取模型详细信息错误:', error)
+      return {
+        success: false,
+        error: '获取模型详细信息失败'
+      }
+    }
+  }
+
+  /**
    * 删除文件
    */
   async deleteFile(hash: string): Promise<FileDeleteResult> {

@@ -131,6 +131,37 @@ export class FileController {
   }
 
   /**
+   * 根据hash获取模型详细信息
+   */
+  async getModelByHash(req: Request, res: Response): Promise<void> {
+    try {
+      const { hash } = req.params
+
+      if (!hash) {
+        res.status(400).json({
+          success: false,
+          error: 'hash参数不能为空'
+        })
+        return
+      }
+
+      const result = await fileService.getModelByHash(hash)
+
+      if (result.success) {
+        res.json(result)
+      } else {
+        res.status(404).json(result)
+      }
+    } catch (error) {
+      console.error('根据hash获取模型详细信息失败:', error)
+      res.status(500).json({
+        success: false,
+        error: '获取模型详细信息失败'
+      })
+    }
+  }
+
+  /**
    * 删除文件
    */
   async deleteFile(req: Request, res: Response): Promise<void> {

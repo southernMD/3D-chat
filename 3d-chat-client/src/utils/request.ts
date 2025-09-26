@@ -177,5 +177,3 @@ export const upload = <T = any>(
   })
 }
 
-// 导出类型
-export type { ApiResponse, RequestConfig }

@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { MMDModel } from '../MMDModel';
 import { GLTFModel } from '../GLTFModel';
 import { BVHPhysics } from '@/physics/BVHPhysics';
+import { getModelFilePathByHash } from '@/api/modelApi';
 
 /**
  * MMDModelManager类 - 专门管理MMD模型的类
@@ -16,18 +17,6 @@ export class MMDModelManager {
   private renderer: THREE.WebGLRenderer;
   private bvhPhysics: BVHPhysics;
 
-  // 键盘映射
-  private keyMap = {
-    'w': 'ArrowUp',
-    's': 'ArrowDown',
-    'a': 'ArrowLeft',
-    'd': 'ArrowRight',
-    'W': 'ArrowUp',
-    'S': 'ArrowDown',
-    'A': 'ArrowLeft',
-    'D': 'ArrowRight',
-  };
-
   constructor(scene: THREE.Scene, renderer: THREE.WebGLRenderer, bvhPhysics: BVHPhysics) {
     this.scene = scene;
     this.renderer = renderer;
@@ -35,20 +24,37 @@ export class MMDModelManager {
   }
 
   /**
-   * 加载MMD模型
+   * @param modelHash
    */
-  async loadModel(): Promise<void> {
+  async loadModel(modelHash:string): Promise<void> {
     try {
-      this.mmdModel = new GLTFModel(this.bvhPhysics);
-      await this.mmdModel.load(this.scene, '/model/newtest.glb');
+      const modelPathRes = await getModelFilePathByHash(modelHash)
+      if(modelPathRes.success){
+        const isPMX = modelPathRes.data?.resources.some(resource => resource.ext === '.pmx')
+        if(isPMX){
+          const pmxPath = modelPathRes.data?.resources.find(resource => resource.ext === '.pmx')?.path!
+          const walkAnimPath = modelPathRes.data?.resources.find(resource => resource.path.includes('walk.vmd'))?.path!
+          const standAnimPath = modelPathRes.data?.resources.find(resource => resource.path.includes('stand.vmd'))?.path!
+          this.mmdModel = new MMDModel(this.bvhPhysics);
+          await this.mmdModel.load(this.scene, pmxPath, walkAnimPath, standAnimPath);
+        }else{
+          const glbPath = modelPathRes.data?.resources.find(resource => resource.ext === '.glb')?.path!
+          this.mmdModel = new GLTFModel(this.bvhPhysics);
+          await this.mmdModel.load(this.scene, glbPath);
+        }
+      }else{
+        throw new Error(modelPathRes.error)
+      }
+      // this.mmdModel = new GLTFModel(this.bvhPhysics);
+      // await this.mmdModel.load(this.scene, '/model/newtest.glb');
       // this.mmdModel = new MMDModel(this.bvhPhysics);
       // await this.mmdModel.load(this.scene, '/lm/楈柌v2.pmx', '/lm/走路.vmd', '/lm/站立.vmd');
       
       // 创建跟随相机
-      this.lookCamera = this.mmdModel.createLookCamera(this.scene);
+      this.lookCamera = this.mmdModel!.createLookCamera(this.scene);
       
       // 创建相机控制器
-      this.cameraControls = this.mmdModel.createCameraControls(
+      this.cameraControls = this.mmdModel!.createCameraControls(
         this.lookCamera, 
         this.renderer.domElement, 
         this.renderer
