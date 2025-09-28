@@ -151,13 +151,6 @@ const initializeWebRTC = async () => {
 }
 onMounted(async () => {
   try {
-    const modelPathRes = await getModelFilePathByHash(history.state.modelHash)
-
-    if(modelPathRes.success){
-      
-    }else{
-      throw new Error('模型文件路径获取失败')
-    }
     // 检查WebRTC连接状态（不重新初始化）
     console.log('🌐 3D聊天室页面已加载')
     console.log('当前WebRTC状态:', webrtcStore.getStatusInfo())
@@ -204,8 +197,19 @@ onMounted(async () => {
     mmdModelManager = new MMDModelManager(scene, renderer, bvhPhysics);
     await mmdModelManager.loadModel(history.state.modelHash);
     updateLoadingStep(3, 'completed')
-
     hadRenderCamera = sceneManager.getCamera()
+
+    // 初始化昵称标签管理器
+    const container = dom.value;
+    if (container && hadRenderCamera) {
+      mmdModelManager.initializeNameTagManager(hadRenderCamera, container);
+
+      // 设置用户昵称（从WebRTC store获取）
+      const userPeer = webrtcStore.getYouPeer();
+      if (userPeer && userPeer.name) {
+        mmdModelManager.setNickname(userPeer.name);
+      }
+    }
 
     // 初始化FPS监控器
     fpsMonitor = new FPSMonitor(60)
@@ -218,7 +222,7 @@ onMounted(async () => {
       bvhPhysics,
       renderer,
       fpsMonitor,
-      hadRenderCamera == mmdModelManager.getLookCamera() ? true : false
+      false // 默认为第三人称视角（场景相机）
     );
 
     nextTick(() => {
@@ -629,4 +633,9 @@ const handleCopyRoomCode = (success: boolean, roomCode?: string) => {
   width: 100%;
   height: 100vh;
 }
+</style>
+
+<style>
+/* 引入昵称标签样式 */
+@import '@/styles/name-tag.css';
 </style>

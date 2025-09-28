@@ -4,6 +4,7 @@ import { MMDModel } from '../MMDModel';
 import { GLTFModel } from '../GLTFModel';
 import { BVHPhysics } from '@/physics/BVHPhysics';
 import { getModelFilePathByHash } from '@/api/modelApi';
+import { NameTagManager } from '@/utils/NameTagManager';
 
 /**
  * MMDModelManager类 - 专门管理MMD模型的类
@@ -16,11 +17,98 @@ export class MMDModelManager {
   private cameraControls: OrbitControls | null = null;
   private renderer: THREE.WebGLRenderer;
   private bvhPhysics: BVHPhysics;
+  private nameTagManager: NameTagManager | null = null;
+  private nickname: string = '';
 
   constructor(scene: THREE.Scene, renderer: THREE.WebGLRenderer, bvhPhysics: BVHPhysics) {
     this.scene = scene;
     this.renderer = renderer;
     this.bvhPhysics = bvhPhysics;
+  }
+
+  /**
+   * 初始化昵称标签管理器
+   */
+  initializeNameTagManager(camera: THREE.Camera, container: HTMLElement): void {
+    this.nameTagManager = new NameTagManager(camera, this.renderer, container);
+    // 设置当前用户ID
+    this.nameTagManager.setCurrentUserId('player');
+    // 默认为第三人称视角
+    this.nameTagManager.setFirstPersonMode(false);
+  }
+
+  /**
+   * 设置用户昵称
+   */
+  setNickname(nickname: string): void {
+    this.nickname = nickname;
+    this.updateNameTag();
+  }
+
+  /**
+   * 更新昵称标签
+   */
+  private updateNameTag(): void {
+    if (!this.nameTagManager || !this.mmdModel || !this.nickname) return;
+
+    const modelPosition = this.getModelPosition();
+    const modelHeight = this.getModelHeight();
+
+    this.nameTagManager.addNameTag('player', this.nickname, modelPosition, modelHeight);
+  }
+
+  /**
+   * 获取模型当前位置
+   */
+  private getModelPosition(): THREE.Vector3 {
+    if (!this.mmdModel || !this.mmdModel.mesh) {
+      return new THREE.Vector3(0, 0, 0);
+    }
+    return this.mmdModel.mesh.position.clone();
+  }
+
+  /**
+   * 获取模型高度
+   */
+  private getModelHeight(): number {
+    if (!this.mmdModel) return 20;
+
+    const dimensions = this.mmdModel.getModelDimensions();
+    return dimensions.height;
+  }
+
+  /**
+   * 添加其他玩家的昵称标签
+   */
+  addPlayerNameTag(playerId: string, nickname: string, position: THREE.Vector3, modelHeight: number = 20): void {
+    if (this.nameTagManager) {
+      this.nameTagManager.addNameTag(playerId, nickname, position, modelHeight);
+    }
+  }
+
+  /**
+   * 更新其他玩家的昵称标签位置
+   */
+  updatePlayerNameTag(playerId: string, position: THREE.Vector3): void {
+    if (this.nameTagManager) {
+      this.nameTagManager.updateModelPosition(playerId, position);
+    }
+  }
+
+  /**
+   * 移除其他玩家的昵称标签
+   */
+  removePlayerNameTag(playerId: string): void {
+    if (this.nameTagManager) {
+      this.nameTagManager.removeNameTag(playerId);
+    }
+  }
+
+  /**
+   * 获取昵称标签管理器（供外部使用）
+   */
+  getNameTagManager(): NameTagManager | null {
+    return this.nameTagManager;
   }
 
   /**
@@ -188,6 +276,12 @@ export class MMDModelManager {
       if (this.lookCamera && this.cameraControls) {
         this.mmdModel.updateCameraFollow(this.lookCamera, this.cameraControls);
       }
+
+      // 更新昵称标签位置
+      if (this.nameTagManager && this.nickname) {
+        const modelPosition = this.getModelPosition();
+        this.nameTagManager.updateModelPosition('player', modelPosition);
+      }
     }
   }
 
@@ -196,13 +290,19 @@ export class MMDModelManager {
    */
   cleanup(): void {
     // BVH物理系统不需要特殊的相机控制器清理
-    
+
     // 释放控制器
     if (this.cameraControls) {
       this.cameraControls.dispose();
       this.cameraControls = null;
     }
-    
+
+    // 清理昵称标签管理器
+    if (this.nameTagManager) {
+      this.nameTagManager.dispose();
+      this.nameTagManager = null;
+    }
+
     this.mmdModel = null;
     this.lookCamera = null;
   }

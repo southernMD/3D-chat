@@ -246,6 +246,17 @@ export class GUIManager {
       changeCamera: () => {
         this.ifFirstPerson = !this.ifFirstPerson;
         console.log(`🎥 相机已切换到: ${this.getCameraStatus()}`);
+
+        // 通知昵称标签管理器视角已切换
+        const nameTagManager = this.mmdModelManager?.getNameTagManager();
+        if (nameTagManager) {
+          nameTagManager.setFirstPersonMode(this.ifFirstPerson);
+          // 更新相机引用
+          const currentCamera = this.getHadRenderCamera();
+          if (currentCamera) {
+            nameTagManager.updateCamera(currentCamera);
+          }
+        }
       },
       reSetReimu: () => {
         // 使用MMDModelManager重置位置
