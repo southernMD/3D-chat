@@ -182,4 +182,90 @@ export class Tree extends BaseModel {
         super.dispose();
     }
 
+    /**
+     * 清理静态模型缓存
+     */
+    static disposeStaticModels(): void {
+        console.log('🗑️ 开始清理树模型静态缓存...');
+
+        if (Tree.treeModel) {
+            // 深度清理静态树模型
+            Tree.deepDisposeGLTF(Tree.treeModel);
+            Tree.treeModel = null;
+            console.log('✅ 静态树模型已清理');
+        }
+
+        console.log('✅ 树模型静态缓存清理完成');
+    }
+
+    /**
+     * 深度清理GLTF模型
+     */
+    private static deepDisposeGLTF(gltf: GLTF): void {
+        if (gltf.scene) {
+            Tree.deepDisposeObject3D(gltf.scene);
+        }
+
+        // 清理动画
+        if (gltf.animations) {
+            gltf.animations.forEach(animation => {
+                if (animation.tracks) {
+                    animation.tracks.forEach(track => {
+                        // 动画轨道清理
+                    });
+                }
+            });
+        }
+    }
+
+    /**
+     * 深度清理Three.js对象
+     */
+    private static deepDisposeObject3D(obj: THREE.Object3D): void {
+        obj.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) Tree.deepDisposeMaterial(child.material);
+            }
+
+            if (child instanceof THREE.SkinnedMesh) {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) Tree.deepDisposeMaterial(child.material);
+                if (child.skeleton && child.skeleton.boneTexture) {
+                    child.skeleton.boneTexture.dispose();
+                }
+            }
+        });
+
+        obj.clear();
+    }
+
+    /**
+     * 深度清理材质和纹理
+     */
+    private static deepDisposeMaterial(material: THREE.Material | THREE.Material[]): void {
+        const materials = Array.isArray(material) ? material : [material];
+
+        materials.forEach((mat) => {
+            const textureProperties = [
+                'map', 'normalMap', 'roughnessMap', 'metalnessMap',
+                'aoMap', 'emissiveMap', 'bumpMap', 'displacementMap',
+                'alphaMap', 'lightMap', 'envMap', 'specularMap',
+                'gradientMap', 'matcap', 'clearcoatMap', 'clearcoatNormalMap',
+                'clearcoatRoughnessMap', 'transmissionMap', 'thicknessMap',
+                'sheenColorMap', 'sheenRoughnessMap', 'iridescenceMap',
+                'iridescenceThicknessMap'
+            ];
+
+            textureProperties.forEach(prop => {
+                const texture = (mat as any)[prop];
+                if (texture && texture.dispose) {
+                    texture.dispose();
+                }
+            });
+
+            mat.dispose();
+        });
+    }
+
 }

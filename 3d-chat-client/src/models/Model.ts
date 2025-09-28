@@ -2,20 +2,15 @@ import * as THREE from 'three';
 import { Capsule } from 'three/examples/jsm/math/Capsule.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { BVHPhysics } from '../physics/BVHPhysics';
+import { StaticModel } from './StaticModel';
 import { Egg } from './Egg';
 import { KeyBoardMessageManager } from '@/ImperativeComponents/keyBoardMessage';
 import { doorGroups } from './architecture/doors';
 import { filterColliders } from '@/utils/filterColliders';
 import { eventBus } from '@/utils/eventBus';
-// 基础模型类 - 完全基于BVH物理系统
-export abstract class Model {
-  abstract mesh: THREE.Object3D;
-  protected mixer: THREE.AnimationMixer;
-  protected modelSize: {
-    width: number;
-    height: number;
-    depth: number;
-  }
+
+// 基础模型类 - 继承StaticModel，专注于动态操作控制、物理、相机
+export abstract class Model extends StaticModel {
   // 键盘控制相关
   isWalking: boolean = false;
   keys: {
@@ -26,32 +21,20 @@ export abstract class Model {
     Space: boolean;
   };
 
-  // BVH物理系统
+  // BVH物理系统 - 动态物理相关
   protected bvhPhysics?: BVHPhysics;
   private playerIsOnGround = true; // 初始化为在地面上
   private playerVelocity = new THREE.Vector3();
   private upVector = new THREE.Vector3(0, 1, 0);
   private delta = 0.016;
 
-  // 碰撞相关
+  // 物理胶囊体（包含物理）
   protected playerCapsule?: Capsule;
-  protected capsuleParams?: {
-    radius: number;
-    height: number;
-    visual: THREE.Mesh;
-  };
 
   // 相机辅助器
   private cameraHelpers?: {
     lookCameraHelper?: THREE.CameraHelper;
     targetCameraHelper?: THREE.CameraHelper;
-  };
-
-  // 模型辅助器
-  protected helpersVisible?: {
-    skeletonHelper?: THREE.SkeletonHelper;
-    boxHelper?: THREE.BoxHelper;
-    capsuleVisual?: THREE.Mesh;
   };
 
   // 相机控制器变化处理函数
@@ -83,6 +66,10 @@ export abstract class Model {
 
 
   constructor(bvhPhysics: BVHPhysics) {
+    super(); // 调用父类构造函数（不传递物理系统）
+
+    this.bvhPhysics = bvhPhysics; // 在Model中管理物理系统
+
     this.keys = {
       ArrowUp: false,
       ArrowDown: false,
@@ -90,8 +77,6 @@ export abstract class Model {
       ArrowRight: false,
       Space: false,
     };
-    this.modelSize = { width: 0, height: 0, depth: 0 };
-    this.bvhPhysics = bvhPhysics
 
     // 监听清理鸡蛋距离映射事件
     eventBus.on('clear-egg-mapUserPositionDistance', ({ eggId }) => {
@@ -100,167 +85,84 @@ export abstract class Model {
     });
   }
 
-  // 抽象方法
-  abstract update(): void;
-
-  // 获取模型三维尺寸 - 抽象方法，子类需要实现
-  abstract setModelDimensions(): { width: number; height: number; depth: number };
-
-  // 开始行走动画 - 子类需要实现具体逻辑
-  abstract startWalking(): void;
-
-  // 停止行走动画 - 子类需要实现具体逻辑
-  abstract stopWalking(): void;
-
-  // 获取已计算的模型尺寸
-  getModelDimensions(): { width: number; height: number; depth: number } {
-    return this.modelSize;
-  }
+  // 这些抽象方法已在 StaticModel 中定义，这里不需要重复声明
 
 
   /**
-   * 创建胶囊体碰撞检测 (完全按照ModelBefore.ts)
+   * 创建物理胶囊体（基于StaticModel的几何信息）
    */
-  protected createCapsule(): { playerCapsule: Capsule, capsuleVisual: THREE.Mesh } {
-    // 使用this.modelSize获取模型精确尺寸
-    const dimensions = this.getModelDimensions();
-
-    // 安全检查：如果modelSize还没有计算，使用默认值
-    if (dimensions.width === 0 || dimensions.height === 0 || dimensions.depth === 0) {
-      console.warn('⚠️ 模型尺寸未计算，使用默认胶囊体尺寸');
-      dimensions.width = 1;
-      dimensions.height = 2;
-      dimensions.depth = 1;
+  protected createPhysicsCapsule(): Capsule | null {
+    const capsuleInfo = this.getCapsuleInfo();
+    if (!capsuleInfo || !this.mesh) {
+      console.warn('⚠️ 无法创建物理胶囊体：缺少几何信息或网格');
+      return null;
     }
 
-    // 计算胶囊体参数 - 完全贴合模型
-    // 半径设为模型宽度和深度中较大值的一半
-    const radius = Math.max(Math.max(dimensions.width, dimensions.depth) / 4, 6);
+    const { radius, height } = capsuleInfo;
 
-    // 确保半径不为0或NaN
-    const safeRadius = Math.max(0.1, radius || 0.1);
-
-    // 调整高度，使圆弧部分完全包裹模型顶部和底部
-    // 胶囊体总长度 = 中间圆柱体部分 + 两端半球部分
-    // 因此我们需要将模型高度减去两个半径(两端的半球)，得到中间圆柱体部分的高度
-    const safeHeight = Math.max(1, dimensions.height || 1);
-    const cylinderHeight = Math.max(0, safeHeight - 2 * safeRadius);
-
-    // 重要调整：将起点抬高到地面上，防止穿透地面
-    // 胶囊体起点应该在模型底部位置 + 半径，这样胶囊体底部刚好与地面接触
+    // 创建物理胶囊体的起点和终点
     const start = new THREE.Vector3(
       this.mesh.position.x,
-      this.mesh.position.y + safeRadius, // 将起点抬高半径的距离，防止穿透地面
+      this.mesh.position.y + radius, // 将起点抬高半径的距离，防止穿透地面
       this.mesh.position.z
     );
 
-    // 胶囊体终点相应上移
     const end = new THREE.Vector3(
       this.mesh.position.x,
-      this.mesh.position.y + safeHeight - safeRadius, // 相应调整终点位置
+      this.mesh.position.y + height - radius, // 相应调整终点位置
       this.mesh.position.z
     );
 
-    const playerCapsule = new Capsule(start, end, safeRadius);
+    this.playerCapsule = new Capsule(start, end, radius);
 
-    // 创建胶囊体可视化
-    const capsuleGeometry = new THREE.CapsuleGeometry(safeRadius, cylinderHeight, 16, 8);
-    const capsuleMaterial = new THREE.MeshBasicMaterial({
-      color: 0x00ff00,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.5
-    });
-    const capsuleVisual = new THREE.Mesh(capsuleGeometry, capsuleMaterial);
-
-    // 放置在正确位置 - 需要将可视化胶囊体上移
-    capsuleVisual.position.set(
-      this.mesh.position.x,
-      this.mesh.position.y, // 上移radius距离，防止底部穿入地面
-      this.mesh.position.z
-    );
-
-    // 保存胶囊体参数
-    this.playerCapsule = playerCapsule;
-    this.capsuleParams = {
-      visual: capsuleVisual,
-      radius: safeRadius,
-      height: safeHeight
-    };
-
-    console.log('✅ 创建胶囊体成功:', {
+    console.log('✅ 创建物理胶囊体成功:', {
       模型位置: this.mesh.position,
-      模型尺寸: dimensions,
-      安全半径: safeRadius,
-      安全高度: safeHeight,
-      圆柱体高度: cylinderHeight,
-      总高度: cylinderHeight + 2 * safeRadius,
+      半径: radius,
+      高度: height,
       起点: start,
-      终点: end,
-      底部距地面: safeRadius // 底部到地面的距离
+      终点: end
     });
 
-    return { playerCapsule, capsuleVisual };
+    return this.playerCapsule;
   }
 
   /**
-   * 更新胶囊体位置
+   * 更新物理胶囊体位置
    */
-  protected updateCapsulePosition(): void {
-    if (!this.playerCapsule || !this.mesh || !this.capsuleParams) {
-      console.log('❌ 胶囊体更新失败，组件缺失:', {
-        playerCapsule: !!this.playerCapsule,
-        mesh: !!this.mesh,
-        capsuleParams: !!this.capsuleParams
-      });
+  protected updatePhysicsCapsulePosition(): void {
+    const capsuleInfo = this.getCapsuleInfo();
+    if (!this.playerCapsule || !this.mesh || !capsuleInfo) {
       return;
     }
 
-    const { radius, height } = this.capsuleParams;
+    const { radius, height } = capsuleInfo;
 
     // 检查NaN值
     if (isNaN(this.mesh.position.x) || isNaN(this.mesh.position.y) || isNaN(this.mesh.position.z)) {
-      console.error('❌ 网格位置包含NaN，跳过胶囊体更新');
+      console.error('❌ 网格位置包含NaN，跳过物理胶囊体更新');
       return;
     }
 
-    if (isNaN(radius) || isNaN(height) || radius <= 0 || height <= 0) {
-      console.error('❌ 胶囊体参数无效:', { radius, height });
-      return;
-    }
-
-    // 更新胶囊体位置
+    // 更新物理胶囊体位置
     this.playerCapsule.start.copy(this.mesh.position);
     this.playerCapsule.start.y += radius;
 
     this.playerCapsule.end.copy(this.mesh.position);
     this.playerCapsule.end.y += height - radius;
-
-    // 更新可视化位置
-    this.capsuleParams.visual.position.copy(this.mesh.position);
-    this.capsuleParams.visual.position.y += height / 2;
-
-    // 调试信息（偶尔打印）
-    if (Math.random() < 0.01) {
-      console.log('🔄 胶囊体位置更新:', {
-        meshPosition: this.mesh.position,
-        capsuleVisualPosition: this.capsuleParams.visual.position,
-        visible: this.capsuleParams.visual.visible,
-        inScene: !!this.capsuleParams.visual.parent
-      });
-    }
   }
 
   /**
    * 使用BVH进行碰撞检测和物理更新（参考characterMovement.js）
    */
   handleBVHPhysics(delta: number, screen: THREE.Scene): void {
-    if (!this.bvhPhysics || !this.mesh || !this.playerCapsule || !this.capsuleParams) {
+    const capsuleInfo = this.getCapsuleInfo();
+
+    if (!this.bvhPhysics || !this.mesh || !this.playerCapsule || !capsuleInfo) {
       console.log('❌ BVH物理系统组件缺失:', {
         bvhPhysics: !!this.bvhPhysics,
         mesh: !!this.mesh,
         playerCapsule: !!this.playerCapsule,
-        capsuleParams: !!this.capsuleParams
+        capsuleInfo: !!capsuleInfo
       });
       return;
     }
@@ -304,8 +206,11 @@ export abstract class Model {
     //   this.playerIsOnGround = false;
     // }
 
-    // 更新胶囊体位置
-    this.updateCapsulePosition();
+    // 更新物理胶囊体位置
+    this.updatePhysicsCapsulePosition();
+
+    // 更新静态胶囊体可视化位置
+    this.updateCapsuleVisualPosition();
 
     // 如果角色掉得太低，重置位置
     if (this.mesh.position.y < -25) {
@@ -453,14 +358,14 @@ export abstract class Model {
 
     const colliders = this.bvhPhysics.getColliders();
     const colliderMapping = this.bvhPhysics.getColliderMapping();
+    const capsuleInfo = this.getCapsuleInfo();
 
-    if (!this.mesh || !this.playerCapsule || !this.capsuleParams) return;
+    if (!this.mesh || !this.playerCapsule || !capsuleInfo) return;
 
     // 临时变量
     const tempBox = new THREE.Box3();
     const tempMat = new THREE.Matrix4();
     const tempSegment = new THREE.Line3();
-    const capsuleInfo = this.capsuleParams;
 
     // 保存原始胶囊体位置
     const originalCapsuleStart = this.playerCapsule.start.clone();
@@ -488,8 +393,8 @@ export abstract class Model {
       tempMat.copy(collider.matrixWorld).invert();
 
       // 重置segment到原始位置
-      tempSegment.start.copy(this.playerCapsule!.start);
-      tempSegment.end.copy(this.playerCapsule!.end);
+      tempSegment.start.copy(this.playerCapsule.start);
+      tempSegment.end.copy(this.playerCapsule.end);
 
       // 转换到碰撞体局部空间
       tempSegment.start.applyMatrix4(tempMat);
@@ -751,9 +656,10 @@ export abstract class Model {
 
     // 设置相机位置
     if (this.mesh) {
+      const dimensions = this.getModelDimensions();
       camera.position.set(
         this.mesh.position.x,
-        this.mesh.position.y + 1 * this.modelSize?.height,
+        this.mesh.position.y + 1 * dimensions.height,
         this.mesh.position.z
       );
     } else {
@@ -792,9 +698,10 @@ export abstract class Model {
 
     // 设置控制器目标为模型位置上方
     if (this.mesh) {
+      const dimensions = this.getModelDimensions();
       controls.target.set(
         this.mesh.position.x,
-        this.mesh.position.y + 1 * this.modelSize?.height,
+        this.mesh.position.y + 1 * dimensions.height,
         this.mesh.position.z
       );
     }
@@ -881,7 +788,8 @@ export abstract class Model {
     controls.target.copy(this.mesh.position);
 
     // 根据角色高度调整目标点Y坐标
-    controls.target.y += 1 * this.modelSize?.height;
+    const dimensions = this.getModelDimensions();
+    controls.target.y += 1 * dimensions.height;
 
     // 根据保存的偏移更新相机位置
     camera.position.copy(controls.target).add(cameraOffset);
@@ -897,49 +805,7 @@ export abstract class Model {
     this.cameraHelpers?.lookCameraHelper?.update();
   }
 
-  /**
-   * 更新模型辅助器
-   */
-  public updateModelHelpers(): void {
-    if (this.helpersVisible) {
-      const { boxHelper, capsuleVisual } = this.helpersVisible;
-
-      // 更新包围盒辅助线
-      if (boxHelper && this.mesh) {
-        boxHelper.update();
-      }
-
-      // 更新胶囊体可视化位置（使用正确的计算逻辑）
-      if (capsuleVisual && this.mesh && this.capsuleParams) {
-        const cylinderHeight = Math.max(0, this.capsuleParams.height ?? 0);
-        capsuleVisual.position.set(
-          this.mesh.position.x,
-          this.mesh.position.y + cylinderHeight / 2, // 上移radius距离，防止底部穿入地面
-          this.mesh.position.z
-        );
-      }
-    }
-  }
-
-  /**
-   * 切换胶囊体可视化
-   */
-  public toggleCapsuleVisibility(): void {
-    if (this.capsuleParams && this.capsuleParams.visual) {
-      this.capsuleParams.visual.visible = !this.capsuleParams.visual.visible;
-      console.log(`胶囊体可视化: ${this.capsuleParams.visual.visible ? '显示' : '隐藏'}`);
-      console.log('胶囊体信息:', {
-        position: this.capsuleParams.visual.position,
-        scale: this.capsuleParams.visual.scale,
-        parent: this.capsuleParams.visual.parent?.name || 'no parent'
-      });
-    } else {
-      console.log('❌ 胶囊体参数或可视化对象不存在:', {
-        capsuleParams: !!this.capsuleParams,
-        visual: !!(this.capsuleParams?.visual)
-      });
-    }
-  }
+  // updateModelHelpers 和 toggleCapsuleVisibility 方法已移至 StaticModel 基类
 
   // ==================== 右键发射鸡蛋功能 ====================
 
@@ -1020,19 +886,4 @@ export abstract class Model {
     console.log('🗑️ 鸡蛋资源已清理');
   }
 
-  /**
-   * 获取当前鸡蛋数量
-   */
-  public getEggCount(): number {
-    return this.eggs.length;
-  }
-
-  /**
-   * 设置鸡蛋参数
-   * @param params 鸡蛋参数
-   */
-  public setEggParams(params: Partial<typeof this.eggParams>): void {
-    Object.assign(this.eggParams, params);
-    console.log('⚙️ 鸡蛋参数已更新:', this.eggParams);
-  }
 }

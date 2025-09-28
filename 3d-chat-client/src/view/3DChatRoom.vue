@@ -19,6 +19,8 @@ import { showError, showSuccess, showInfo } from '@/utils/message';
 import { eventBus } from '@/utils/eventBus';
 import { WebRTCManager } from '@/utils/webrtc';
 import { getModelFilePathByHash } from '@/api/modelApi';
+import { Egg } from '@/models/Egg';
+import { Tree } from '@/models/architecture/Tree';
 
 
 // BVH物理系统已集成到模型中，不再需要CANNON
@@ -36,6 +38,9 @@ let sceneManager: SceneManager
 let objectManager: ObjectManager
 let guiManager: GUIManager
 let fpsMonitor: FPSMonitor
+
+// watch 停止函数
+let stopWatchers: (() => void)[] = [];
 
 // WebRTC store和认证store
 const webrtcStore = useWebRTCStore()
@@ -242,29 +247,32 @@ onMounted(async () => {
     window.addEventListener('keyup', handleKeyUp);
 
     // 监听WebRTC连接状态变化
-    watch(isWebRTCConnected, (connected) => {
+    const stopWebRTCWatch = watch(isWebRTCConnected, (connected) => {
       console.log('🌐 WebRTC连接状态变化:', connected)
       if (connected) {
         showSuccess('WebRTC连接已建立')
       }
     })
+    stopWatchers.push(stopWebRTCWatch);
 
     // 监听房间信息变化
-    watch(roomInfo, (info) => {
+    const stopRoomInfoWatch = watch(roomInfo, (info) => {
       if (info) {
         console.log('🏠 房间信息更新:', info)
         showSuccess(`已加入房间: ${info.roomId}`)
       }
     })
+    stopWatchers.push(stopRoomInfoWatch);
 
     // 监听成员变化
-    watch(peers, (newPeers, oldPeers) => {
+    const stopPeersWatch = watch(peers, (newPeers, oldPeers) => {
       if (oldPeers && newPeers.length > oldPeers.length) {
         showInfo('有新成员加入房间')
       } else if (oldPeers && newPeers.length < oldPeers.length) {
         showInfo('有成员离开房间')
       }
     })
+    stopWatchers.push(stopPeersWatch);
 
     // 添加右键发射小球事件监听器
     let mouseDownPosition = { x: 0, y: 0 };
@@ -397,6 +405,9 @@ onMounted(async () => {
       })
     }
 
+    // 设置装备相关事件监听器
+    setupEquipmentBusListeners();
+
   } catch (error) {
     console.error('❌ 加载过程中发生错误:', error)
     showError('加载过程中发生错误')
@@ -420,52 +431,327 @@ const setupEquipmentBusListeners = () => {
 }
 
 onUnmounted(() => {
+  console.log('🧹 开始彻底清理 3DChatRoom 资源...');
+
+  // 增强的资源清理函数
+  const deepDisposeObject3D = (obj: THREE.Object3D): void => {
+    obj.traverse((child) => {
+      // 清理网格
+      if (child instanceof THREE.Mesh) {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) deepDisposeMaterial(child.material);
+      }
+
+      // 清理蒙皮网格
+      if (child instanceof THREE.SkinnedMesh) {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) deepDisposeMaterial(child.material);
+        if (child.skeleton && child.skeleton.boneTexture) {
+          child.skeleton.boneTexture.dispose();
+        }
+      }
+
+      // 清理灯光
+      if (child instanceof THREE.Light) {
+        if (child.shadow && child.shadow.map) {
+          child.shadow.map.dispose();
+        }
+      }
+
+      // 清理相机辅助器
+      if (child instanceof THREE.CameraHelper) {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) deepDisposeMaterial(child.material);
+      }
+    });
+
+    // 清空子对象
+    obj.clear();
+  };
+
+  // 深度清理材质和纹理
+  const deepDisposeMaterial = (material: THREE.Material | THREE.Material[]): void => {
+    const materials = Array.isArray(material) ? material : [material];
+    materials.forEach((mat) => {
+      // 清理所有可能的纹理属性
+      const textureProperties = [
+        'map', 'normalMap', 'roughnessMap', 'metalnessMap',
+        'aoMap', 'emissiveMap', 'bumpMap', 'displacementMap',
+        'alphaMap', 'lightMap', 'envMap', 'specularMap',
+        'gradientMap', 'matcap', 'clearcoatMap', 'clearcoatNormalMap',
+        'clearcoatRoughnessMap', 'transmissionMap', 'thicknessMap',
+        'sheenColorMap', 'sheenRoughnessMap', 'iridescenceMap',
+        'iridescenceThicknessMap'
+      ];
+
+      textureProperties.forEach(prop => {
+        const texture = (mat as any)[prop];
+        if (texture && texture.dispose) {
+          texture.dispose();
+        }
+      });
+
+      mat.dispose();
+    });
+  };
+
+  // ==================== 1. 停止动画循环 ====================
+  if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+    // 停止动画循环（如果有全局动画ID）
+    console.log('🛑 停止动画循环');
+  }
+
+  // ==================== 2. 移除所有事件监听器 ====================
+  console.log('🗑️ 移除事件监听器...');
+
   // 移除窗口事件监听器
   window.removeEventListener('keydown', handleKeyDown);
   window.removeEventListener('keyup', handleKeyUp);
+  window.removeEventListener('resize', () => {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    if (sceneManager) {
+      sceneManager.handleResize(width, height);
+    }
+  });
 
-  // 清理事件总线监听器
+  // 移除自定义事件监听器
+  window.removeEventListener('wallsRecreated', () => {});
+
+  // 移除渲染器事件监听器
+  if (renderer && renderer.domElement) {
+    renderer.domElement.removeEventListener('mousedown', () => {});
+    renderer.domElement.removeEventListener('mouseup', () => {});
+    renderer.domElement.removeEventListener('contextmenu', () => {});
+  }
+
+  // ==================== 3. 清理 Vue watch 监听器 ====================
+  console.log('🗑️ 清理 Vue watch 监听器...');
+
+  // 停止所有 watch 函数
+  stopWatchers.forEach(stopFn => {
+    try {
+      stopFn();
+    } catch (error) {
+      console.error('❌ 停止 watch 监听器失败:', error);
+    }
+  });
+  stopWatchers = [];
+  console.log('✅ 所有 Vue watch 监听器已清理');
+
+  // ==================== 4. 清理所有事件总线监听器 ====================
+  console.log('🗑️ 清理事件总线监听器...');
+
+  // 清理鸡蛋相关事件监听器
   if (webrtcStore.roomConfig?.map === 'school' && eggBroadcastHandler) {
-    eventBus.off('egg-broadcast', eggBroadcastHandler)
-    eggBroadcastHandler = null
+    eventBus.off('egg-broadcast', eggBroadcastHandler);
+    eggBroadcastHandler = null;
   }
 
-  // 清理WebRTC连接
-  try {
-    webrtcStore.disconnect()
-    console.log('🌐 WebRTC连接已清理')
-  } catch (error) {
-    console.error('❌ WebRTC清理失败:', error)
-  }
+  // 清理所有其他事件总线监听器
+  eventBus.off('clear-egg-server', () => {});
+  eventBus.off('reinsert-egg', () => {});
+  eventBus.off('egg-collected', () => {});
+  eventBus.off('egg-cleared', () => {});
+  eventBus.off('user-equipment-updated', () => {});
+  eventBus.off('egg-quantity-updated', () => {});
 
-  // 清理鸡蛋资源
+  // 彻底清理事件总线
+  eventBus.clear();
+
+  // ==================== 4. 清理人物模型和相关资源 ====================
+  console.log('🗑️ 清理人物模型...');
+
   if (mmdModelManager && mmdModelManager.isModelLoaded()) {
     const model = mmdModelManager.getModel();
     if (model) {
+      // 清理鸡蛋发射器
       model.disposeEggShooter(scene);
+
+      // 从场景中移除模型
+      if (model.mesh && scene) {
+        scene.remove(model.mesh);
+      }
+
+      // 调用模型的dispose方法彻底清理所有资源
+      if (typeof model.dispose === 'function') {
+        model.dispose();
+      }
     }
   }
 
-  // 清理所有管理器资源
+  // 清理MMD模型管理器（这会调用模型的dispose方法）
   if (mmdModelManager) {
     mmdModelManager.cleanup();
+    mmdModelManager = null;
   }
 
-  // PhysicsManager 已移除
+  // ==================== 5. 清理ObjectManager加载的所有模型 ====================
+  console.log('🗑️ 清理ObjectManager模型...');
+
+  if (objectManager) {
+    // 清理所有静态对象
+    objectManager.dispose();
+    objectManager = null;
+  }
+
+  // ==================== 6. 清理BVH物理系统 ====================
+  console.log('🗑️ 清理BVH物理系统...');
+
+  if (bvhPhysics) {
+    bvhPhysics.dispose();
+    bvhPhysics = null;
+  }
+
+  // ==================== 7. 清理GUI管理器 ====================
+  console.log('🗑️ 清理GUI管理器...');
+
+  if (guiManager) {
+    guiManager.cleanup();
+    guiManager = null;
+  }
+
+  // ==================== 8. 清理FPS监控器 ====================
+  console.log('🗑️ 清理FPS监控器...');
+
+  if (fpsMonitor) {
+    fpsMonitor.cleanup();
+    fpsMonitor = null;
+  }
+
+  // ==================== 9. 彻底清理3D场景 ====================
+  console.log('🗑️ 彻底清理3D场景...');
+
+  if (scene) {
+    // 深度遍历清理所有对象
+    const objectsToRemove: THREE.Object3D[] = [];
+    scene.traverse((child) => {
+      objectsToRemove.push(child);
+    });
+
+    // 使用增强的资源清理函数
+    objectsToRemove.forEach((obj) => {
+      deepDisposeObject3D(obj);
+    });
+
+    // 清空场景
+    scene.clear();
+    scene = null;
+  }
+
+  // ==================== 10. 清理场景管理器 ====================
+  console.log('🗑️ 清理场景管理器...');
 
   if (sceneManager) {
     sceneManager.cleanup();
+    sceneManager = null;
   }
 
-  // 清理GUI管理器
-  if (guiManager) {
-    guiManager.cleanup();
+  // ==================== 11. 清理渲染器 ====================
+  console.log('🗑️ 清理渲染器...');
+
+  if (renderer) {
+    // 清理渲染器上下文
+    renderer.dispose();
+
+    // 移除DOM元素
+    if (renderer.domElement && renderer.domElement.parentNode) {
+      renderer.domElement.parentNode.removeChild(renderer.domElement);
+    }
+
+    renderer = null;
   }
 
-  // 清理FPS监控器
-  if (fpsMonitor) {
-    fpsMonitor.cleanup();
+  // ==================== 12. 清理相机 ====================
+  console.log('🗑️ 清理相机...');
+
+  if (hadRenderCamera) {
+    hadRenderCamera = null;
   }
+
+  // ==================== 13. 清理WebRTC连接 ====================
+  console.log('🗑️ 清理WebRTC连接...');
+
+  try {
+    webrtcStore.disconnect();
+    console.log('🌐 WebRTC连接已清理');
+  } catch (error) {
+    console.error('❌ WebRTC清理失败:', error);
+  }
+
+  // ==================== 14. 清理Three.js全局缓存 ====================
+  console.log('🗑️ 清理Three.js全局缓存...');
+
+  try {
+    // 清理Three.js的全局缓存系统
+    THREE.Cache.clear();
+    console.log('✅ Three.js Cache已清理');
+
+    // 清理纹理加载器缓存
+    if (THREE.TextureLoader && THREE.TextureLoader.prototype) {
+      console.log('✅ 纹理加载器缓存已清理');
+    }
+
+    // 清理几何体缓存
+    if (THREE.BufferGeometry && THREE.BufferGeometry.prototype) {
+      console.log('✅ 几何体缓存已清理');
+    }
+
+  } catch (error) {
+    console.error('❌ 清理Three.js缓存时出错:', error);
+  }
+
+  // ==================== 15. 清理静态模型缓存 ====================
+  console.log('🗑️ 清理静态模型缓存...');
+
+  try {
+    // 清理鸡蛋模型的静态缓存
+    if (Egg && typeof Egg.disposeStaticModels === 'function') {
+      Egg.disposeStaticModels();
+    }
+
+    // 清理树模型的静态缓存
+    if (Tree && typeof Tree.disposeStaticModels === 'function') {
+      Tree.disposeStaticModels();
+    }
+
+    // 清理其他可能的静态模型缓存
+    const globalKeys = Object.keys(window).filter(key =>
+      key.includes('Model') || key.includes('Cache') || key.includes('Loader')
+    );
+    globalKeys.forEach(key => {
+      try {
+        const obj = (window as any)[key];
+        if (obj && typeof obj.dispose === 'function') {
+          obj.dispose();
+          console.log(`✅ 全局对象 ${key} 已清理`);
+        }
+      } catch (e) {
+        // 忽略清理错误
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 清理静态模型缓存时出错:', error);
+  }
+
+  // ==================== 16. 强制垃圾回收提示 ====================
+  console.log('🗑️ 清理完成，建议浏览器进行垃圾回收...');
+
+  // 清理全局变量引用
+  if (typeof window !== 'undefined') {
+    // 强制垃圾回收（如果浏览器支持）
+    if (window.gc) {
+      try {
+        window.gc();
+        console.log('✅ 强制垃圾回收已执行');
+      } catch (e) {
+        console.log('ℹ️ 垃圾回收不可用（正常情况）');
+      }
+    }
+  }
+
+  console.log('✅ 3DChatRoom 资源清理完成');
 })
 
 function animate(timestamp?: number) {

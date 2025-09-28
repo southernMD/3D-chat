@@ -11,7 +11,7 @@ export class NameTagManager {
   private nameTags: Map<string, HTMLElement> = new Map();
   private modelPositions: Map<string, THREE.Vector3> = new Map();
   private modelHeights: Map<string, number> = new Map();
-  private isFirstPerson: Boolean = false; // 是否为第一人称视角
+  private isFirstPerson: boolean = false; // 是否为第一人称视角
   private currentUserId: string = 'player'; // 当前用户的模型ID
 
   // 配置选项
@@ -270,7 +270,7 @@ export class NameTagManager {
   /**
    * 设置视角模式
    */
-  setFirstPersonMode(isFirstPerson: Boolean): void {
+  setFirstPersonMode(isFirstPerson: boolean): void {
     this.isFirstPerson = isFirstPerson;
     console.log(`🏷️ 昵称标签管理器切换到${isFirstPerson ? '第一人称' : '第三人称'}视角`);
     // 立即更新所有标签的显示状态

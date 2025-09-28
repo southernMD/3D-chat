@@ -289,22 +289,39 @@ export class MMDModelManager {
    * 清理资源
    */
   cleanup(): void {
-    // BVH物理系统不需要特殊的相机控制器清理
+    console.log('🗑️ 开始清理MMDModelManager资源...');
 
-    // 释放控制器
+    // 1. 清理MMD模型
+    if (this.mmdModel) {
+      // 调用模型的dispose方法彻底清理资源
+      if (typeof this.mmdModel.dispose === 'function') {
+        this.mmdModel.dispose();
+      }
+      this.mmdModel = null;
+      console.log('✅ MMD模型已清理');
+    }
+
+    // 2. 释放相机控制器
     if (this.cameraControls) {
       this.cameraControls.dispose();
       this.cameraControls = null;
+      console.log('✅ 相机控制器已清理');
     }
 
-    // 清理昵称标签管理器
+    // 3. 清理昵称标签管理器
     if (this.nameTagManager) {
       this.nameTagManager.dispose();
       this.nameTagManager = null;
+      console.log('✅ 昵称标签管理器已清理');
     }
 
-    this.mmdModel = null;
-    this.lookCamera = null;
+    // 4. 清理相机引用
+    if (this.lookCamera) {
+      this.lookCamera = null;
+      console.log('✅ 相机引用已清理');
+    }
+
+    console.log('✅ MMDModelManager资源清理完成');
   }
 
   /**

@@ -121,12 +121,12 @@ export class MMDModel extends Model {
       this.mesh.position.set(0,2,0)
       this.setModelDimensions()
 
-      // 创建胶囊体碰撞检测 - 按照ModelBefore.ts
-      const { playerCapsule, capsuleVisual } = this.createCapsule();
+      // 创建静态胶囊体几何
+      const { capsuleInfo, capsuleVisual } = this.createCapsuleGeometry();
 
       // 添加胶囊体可视化到场景
       scene.add(capsuleVisual);
-      console.log('✅ 胶囊体已添加到场景:', {
+      console.log('✅ 胶囊体可视化已添加到场景:', {
         name: capsuleVisual.name,
         visible: capsuleVisual.visible,
         position: capsuleVisual.position,
@@ -135,11 +135,15 @@ export class MMDModel extends Model {
         material: Array.isArray(capsuleVisual.material) ? 'Array' : (capsuleVisual.material as THREE.Material).type
       });
 
+      // 创建物理胶囊体
+      const playerCapsule = this.createPhysicsCapsule();
+
       // 设置辅助器
       this.setupHelpers(scene, capsuleVisual);
 
       // 更新胶囊体位置
-      this.updateCapsulePosition();
+      this.updatePhysicsCapsulePosition();
+      this.updateCapsuleVisualPosition();
       
       // 创建动画混合器
       this.mixer = new THREE.AnimationMixer(this.mesh);
@@ -225,8 +229,121 @@ export class MMDModel extends Model {
       height: size.y,
       depth: size.z
     };
-    
+
     return this.modelSize;
+  }
+
+  /**
+   * 彻底清理MMD模型资源
+   */
+  dispose(): void {
+    console.log('🗑️ 开始清理MMD模型资源...');
+
+    // 1. 清理MMD动画助手
+    if (this.helper) {
+      // 停止所有动画
+      this.helper = null;
+      console.log('✅ MMD动画助手已清理');
+    }
+
+    // 2. 清理动画混合器
+    if (this.mixer) {
+      // 停止所有动画动作
+      this.mixer.stopAllAction();
+      // 清理所有剪辑
+      this.mixer.uncacheRoot(this.mesh);
+      this.mixer = null;
+      console.log('✅ 动画混合器已清理');
+    }
+
+    // 3. 清理动画动作
+    if (this.walkAction) {
+      this.walkAction.stop();
+      this.walkAction = null;
+    }
+    if (this.standAction) {
+      this.standAction.stop();
+      this.standAction = null;
+    }
+
+    // 4. 深度清理模型网格和所有资源
+    if (this.mesh) {
+      this.deepDisposeObject3D(this.mesh);
+      this.mesh = null;
+      console.log('✅ MMD模型网格已清理');
+    }
+
+    console.log('✅ MMD模型资源清理完成');
+  }
+
+  /**
+   * 深度清理Three.js对象的所有资源
+   */
+  private deepDisposeObject3D(obj: THREE.Object3D): void {
+    obj.traverse((child) => {
+      // 清理网格
+      if (child instanceof THREE.Mesh) {
+        // 清理几何体
+        if (child.geometry) {
+          child.geometry.dispose();
+        }
+
+        // 深度清理材质和纹理
+        if (child.material) {
+          this.deepDisposeMaterial(child.material);
+        }
+      }
+
+      // 清理骨骼
+      if (child instanceof THREE.Bone) {
+        // 骨骼本身不需要特殊清理，但确保从父对象中移除
+      }
+
+      // 清理灯光
+      if (child instanceof THREE.Light) {
+        if (child.shadow && child.shadow.map) {
+          child.shadow.map.dispose();
+        }
+      }
+
+      // 清理相机
+      if (child instanceof THREE.Camera) {
+        // 相机本身不需要特殊清理
+      }
+    });
+
+    // 清空子对象
+    obj.clear();
+  }
+
+  /**
+   * 深度清理材质和所有相关纹理
+   */
+  private deepDisposeMaterial(material: THREE.Material | THREE.Material[]): void {
+    const materials = Array.isArray(material) ? material : [material];
+
+    materials.forEach((mat) => {
+      // 清理所有可能的纹理属性
+      const textureProperties = [
+        'map', 'normalMap', 'roughnessMap', 'metalnessMap',
+        'aoMap', 'emissiveMap', 'bumpMap', 'displacementMap',
+        'alphaMap', 'lightMap', 'envMap', 'specularMap',
+        'gradientMap', 'matcap', 'clearcoatMap', 'clearcoatNormalMap',
+        'clearcoatRoughnessMap', 'transmissionMap', 'thicknessMap',
+        'sheenColorMap', 'sheenRoughnessMap', 'iridescenceMap',
+        'iridescenceThicknessMap'
+      ];
+
+      textureProperties.forEach(prop => {
+        const texture = (mat as any)[prop];
+        if (texture && texture.dispose) {
+          texture.dispose();
+        }
+      });
+
+      // 清理材质本身
+      mat.dispose();
+    });
   }
 }
 
