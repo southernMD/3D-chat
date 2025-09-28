@@ -214,4 +214,84 @@ export abstract class StaticModel {
       height: this.capsuleGeometry.height
     };
   }
+
+  /**
+   * 清理静态模型的基础资源（胶囊体、包围盒等）
+   */
+  dispose(): void {
+    console.log('🗑️ 开始清理StaticModel基础资源...');
+
+    // 清理胶囊体可视化
+    if (this.capsuleGeometry?.visual) {
+      if (this.capsuleGeometry.visual.parent) {
+        this.capsuleGeometry.visual.parent.remove(this.capsuleGeometry.visual);
+      }
+
+      // 清理胶囊体几何体和材质
+      if (this.capsuleGeometry.visual.geometry) {
+        this.capsuleGeometry.visual.geometry.dispose();
+      }
+      if (this.capsuleGeometry.visual.material) {
+        if (Array.isArray(this.capsuleGeometry.visual.material)) {
+          this.capsuleGeometry.visual.material.forEach(mat => mat.dispose());
+        } else {
+          this.capsuleGeometry.visual.material.dispose();
+        }
+      }
+
+      this.capsuleGeometry = undefined;
+      console.log('✅ 胶囊体可视化已清理');
+    }
+
+    // 清理辅助器
+    if (this.helpersVisible) {
+      // 清理骨骼辅助器
+      if (this.helpersVisible.skeletonHelper) {
+        if (this.helpersVisible.skeletonHelper.parent) {
+          this.helpersVisible.skeletonHelper.parent.remove(this.helpersVisible.skeletonHelper);
+        }
+        this.helpersVisible.skeletonHelper.dispose();
+        console.log('✅ 骨骼辅助器已清理');
+      }
+
+      // 清理包围盒辅助器
+      if (this.helpersVisible.boxHelper) {
+        if (this.helpersVisible.boxHelper.parent) {
+          this.helpersVisible.boxHelper.parent.remove(this.helpersVisible.boxHelper);
+        }
+        this.helpersVisible.boxHelper.dispose();
+        console.log('✅ 包围盒辅助器已清理');
+      }
+
+      // 清理胶囊体辅助器
+      if (this.helpersVisible.capsuleVisual) {
+        if (this.helpersVisible.capsuleVisual.parent) {
+          this.helpersVisible.capsuleVisual.parent.remove(this.helpersVisible.capsuleVisual);
+        }
+
+        if (this.helpersVisible.capsuleVisual.geometry) {
+          this.helpersVisible.capsuleVisual.geometry.dispose();
+        }
+        if (this.helpersVisible.capsuleVisual.material) {
+          if (Array.isArray(this.helpersVisible.capsuleVisual.material)) {
+            this.helpersVisible.capsuleVisual.material.forEach(mat => mat.dispose());
+          } else {
+            this.helpersVisible.capsuleVisual.material.dispose();
+          }
+        }
+        console.log('✅ 胶囊体辅助器已清理');
+      }
+
+      this.helpersVisible = undefined;
+    }
+
+    // 清理动画混合器
+    if (this.mixer) {
+      this.mixer.stopAllAction();
+      this.mixer = undefined as any;
+      console.log('✅ 动画混合器已清理');
+    }
+
+    console.log('✅ StaticModel基础资源清理完成');
+  }
 }

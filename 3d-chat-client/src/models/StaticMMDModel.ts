@@ -143,21 +143,33 @@ export class StaticMMDModel extends StaticModel {
       
       // 创建动画混合器
       this.mixer = new THREE.AnimationMixer(this.mesh);
-      
-      // 加载走路动画
-      const walkAnimData = await loadAnimation(this.mesh, walkAnimPath);
-      const walkClip = new AnimationClip('walk', -1, walkAnimData.tracks as KeyframeTrack[]);
-      this.walkAction = this.mixer.clipAction(walkClip);
-      this.walkAction.setLoop(THREE.LoopRepeat, Infinity);
-      
-      // 加载站立动画
-      const standAnimData = await loadAnimation(this.mesh, standAnimPath);
-      const standClip = new AnimationClip('stand', -1, standAnimData.tracks as KeyframeTrack[]);
-      this.standAction = this.mixer.clipAction(standClip);
-      this.standAction.setLoop(THREE.LoopRepeat, Infinity);
-      
-      // 默认播放站立动画
-      this.standAction.play();
+
+      // 加载走路动画（如果路径存在）
+      if (walkAnimPath && walkAnimPath.trim() !== '') {
+        try {
+          const walkAnimData = await loadAnimation(this.mesh, walkAnimPath);
+          const walkClip = new AnimationClip('walk', -1, walkAnimData.tracks as KeyframeTrack[]);
+          this.walkAction = this.mixer.clipAction(walkClip);
+          this.walkAction.setLoop(THREE.LoopRepeat, Infinity);
+        } catch (error) {
+          console.warn('加载走路动画失败:', error);
+        }
+      }
+
+      // 加载站立动画（如果路径存在）
+      if (standAnimPath && standAnimPath.trim() !== '') {
+        try {
+          const standAnimData = await loadAnimation(this.mesh, standAnimPath);
+          const standClip = new AnimationClip('stand', -1, standAnimData.tracks as KeyframeTrack[]);
+          this.standAction = this.mixer.clipAction(standClip);
+          this.standAction.setLoop(THREE.LoopRepeat, Infinity);
+
+          // 默认播放站立动画
+          this.standAction.play();
+        } catch (error) {
+          console.warn('加载站立动画失败:', error);
+        }
+      }
       
       // 添加到场景
       scene.add(this.mesh);
@@ -264,6 +276,9 @@ export class StaticMMDModel extends StaticModel {
       this.deepDisposeObject3D(this.mesh);
       console.log('✅ MMD模型网格已清理');
     }
+
+    // 5. 调用父类清理方法（清理胶囊体、包围盒、辅助器等）
+    super.dispose();
 
     console.log('✅ MMD模型资源清理完成');
   }

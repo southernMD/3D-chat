@@ -12,6 +12,10 @@ export interface EventBusEvents {
   // 装备相关事件
   'user-equipment-updated': UserEquipmentUpdatedData
   'egg-quantity-updated': EggQuantityUpdatedData
+  // 用户模型相关事件
+  'user-joined': UserJoinedData
+  'user-left': UserLeftData
+  'room-users-sync': RoomUsersSyncData
 }
 
 export interface EggBroadcastData {
@@ -69,6 +73,25 @@ export interface UserEquipmentUpdatedData {
 
 export interface EggQuantityUpdatedData {
   quantity: number
+}
+
+// 用户模型相关接口
+export interface UserJoinedData {
+  peerId: string
+  userName: string
+  modelHash: string
+}
+
+export interface UserLeftData {
+  peerId: string
+}
+
+export interface RoomUsersSyncData {
+  users: Array<{
+    peerId: string
+    userName: string
+    modelHash: string
+  }>
 }
 
 // 事件总线实现

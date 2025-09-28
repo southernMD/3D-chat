@@ -268,6 +268,9 @@ export class StaticGLTFModel extends StaticModel {
       console.log('✅ GLTF模型网格已清理');
     }
 
+    // 5. 调用父类清理方法（清理胶囊体、包围盒、辅助器等）
+    super.dispose();
+
     console.log('✅ GLTF模型资源清理完成');
   }
 

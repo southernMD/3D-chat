@@ -111,6 +111,7 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
           .map(p => ({
             id: p.id,
             name: p.name,
+            modelHash: room.modelHash?.get(p.name) || 'default-model-hash', // 添加用户的模型hash
           })),
       });
 

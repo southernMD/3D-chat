@@ -260,7 +260,8 @@ export abstract class Model extends StaticModel {
   private resetPosition(): void {
     this.playerVelocity.set(0, 0, 0);
     this.mesh.position.set(0, 5, 0); // 重置到安全位置
-    this.updateCapsulePosition();
+    this.updatePhysicsCapsulePosition();
+    this.updateCapsuleVisualPosition();
     console.log('🔄 角色位置已重置');
   }
 
@@ -294,7 +295,8 @@ export abstract class Model extends StaticModel {
           // 先直接改变一点位置，模拟初始冲量
           this.mesh.position.y += 1.0;
           // 立即更新胶囊体位置，避免碰撞检测问题
-          this.updateCapsulePosition();
+          this.updatePhysicsCapsulePosition();
+          this.updateCapsuleVisualPosition();
           // 然后设置一个适当的向上速度
           this.playerVelocity.y = 40.0;
           this.playerIsOnGround = false;

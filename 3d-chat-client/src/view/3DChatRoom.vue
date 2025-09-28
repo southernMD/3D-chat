@@ -6,6 +6,7 @@ import * as THREE from 'three'
 import { GUIManager } from '@/models/managers/GUIManager';
 // 导入管理器类
 import { MMDModelManager } from '@/models/managers/MMDModelManager';
+import { StaticMMDModelManager } from '@/models/managers/StaticMMDModelManager';
 import { SceneManager } from '@/models/managers/SceneManager';
 import { ObjectManager } from '@/models/managers/ObjectManager';
 import { BVHPhysics } from '@/physics/BVHPhysics';
@@ -33,7 +34,8 @@ let hadRenderCamera: THREE.PerspectiveCamera
 let renderer: THREE.WebGLRenderer
 
 // 管理器实例
-let mmdModelManager: MMDModelManager
+let mmdModelManager: MMDModelManager          // 主机用户模型管理器（有物理）
+let staticModelManager: StaticMMDModelManager // 其他用户静态模型管理器（无物理）
 let sceneManager: SceneManager
 let objectManager: ObjectManager
 let guiManager: GUIManager
@@ -197,14 +199,14 @@ onMounted(async () => {
     await objectManager.create();
     updateLoadingStep(2, 'completed')
 
-    // 步骤3: 加载MMD模型
+    // 步骤3: 加载主机用户模型（有物理）
     updateLoadingStep(3, 'loading', '正在加载角色模型和动画数据...')
     mmdModelManager = new MMDModelManager(scene, renderer, bvhPhysics);
     await mmdModelManager.loadModel(history.state.modelHash);
     updateLoadingStep(3, 'completed')
     hadRenderCamera = sceneManager.getCamera()
 
-    // 初始化昵称标签管理器
+    // 初始化主机用户昵称标签管理器
     const container = dom.value;
     if (container && hadRenderCamera) {
       mmdModelManager.initializeNameTagManager(hadRenderCamera, container);
@@ -214,6 +216,16 @@ onMounted(async () => {
       if (userPeer && userPeer.name) {
         mmdModelManager.setNickname(userPeer.name);
       }
+    }
+
+    // 步骤4: 初始化其他用户静态模型管理器（无物理）
+    console.log('🎭 初始化其他用户静态模型管理器...')
+    staticModelManager = new StaticMMDModelManager(scene, renderer);
+
+    // 为其他用户初始化昵称标签管理器
+    if (container && hadRenderCamera) {
+      staticModelManager.initializeNameTagManager(hadRenderCamera, container);
+      console.log('✅ 其他用户静态模型管理器初始化完成');
     }
 
     // 初始化FPS监控器
@@ -264,15 +276,93 @@ onMounted(async () => {
     })
     stopWatchers.push(stopRoomInfoWatch);
 
-    // 监听成员变化
-    const stopPeersWatch = watch(peers, (newPeers, oldPeers) => {
-      if (oldPeers && newPeers.length > oldPeers.length) {
-        showInfo('有新成员加入房间')
-      } else if (oldPeers && newPeers.length < oldPeers.length) {
-        showInfo('有成员离开房间')
-      }
-    })
-    stopWatchers.push(stopPeersWatch);
+    // 🆕 监听 eventBus 事件来处理用户模型加载
+    if (staticModelManager) {
+
+      // 监听新用户加入事件
+      const handleUserJoined = async (data: { peerId: string, userName: string, modelHash: string }) => {
+        console.log(`👤 EventBus新用户加入: ${data.userName} (${data.peerId}) 模型: ${data.modelHash}`);
+
+        try {
+          // 为新用户创建静态模型
+          await staticModelManager.loadModel(data.peerId, data.modelHash);
+
+          // 设置用户昵称
+          staticModelManager.setNickname(data.peerId, data.userName);
+
+          console.log(`✅ 用户 ${data.userName} 的静态模型已创建`);
+          showInfo(`${data.userName} 加入了房间`);
+        } catch (error) {
+          console.error(`❌ 为用户 ${data.userName} 创建静态模型失败:`, error);
+        }
+      };
+
+      // 监听用户离开事件
+      const handleUserLeft = (data: { peerId: string }) => {
+        console.log(`👋 EventBus用户离开: ${data.peerId}`);
+
+        try {
+          // 移除用户的静态模型
+          staticModelManager.removeModel(data.peerId);
+          console.log(`✅ 用户 ${data.peerId} 的静态模型已移除`);
+          showInfo('有成员离开房间');
+        } catch (error) {
+          console.error(`❌ 移除用户 ${data.peerId} 的静态模型失败:`, error);
+        }
+      };
+
+      // 监听房间用户同步事件
+      const handleRoomUsersSync = async (data: { users: Array<{ peerId: string, userName: string, modelHash: string }> }) => {
+        console.log('🔄 EventBus房间用户同步:', data.users);
+        const currentUserId = webrtcStore.roomInfo?.peerId;
+
+        for (const user of data.users) {
+          if (user.peerId !== currentUserId) {
+            console.log(`🔄 同步已存在用户: ${user.userName} (${user.peerId}) 模型: ${user.modelHash}`);
+            try {
+              await staticModelManager.loadModel(user.peerId, user.modelHash);
+              staticModelManager.setNickname(user.peerId, user.userName);
+              console.log(`✅ 已存在用户 ${user.userName} 的静态模型已同步`);
+            } catch (error) {
+              console.error(`❌ 同步用户 ${user.userName} 的静态模型失败:`, error);
+            }
+          }
+        }
+      };
+
+      // 绑定 eventBus 监听器
+      eventBus.on('user-joined', handleUserJoined);
+      eventBus.on('user-left', handleUserLeft);
+      eventBus.on('room-users-sync', handleRoomUsersSync);
+
+      // 保存清理函数
+      const cleanupEventBusListeners = () => {
+        eventBus.off('user-joined', handleUserJoined);
+        eventBus.off('user-left', handleUserLeft);
+        eventBus.off('room-users-sync', handleRoomUsersSync);
+      };
+      stopWatchers.push(cleanupEventBusListeners);
+
+      // 加载房间内已存在的其他用户模型
+      // console.log('🔄 开始同步房间内已存在的用户模型...');
+      // const currentPeers = webrtcStore.peers;
+      // const currentUserId = webrtcStore.roomInfo?.peerId;
+
+      // for (const peer of currentPeers) {
+      //   if (peer.id !== currentUserId) {
+      //     console.log(`� 同步已存在用户: ${peer.name} (${peer.id}) 模型: ${peer.modelHash}`);
+      //     try {
+      //       // 使用用户真实的modelHash，如果没有则使用默认值
+      //       const userModelHash = peer.modelHash || history.state.modelHash || 'default-model-hash';
+      //       await staticModelManager.loadModel(peer.id, userModelHash);
+      //       staticModelManager.setNickname(peer.id, peer.name);
+      //       console.log(`✅ 已存在用户 ${peer.name} 的静态模型已同步`);
+      //     } catch (error) {
+      //       console.error(`❌ 同步用户 ${peer.name} 的静态模型失败:`, error);
+      //     }
+      //   }
+      // }
+    }
 
     // 添加右键发射小球事件监听器
     let mouseDownPosition = { x: 0, y: 0 };
@@ -580,10 +670,16 @@ onUnmounted(() => {
     }
   }
 
-  // 清理MMD模型管理器（这会调用模型的dispose方法）
+  // 清理主机用户MMD模型管理器（这会调用模型的dispose方法）
   if (mmdModelManager) {
     mmdModelManager.cleanup();
     mmdModelManager = null;
+  }
+
+  // 清理其他用户静态模型管理器
+  if (staticModelManager) {
+    staticModelManager.cleanup();
+    staticModelManager = null;
   }
 
   // ==================== 5. 清理ObjectManager加载的所有模型 ====================
@@ -756,19 +852,24 @@ onUnmounted(() => {
 
 function animate(timestamp?: number) {
   // 使用FPS监控器进行帧率控制和显示更新
-  if (!fpsMonitor.update(timestamp)) {
+  if (fpsMonitor && !fpsMonitor.update(timestamp)) {
     requestAnimationFrame(animate);
     return;
   }
 
   requestAnimationFrame(animate);
 
-  // 1. 更新MMD模型（处理用户输入，同步到物理身体）
+  // 1. 更新主机用户MMD模型（处理用户输入，同步到物理身体）
   if (mmdModelManager) {
     mmdModelManager.update(1 / 120);
   }
 
-  // 2. 更新BVH物理系统（集成在模型中）
+  // 2. 更新其他用户的静态模型（无物理）
+  if (staticModelManager) {
+    staticModelManager.update(1 / 60);
+  }
+
+  // 3. 更新BVH物理系统（集成在主机用户模型中）
   if (mmdModelManager && mmdModelManager.isModelLoaded()) {
     const model = mmdModelManager.getModel();
     if (model) {
@@ -786,7 +887,7 @@ function animate(timestamp?: number) {
     }
   }
 
-  // 3. 更新相机跟随
+  // 4. 更新相机跟随
   if (mmdModelManager && mmdModelManager.isModelLoaded()) {
     const model = mmdModelManager.getModel();
     if (model && mmdModelManager.getLookCamera() && mmdModelManager.getCameraControls()) {
@@ -799,6 +900,15 @@ function animate(timestamp?: number) {
     sceneManager.update();
     // 从GUIManager获取当前渲染相机，如果没有则使用默认相机
     const currentCamera = guiManager.getHadRenderCamera() || hadRenderCamera;
+
+    // 🔧 检查相机是否发生变化，如果变化则更新 StaticMMDModelManager 的相机引用
+    if (staticModelManager && currentCamera) {
+      const staticNameTagManager = staticModelManager.getNameTagManager();
+      if (staticNameTagManager) {
+        staticNameTagManager.updateCamera(currentCamera);
+      }
+    }
+
     sceneManager.render(currentCamera);
   }
 }

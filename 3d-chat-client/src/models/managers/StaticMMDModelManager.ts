@@ -51,22 +51,25 @@ export class StaticMMDModelManager {
         if (isPMX) {
           // 创建静态MMD模型
           const pmxPath = modelPathRes.data?.resources.find(resource => resource.ext === '.pmx')?.path;
+          const walkVmdPath = modelPathRes.data?.resources.find(resource => resource.ext === '.vmd' && resource.path.includes('走路'))?.path;
+          const standVmdPath = modelPathRes.data?.resources.find(resource => resource.ext === '.vmd' && resource.path.includes('站立'))?.path;
+
           if (pmxPath) {
             const staticModel = new StaticMMDModel();
-            // 添加到场景
-            this.scene.add(staticModel.mesh);
+            // 🔧 实际加载模型数据
+            await staticModel.load(this.scene, pmxPath, walkVmdPath || '', standVmdPath || '');
             this.models.set(userId, staticModel);
-            console.log(`✅ 用户 ${userId} 的静态MMD模型创建完成`);
+            console.log(`✅ 用户 ${userId} 的静态MMD模型加载完成`);
           }
         } else {
           // 创建静态GLTF模型
           const gltfPath = modelPathRes.data?.resources.find(resource => resource.ext === '.glb')?.path;
           if (gltfPath) {
             const staticModel = new StaticGLTFModel();
-            // 添加到场景
-            this.scene.add(staticModel.mesh);
+            // 🔧 实际加载模型数据
+            await staticModel.load(this.scene, gltfPath);
             this.models.set(userId, staticModel);
-            console.log(`✅ 用户 ${userId} 的静态GLTF模型创建完成`);
+            console.log(`✅ 用户 ${userId} 的静态GLTF模型加载完成`);
           }
         }
       }
@@ -81,21 +84,33 @@ export class StaticMMDModelManager {
   removeModel(userId: string): void {
     const model = this.models.get(userId);
     if (model) {
+      console.log(`🗑️ 开始移除用户 ${userId} 的静态模型...`);
+
+      // 🔧 清理昵称标签
+      if (this.nameTagManager) {
+        this.nameTagManager.removeNameTag(userId);
+        console.log(`✅ 用户 ${userId} 的昵称标签已清理`);
+      }
+
       // 从场景中移除
       if (model.mesh && model.mesh.parent) {
         model.mesh.parent.remove(model.mesh);
+        console.log(`✅ 用户 ${userId} 的模型已从场景移除`);
       }
 
-      // 清理资源
+      // 🔧 清理模型资源（包括胶囊体、包围盒、辅助器等）
       if (typeof model.dispose === 'function') {
         model.dispose();
+        console.log(`✅ 用户 ${userId} 的模型资源已清理`);
       }
 
       // 从映射中移除
       this.models.delete(userId);
       this.nicknames.delete(userId);
 
-      console.log(`✅ 用户 ${userId} 的静态模型已移除`);
+      console.log(`✅ 用户 ${userId} 的静态模型完全移除`);
+    } else {
+      console.warn(`⚠️ 用户 ${userId} 的模型不存在，无需移除`);
     }
   }
 
@@ -137,6 +152,13 @@ export class StaticMMDModelManager {
   }
 
   /**
+   * 获取昵称标签管理器
+   */
+  getNameTagManager(): NameTagManager | null {
+    return this.nameTagManager;
+  }
+
+  /**
    * 更新所有模型（每帧调用）
    */
   update(_deltaTime: number): void {
@@ -146,12 +168,20 @@ export class StaticMMDModelManager {
         if (typeof model.update === 'function') {
           model.update();
         }
+
+        // 🔧 每帧更新模型位置到 NameTagManager
+        if (this.nameTagManager && model.mesh) {
+          const nickname = this.nicknames.get(userId);
+          if (nickname) {
+            this.nameTagManager.updateModelPosition(userId, model.mesh.position);
+          }
+        }
       } catch (error) {
         console.error(`❌ 更新用户 ${userId} 的模型失败:`, error);
       }
     });
 
-    // 更新昵称标签
+    // 更新昵称标签位置
     if (this.nameTagManager) {
       this.nameTagManager.updateAllNameTags();
     }
@@ -181,10 +211,16 @@ export class StaticMMDModelManager {
       }
     });
 
-    // 清理昵称标签管理器
+    // 🔧 清理昵称标签管理器
     if (this.nameTagManager) {
-      // NameTagManager 没有 cleanup 方法，直接设为 null
+      // 清理所有剩余的昵称标签
+      const remainingUserIds = Array.from(this.nicknames.keys());
+      remainingUserIds.forEach(userId => {
+        this.nameTagManager!.removeNameTag(userId);
+      });
+
       this.nameTagManager = null;
+      console.log('✅ 昵称标签管理器已清理');
     }
 
     // 清空集合

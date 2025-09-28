@@ -17,6 +17,7 @@ export interface RoomInfo {
 export interface Peer {
   id: string
   name: string
+  modelHash?: string // 用户的模型hash
 }
 
 // 房间配置接口
@@ -361,6 +362,19 @@ export class WebRTCManager {
 
       this.updatePeersListCallback([...this.peers])
 
+      // 🆕 通过 eventBus 通知页面同步房间内已存在的用户
+      const existingUsers = this.peers.map(peer => ({
+        peerId: peer.id,
+        userName: peer.name,
+        modelHash: peer.modelHash || 'default-model-hash'
+      }))
+
+      if (existingUsers.length > 0) {
+        eventBus.emit('room-users-sync', {
+          users: existingUsers
+        })
+      }
+
       if(roomConfig.map === 'school'){
         this.state.socket!.on('eggBroadcast', (data:EggPosintions) => {
           console.log(`收到${data}个鸡蛋位置`);
@@ -423,12 +437,13 @@ export class WebRTCManager {
 
     // 监听新成员加入事件
     this.state.socket.on('peerJoined', ({ peerId, userName, modelHash }) => {
-      this.log(`新成员加入: ${userName} (${peerId})`)
+      this.log(`新成员加入: ${userName} (${peerId}) 模型: ${modelHash}`)
 
       // 添加到成员列表
       const newPeer: Peer = {
         id: peerId,
-        name: userName
+        name: userName,
+        modelHash: modelHash // 保存模型hash
       }
 
       // 更新内部成员列表
@@ -440,6 +455,13 @@ export class WebRTCManager {
 
       // 更新UI
       this.updatePeersListCallback([...this.peers])
+
+      // 🆕 通过 eventBus 通知页面有新用户加入
+      eventBus.emit('user-joined', {
+        peerId,
+        userName,
+        modelHash
+      })
     })
 
     // 监听成员离开事件
@@ -482,6 +504,11 @@ export class WebRTCManager {
 
       // 更新UI
       this.updatePeersListCallback([...this.peers])
+
+      // 🆕 通过 eventBus 通知页面有用户离开
+      eventBus.emit('user-left', {
+        peerId
+      })
     })
 
     // 监听新的数据生产者事件
