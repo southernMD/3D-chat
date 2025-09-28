@@ -5,6 +5,7 @@ import { GLTFModel } from '../GLTFModel';
 import { BVHPhysics } from '@/physics/BVHPhysics';
 import { getModelFilePathByHash } from '@/api/modelApi';
 import { NameTagManager } from '@/utils/NameTagManager';
+import { StaticMMDModel } from '../StaticMMDModel';
 
 /**
  * MMDModelManager类 - 专门管理MMD模型的类
@@ -229,17 +230,6 @@ export class MMDModelManager {
     if (this.mmdModel) {
       this.mmdModel.stopWalk();
       this.mmdModel.isWalking = false;
-    }
-  }
-
-  /**
-   * 在当前位置创建箱子
-   */
-  createBoxHere(createBoxCallback: (color: THREE.ColorRepresentation, position: THREE.Vector3) => void): void {
-    if (this.mmdModel && this.mmdModel.mesh) {
-      const position = this.mmdModel.mesh.position.clone();
-      position.y += 55; // 在模型头上方创建盒子
-      createBoxCallback(0x00ff00, position);
     }
   }
 

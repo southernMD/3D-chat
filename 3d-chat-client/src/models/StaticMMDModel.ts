@@ -6,17 +6,17 @@ import { AnimationAction } from 'three/src/animation/AnimationAction.js';
 
 import type { KeyframeTrack } from 'three';
 import { Model } from './Model';
-import { BVHPhysics } from '@/physics/BVHPhysics';
+import { StaticModel } from './StaticModel';
 
 // MMDModel类 - 继承自Model基类，特化为MMD模型
-export class MMDModel extends Model {
+export class StaticMMDModel extends StaticModel {
   declare mesh: THREE.SkinnedMesh<THREE.BufferGeometry<THREE.NormalBufferAttributes>, THREE.Material | THREE.Material[]>;
   walkAction?: AnimationAction;
   standAction?: AnimationAction;
   private helper: MMDAnimationHelper | null = null;
 
-  constructor(bvhPhysics: BVHPhysics) {
-    super(bvhPhysics);
+  constructor() {
+    super();
     this.mesh = new THREE.SkinnedMesh();
   }
   update(): void {
@@ -135,14 +135,10 @@ export class MMDModel extends Model {
         material: Array.isArray(capsuleVisual.material) ? 'Array' : (capsuleVisual.material as THREE.Material).type
       });
 
-      // 创建物理胶囊体
-      const playerCapsule = this.createPhysicsCapsule();
-
       // 设置辅助器
       this.setupHelpers(scene, capsuleVisual);
 
       // 更新胶囊体位置
-      this.updatePhysicsCapsulePosition();
       this.updateCapsuleVisualPosition();
       
       // 创建动画混合器
