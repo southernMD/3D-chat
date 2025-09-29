@@ -411,7 +411,6 @@ export class WebRTCManager {
         modelHash: peer.modelHash || 'default-model-hash'
       }))
 
-      debugger
       if (existingUsers.length > 0) {
         eventBus.emit('room-users-sync', {
           users: existingUsers

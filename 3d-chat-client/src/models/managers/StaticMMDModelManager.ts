@@ -15,6 +15,18 @@ export class StaticMMDModelManager {
   private renderer: THREE.WebGLRenderer;
   private nameTagManager: NameTagManager | null = null;
   private nicknames: Map<string, string> = new Map();
+  
+  // 用于插值的缓存数据
+  private targetStates: Map<string, {
+    position: THREE.Vector3;
+    rotation: THREE.Euler;
+    timestamp: number;
+    animationState: string;
+  }> = new Map();
+  
+  // 插值参数
+  private interpolationFactor = 0.1; // 插值因子，控制平滑度
+  private maxExtrapolationTime = 100; // 最大外推时间（毫秒）
 
   constructor(scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
     this.scene = scene;
@@ -72,7 +84,6 @@ export class StaticMMDModelManager {
             console.log(`✅ 用户 ${userId} 的静态GLTF模型加载完成`);
           }
         }
-        this.models.get(userId)?.stopWalking();
       }
     } catch (error) {
       console.error(`❌ 加载用户 ${userId} 的静态模型失败:`, error);
@@ -108,6 +119,7 @@ export class StaticMMDModelManager {
       // 从映射中移除
       this.models.delete(userId);
       this.nicknames.delete(userId);
+      this.targetStates.delete(userId); // 同时清理目标状态
 
       console.log(`✅ 用户 ${userId} 的静态模型完全移除`);
     } else {
@@ -163,12 +175,17 @@ export class StaticMMDModelManager {
    * 更新所有模型（每帧调用）
    */
   update(_deltaTime: number): void {
+    const currentTime = Date.now();
+    
     this.models.forEach((model, userId) => {
       try {
         // 静态模型的update方法不需要参数
         if (typeof model.update === 'function') {
           model.update();
         }
+
+        // 执行插值更新
+        this.interpolateModel(userId, model, currentTime);
 
         // 🔧 每帧更新模型位置到 NameTagManager
         if (this.nameTagManager && model.mesh) {
@@ -189,6 +206,52 @@ export class StaticMMDModelManager {
   }
 
   /**
+   * 插值更新模型位置和旋转
+   */
+  private interpolateModel(userId: string, model: StaticMMDModel | StaticGLTFModel, currentTime: number): void {
+    const targetState = this.targetStates.get(userId);
+    if (!targetState || !model.mesh) return;
+
+    // 计算时间差
+    const timeDiff = currentTime - targetState.timestamp;
+    
+    // 如果时间差过大，直接设置位置（避免过度外推）
+    if (timeDiff > this.maxExtrapolationTime) {
+      model.mesh.position.copy(targetState.position);
+      model.mesh.rotation.copy(targetState.rotation);
+      
+      // 更新动画状态
+      this.updateAnimationState(model, targetState.animationState);
+      return;
+    }
+
+    // 使用线性插值平滑更新位置和旋转
+    model.mesh.position.lerp(targetState.position, this.interpolationFactor);
+    
+    // 对于旋转，使用球面线性插值
+    model.mesh.quaternion.slerp(
+      new THREE.Quaternion().setFromEuler(targetState.rotation),
+      this.interpolationFactor
+    );
+
+    // 更新动画状态
+    this.updateAnimationState(model, targetState.animationState);
+  }
+
+  /**
+   * 更新动画状态
+   */
+  private updateAnimationState(model: StaticMMDModel | StaticGLTFModel, animationState: string): void {
+    if(model.isWalking && animationState === 'standing'){
+      model.stopWalking();
+      model.isWalking = false
+    }else if(!model.isWalking && animationState === 'walking'){
+      model.startWalking();
+      model.isWalking = true
+    }
+  }
+
+  /**
    * 根据状态更新模型
    * @param userId 用户ID
    * @param state 模型状态数据
@@ -201,40 +264,17 @@ export class StaticMMDModelManager {
     }
 
     try {
-      // 更新位置
-      if (state.position) {
-        model.mesh.position.set(state.position.x, state.position.y, state.position.z);
-      }
-
-      // 更新旋转
-      if (state.rotation) {
-        model.mesh.rotation.set(
+      // 缓存目标状态用于插值
+      this.targetStates.set(userId, {
+        position: new THREE.Vector3(state.position.x, state.position.y, state.position.z),
+        rotation: new THREE.Euler(
           state.rotation.x * Math.PI / 180, // 转换回弧度
           state.rotation.y * Math.PI / 180,
           state.rotation.z * Math.PI / 180
-        );
-      }
-
-      // 更新动画状态
-      if (state.animation) {
-        if(state.animation.currentAnimation === 'walking' && model.isWalking === false){
-          model.isWalking = true
-          model.startWalk()
-        }else if(state.animation.currentAnimation === 'standing' && model.isWalking === true){
-          model.isWalking = false
-          model.stopWalk()
-        }
-      }
-
-      // 更新胶囊体可视化位置
-      if (typeof model.updateCapsuleVisualPosition === 'function') {
-        model.updateCapsuleVisualPosition();
-      }
-
-      // 更新模型辅助器（包括包围盒）
-      if (typeof model.updateModelHelpers === 'function') {
-        model.updateModelHelpers();
-      }
+        ),
+        timestamp: Date.now(),
+        animationState: state.animation.currentAnimation
+      });
 
       // 更新昵称标签位置
       if (this.nameTagManager) {
@@ -286,6 +326,7 @@ export class StaticMMDModelManager {
     // 清空集合
     this.models.clear();
     this.nicknames.clear();
+    this.targetStates.clear(); // 清理目标状态缓存
 
     console.log('✅ StaticMMDModelManager 清理完成');
   }
