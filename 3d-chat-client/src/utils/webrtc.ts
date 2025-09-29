@@ -82,6 +82,39 @@ interface GetProducersResponse {
   error?: string
 }
 
+// 模型状态数据接口
+export interface ModelStateData {
+  type: 'modelState'
+  peerId: string
+  timestamp: number
+  state: {
+    position: { x: number; y: number; z: number }
+    rotation: { x: number; y: number; z: number }
+    animation: {
+      currentAnimation: string
+      walkActionActive: boolean
+      standActionActive: boolean
+      isWalking?: boolean
+    }
+    modelInfo?: {
+      dimensions: { width: number; height: number; depth: number }
+      hasAnimations: boolean
+    }
+    physics?: {
+      isOnGround: boolean
+      velocity: { x: number; y: number; z: number }
+    }
+  }
+}
+
+// 数据通道消息类型
+export type DataChannelMessage = {
+  type: 'chat'
+  message: string
+  peerId: string
+  timestamp: number
+} | ModelStateData
+
 // 应用程序状态接口
 export interface AppState {
   socket: Socket | null
@@ -107,6 +140,7 @@ type RoomInfoCallback = (info: RoomInfo) => void
 type PeersListCallback = (peers: Peer[]) => void
 type MessageCallback = (content: string, isSent: boolean, senderName?: string) => void
 type EggPositionsCallback = (positions: EggPosintions) => void | undefined
+type ModelStateCallback = (userName: string, modelState: ModelStateData['state']) => void
 export class WebRTCManager {
   private state: AppState = {
     socket: null,
@@ -136,6 +170,12 @@ export class WebRTCManager {
   private addMessageCallback: MessageCallback
   private getEggPositionsCallback: EggPositionsCallback | undefined
   private updateRoomConfigCallback?: (config: RoomConfig) => void
+  private modelStateCallback?: ModelStateCallback
+
+  // 模型状态传输相关
+  private modelStateInterval?: number
+  private lastModelStateTime: number = 0
+  private modelStateUpdateRate: number = 60 // 每秒60次更新
 
   constructor(
     logCallback: LogCallback,
@@ -143,7 +183,8 @@ export class WebRTCManager {
     updateRoomInfoCallback: RoomInfoCallback,
     updatePeersListCallback: PeersListCallback,
     addMessageCallback: MessageCallback,
-    getEggPositionsCallback?:EggPositionsCallback
+    getEggPositionsCallback?: EggPositionsCallback,
+    modelStateCallback?: ModelStateCallback
   ) {
     this.logCallback = logCallback
     this.updateConnectionStatusCallback = updateConnectionStatusCallback
@@ -151,6 +192,7 @@ export class WebRTCManager {
     this.updatePeersListCallback = updatePeersListCallback
     this.addMessageCallback = addMessageCallback
     this.getEggPositionsCallback = getEggPositionsCallback
+    this.modelStateCallback = modelStateCallback
   }
 
   private log(message: string): void {
@@ -914,21 +956,24 @@ export class WebRTCManager {
    * 清理资源
    */
   private cleanupResources(): void {
+    // 停止模型状态传输
+    this.stopModelStateTransmission()
+
     // 清理所有WebRTC资源
     this.state.roomId = null
     this.state.peerId = null
     this.state.rtpCapabilities = null
-    
+
     if (this.state.producerTransport) {
       this.state.producerTransport.close()
       this.state.producerTransport = null
     }
-    
+
     if (this.state.consumerTransport) {
       this.state.consumerTransport.close()
       this.state.consumerTransport = null
     }
-    
+
     // 清理生产者和消费者
     this.state.dataProducer = null
     this.state.audioProducer = null
@@ -1018,24 +1063,108 @@ export class WebRTCManager {
   }
 
   /**
-   * 发送消息
+   * 发送聊天消息
    */
   public sendMessage(message: string): void {
-    if (!this.state.dataProducer) {
+    if (!this.state.dataProducer || !this.state.peerId) {
       this.log('数据生产者未初始化，无法发送消息')
       return
     }
 
     try {
-      const encodedMessage = new TextEncoder().encode(message)
+      const chatMessage: DataChannelMessage = {
+        type: 'chat',
+        message,
+        peerId: this.state.peerId,
+        timestamp: Date.now()
+      }
+
+      const encodedMessage = new TextEncoder().encode(JSON.stringify(chatMessage))
       this.state.dataProducer.send(encodedMessage)
-      this.log(`发送消息: ${message}`)
+      this.log(`发送聊天消息: ${message}`)
 
       // 调用回调函数更新UI显示发送的消息
       this.addMessageCallback(message, true)
     } catch (error) {
       this.log(`发送消息失败: ${error instanceof Error ? error.message : '未知错误'}`)
     }
+  }
+
+  /**
+   * 发送模型状态数据
+   */
+  public sendModelState(modelState: ModelStateData['state']): void {
+    if (!this.state.dataProducer || !this.state.peerId) {
+      this.log('数据生产者未初始化，无法发送模型状态')
+      return
+    }
+
+    try {
+      const modelStateMessage: ModelStateData = {
+        type: 'modelState',
+        peerId: this.state.peerId,
+        timestamp: Date.now(),
+        state: modelState
+      }
+
+      const encodedMessage = new TextEncoder().encode(JSON.stringify(modelStateMessage))
+      this.state.dataProducer.send(encodedMessage)
+      // 不记录日志，避免过多输出
+    } catch (error) {
+      this.log(`发送模型状态失败: ${error instanceof Error ? error.message : '未知错误'}`)
+    }
+  }
+
+  /**
+   * 开始模型状态传输
+   * @param getModelStateFunction 获取模型状态的函数
+   * @param updateRate 更新频率（每秒次数），默认60次
+   */
+  public startModelStateTransmission(
+    getModelStateFunction: () => ModelStateData['state'] | null,
+    updateRate: number = 60
+  ): void {
+    if (this.modelStateInterval) {
+      this.stopModelStateTransmission()
+    }
+
+    this.modelStateUpdateRate = updateRate
+    const intervalMs = 1000 / this.modelStateUpdateRate
+
+    this.modelStateInterval = window.setInterval(() => {
+      const currentTime = Date.now()
+
+      // 限制发送频率，避免过于频繁
+      if (currentTime - this.lastModelStateTime < intervalMs) {
+        return
+      }
+
+      const modelState = getModelStateFunction()
+      if (modelState) {
+        this.sendModelState(modelState)
+        this.lastModelStateTime = currentTime
+      }
+    }, intervalMs)
+
+    this.log(`开始模型状态传输，更新频率: ${updateRate}次/秒`)
+  }
+
+  /**
+   * 停止模型状态传输
+   */
+  public stopModelStateTransmission(): void {
+    if (this.modelStateInterval) {
+      clearInterval(this.modelStateInterval)
+      this.modelStateInterval = undefined
+      this.log('停止模型状态传输')
+    }
+  }
+
+  /**
+   * 设置模型状态回调
+   */
+  public setModelStateCallback(callback: ModelStateCallback): void {
+    this.modelStateCallback = callback
   }
 
   /**
@@ -1139,11 +1268,29 @@ export class WebRTCManager {
 
       // 处理数据消息接收
       dataConsumer.on('message', (message: ArrayBuffer) => {
-        const decodedMessage = new TextDecoder().decode(message)
-        const senderName = this.peerNames.get(producerPeerId) || producerPeerId
-        this.log(`收到消息，来自 ${senderName}: ${decodedMessage}`)
-        // 使用用户名而不是UUID
-        this.addMessageCallback(decodedMessage, false, senderName)
+        try {
+          const decodedMessage = new TextDecoder().decode(message)
+          const data: DataChannelMessage = JSON.parse(decodedMessage)
+
+          if (data.type === 'chat') {
+            // 处理聊天消息
+            const senderName = this.peerNames.get(producerPeerId) || producerPeerId
+            this.log(`收到聊天消息，来自 ${senderName}: ${data.message}`)
+            this.addMessageCallback(data.message, false, senderName)
+          } else if (data.type === 'modelState') {
+            // 处理模型状态数据
+            this.log(`收到模型状态，来自 ${producerPeerId}`)
+            if (this.modelStateCallback) {
+              this.modelStateCallback(this.peerNames.get(producerPeerId)!, data.state)
+            }
+          }
+        } catch (error) {
+          // 兼容旧版本的纯文本消息
+          const decodedMessage = new TextDecoder().decode(message)
+          const senderName = this.peerNames.get(producerPeerId) || producerPeerId
+          this.log(`收到消息，来自 ${senderName}: ${decodedMessage}`)
+          this.addMessageCallback(decodedMessage, false, senderName)
+        }
       })
 
       this.log(`数据消费者已创建，ID: ${dataConsumer.id}`)

@@ -18,8 +18,6 @@ import { useWebRTCStore } from '@/stores/webrtc';
 import { useAuthStore } from '@/stores/auth';
 import { showError, showSuccess, showInfo } from '@/utils/message';
 import { eventBus } from '@/utils/eventBus';
-import { WebRTCManager } from '@/utils/webrtc';
-import { getModelFilePathByHash } from '@/api/modelApi';
 import { Egg } from '@/models/Egg';
 import { Tree } from '@/models/architecture/Tree';
 
@@ -498,6 +496,9 @@ onMounted(async () => {
     // 设置装备相关事件监听器
     setupEquipmentBusListeners();
 
+    //发送自身状态
+    webrtcStore.sendYouState(mmdModelManager.getModel()?.getModelState.bind(mmdModelManager.getModel())!,20)
+
   } catch (error) {
     console.error('❌ 加载过程中发生错误:', error)
     showError('加载过程中发生错误')
@@ -522,7 +523,7 @@ const setupEquipmentBusListeners = () => {
 
 onUnmounted(() => {
   console.log('🧹 开始彻底清理 3DChatRoom 资源...');
-
+  cancelAnimationFrame(animateId)
   // 增强的资源清理函数
   const deepDisposeObject3D = (obj: THREE.Object3D): void => {
     obj.traverse((child) => {
@@ -584,12 +585,6 @@ onUnmounted(() => {
       mat.dispose();
     });
   };
-
-  // ==================== 1. 停止动画循环 ====================
-  if (typeof window !== 'undefined' && window.requestAnimationFrame) {
-    // 停止动画循环（如果有全局动画ID）
-    console.log('🛑 停止动画循环');
-  }
 
   // ==================== 2. 移除所有事件监听器 ====================
   console.log('🗑️ 移除事件监听器...');
@@ -673,13 +668,11 @@ onUnmounted(() => {
   // 清理主机用户MMD模型管理器（这会调用模型的dispose方法）
   if (mmdModelManager) {
     mmdModelManager.cleanup();
-    mmdModelManager = null;
   }
 
   // 清理其他用户静态模型管理器
   if (staticModelManager) {
     staticModelManager.cleanup();
-    staticModelManager = null;
   }
 
   // ==================== 5. 清理ObjectManager加载的所有模型 ====================
@@ -688,7 +681,6 @@ onUnmounted(() => {
   if (objectManager) {
     // 清理所有静态对象
     objectManager.dispose();
-    objectManager = null;
   }
 
   // ==================== 6. 清理BVH物理系统 ====================
@@ -696,7 +688,6 @@ onUnmounted(() => {
 
   if (bvhPhysics) {
     bvhPhysics.dispose();
-    bvhPhysics = null;
   }
 
   // ==================== 7. 清理GUI管理器 ====================
@@ -704,7 +695,6 @@ onUnmounted(() => {
 
   if (guiManager) {
     guiManager.cleanup();
-    guiManager = null;
   }
 
   // ==================== 8. 清理FPS监控器 ====================
@@ -712,7 +702,6 @@ onUnmounted(() => {
 
   if (fpsMonitor) {
     fpsMonitor.cleanup();
-    fpsMonitor = null;
   }
 
   // ==================== 9. 彻底清理3D场景 ====================
@@ -732,7 +721,6 @@ onUnmounted(() => {
 
     // 清空场景
     scene.clear();
-    scene = null;
   }
 
   // ==================== 10. 清理场景管理器 ====================
@@ -740,7 +728,6 @@ onUnmounted(() => {
 
   if (sceneManager) {
     sceneManager.cleanup();
-    sceneManager = null;
   }
 
   // ==================== 11. 清理渲染器 ====================
@@ -755,14 +742,6 @@ onUnmounted(() => {
       renderer.domElement.parentNode.removeChild(renderer.domElement);
     }
 
-    renderer = null;
-  }
-
-  // ==================== 12. 清理相机 ====================
-  console.log('🗑️ 清理相机...');
-
-  if (hadRenderCamera) {
-    hadRenderCamera = null;
   }
 
   // ==================== 13. 清理WebRTC连接 ====================
@@ -850,14 +829,15 @@ onUnmounted(() => {
   console.log('✅ 3DChatRoom 资源清理完成');
 })
 
+let animateId:number
 function animate(timestamp?: number) {
   // 使用FPS监控器进行帧率控制和显示更新
   if (fpsMonitor && !fpsMonitor.update(timestamp)) {
-    requestAnimationFrame(animate);
+    animateId = requestAnimationFrame(animate);
     return;
   }
 
-  requestAnimationFrame(animate);
+  animateId = requestAnimationFrame(animate);
 
   // 1. 更新主机用户MMD模型（处理用户输入，同步到物理身体）
   if (mmdModelManager) {
@@ -872,6 +852,7 @@ function animate(timestamp?: number) {
   // 3. 更新BVH物理系统（集成在主机用户模型中）
   if (mmdModelManager && mmdModelManager.isModelLoaded()) {
     const model = mmdModelManager.getModel();
+
     if (model) {
       // 使用BVH物理系统更新模型
       model.updateMovement(scene);

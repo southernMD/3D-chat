@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, nextTick } from 'vue'
-import { WebRTCManager, type ConnectionStatus, type RoomInfo, type Peer, type RoomConfig } from '@/utils/webrtc'
+import { WebRTCManager, type ConnectionStatus, type RoomInfo, type Peer, type RoomConfig, type ModelStateData } from '@/utils/webrtc'
 import { showError, showSuccess, showInfo } from '@/utils/message'
 import { useAuthStore } from '@/stores/auth'
 import type { EggPosintions } from '@/types/types'
@@ -145,6 +145,9 @@ export const useWebRTCStore = defineStore('webrtc', () => {
           remainingEggs: eggPositions.remainingEggs
         })
 
+      },
+      (userName: string, modelState: ModelStateData['state'])=>{
+        console.log(`${userName}的数据信息`,modelState);
       }
     )
 
@@ -398,6 +401,16 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     }
   }
 
+  const sendYouState = (
+    getModelStateFunction: () => ModelStateData['state'] | null,
+    updateRate: number = 60
+  ):void =>{
+    console.log(getModelStateFunction());
+    webrtcManager?.startModelStateTransmission(getModelStateFunction,updateRate)
+  }
+
+  
+
   return {
     // 状态
     connectionStatus,
@@ -432,6 +445,8 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     getSocket,
     // 装备相关方法
     getUserEquipment,
-    modifyEggQuantity
+    modifyEggQuantity,
+
+    sendYouState
   }
 })

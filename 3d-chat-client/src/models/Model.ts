@@ -888,4 +888,109 @@ export abstract class Model extends StaticModel {
     console.log('🗑️ 鸡蛋资源已清理');
   }
 
+  /**
+   * 获取模型的当前状态（扩展静态模型状态，添加物理信息）
+   * @returns 包含位置、旋转、动画状态、物理状态的对象
+   */
+  public getModelState(): {
+    position: { x: number; y: number; z: number };
+    rotation: { x: number; y: number; z: number };
+    animation: {
+      currentAnimation: string;
+      walkActionActive: boolean;
+      standActionActive: boolean;
+      isWalking: boolean; // Model 类特有的属性
+    };
+    modelInfo: {
+      dimensions: { width: number; height: number; depth: number };
+      hasAnimations: boolean;
+    };
+    physics: { // Model 类特有的物理信息
+      isOnGround: boolean;
+      velocity: { x: number; y: number; z: number };
+    };
+  } {
+    // 获取位置信息
+    const position = this.mesh ? {
+      x: Number(this.mesh.position.x.toFixed(3)),
+      y: Number(this.mesh.position.y.toFixed(3)),
+      z: Number(this.mesh.position.z.toFixed(3))
+    } : { x: 0, y: 0, z: 0 };
+
+    // 获取旋转信息（转换为度数）
+    const rotation = this.mesh ? {
+      x: Number((this.mesh.rotation.x * 180 / Math.PI).toFixed(3)),
+      y: Number((this.mesh.rotation.y * 180 / Math.PI).toFixed(3)),
+      z: Number((this.mesh.rotation.z * 180 / Math.PI).toFixed(3))
+    } : { x: 0, y: 0, z: 0 };
+
+    // 获取动画状态
+    const walkActionActive = this.getWalkActionActive();
+    const standActionActive = this.getStandActionActive();
+
+    let currentAnimation = 'none';
+    if (walkActionActive) {
+      currentAnimation = 'walking';
+    } else if (standActionActive) {
+      currentAnimation = 'standing';
+    }
+
+    // 获取物理状态
+    const physics = {
+      isOnGround: this.playerIsOnGround,
+      velocity: {
+        x: Number(this.playerVelocity.x.toFixed(3)),
+        y: Number(this.playerVelocity.y.toFixed(3)),
+        z: Number(this.playerVelocity.z.toFixed(3))
+      }
+    };
+
+    // 获取模型信息
+    const modelInfo = {
+      dimensions: this.getModelDimensions(),
+      hasAnimations: this.mixer !== undefined && this.mixer !== null
+    };
+
+    return {
+      position,
+      rotation,
+      animation: {
+        currentAnimation,
+        walkActionActive,
+        standActionActive,
+        isWalking: this.isWalking
+      },
+      modelInfo,
+      physics
+    };
+  }
+
+  /**
+   * 检查走路动画是否激活
+   * @returns 走路动画是否正在播放
+   */
+  protected getWalkActionActive(): boolean {
+    // 这个方法需要在子类中被重写，因为不同模型类型的动画属性不同
+    // 这里提供一个默认实现
+    const model = this as any;
+    if (model.walkAction) {
+      return model.walkAction.isRunning() && model.walkAction.getEffectiveWeight() > 0;
+    }
+    return false;
+  }
+
+  /**
+   * 检查站立动画是否激活
+   * @returns 站立动画是否正在播放
+   */
+  protected getStandActionActive(): boolean {
+    // 这个方法需要在子类中被重写，因为不同模型类型的动画属性不同
+    // 这里提供一个默认实现
+    const model = this as any;
+    if (model.standAction) {
+      return model.standAction.isRunning() && model.standAction.getEffectiveWeight() > 0;
+    }
+    return false;
+  }
+
 }
