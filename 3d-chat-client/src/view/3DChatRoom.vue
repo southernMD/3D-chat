@@ -514,7 +514,7 @@ onMounted(async () => {
     setupEquipmentBusListeners();
 
     //发送自身状态
-    webrtcStore.sendYouState(mmdModelManager.getModel()?.getModelState.bind(mmdModelManager.getModel())!,20)
+    webrtcStore.sendYouState(mmdModelManager.getModel()?.getModelState.bind(mmdModelManager.getModel())!,30)
 
   } catch (error) {
     console.error('❌ 加载过程中发生错误:', error)

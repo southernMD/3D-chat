@@ -631,24 +631,6 @@ export abstract class Model extends StaticModel {
   }
 
   /**
-   * 调试：检查BVH物理状态
-   */
-  public debugBVHPhysics(): void {
-    if (!this.mesh) {
-      console.log('❌ 模型不存在');
-      return;
-    }
-
-    const status = this.getBVHPhysicsStatus();
-    console.log('🔍 BVH物理状态检查:');
-    console.log(`   模型位置: (${status.position.x.toFixed(2)}, ${status.position.y.toFixed(2)}, ${status.position.z.toFixed(2)})`);
-    console.log(`   速度: (${status.velocity.x.toFixed(2)}, ${status.velocity.y.toFixed(2)}, ${status.velocity.z.toFixed(2)})`);
-    console.log(`   在地面: ${status.isOnGround ? '是' : '否'}`);
-    console.log(`   BVH物理系统: ${status.hasPhysics ? '已初始化' : '未初始化'}`);
-  }
-
-
-  /**
    * 创建跟随相机 - 创建一个跟随模型的相机
    */
   public createLookCamera(scene: THREE.Scene): THREE.PerspectiveCamera {
@@ -908,6 +890,7 @@ export abstract class Model extends StaticModel {
       isOnGround: boolean;
       velocity: { x: number; y: number; z: number };
     };
+    moveSpeed:number
   } {
     // 获取位置信息
     const position = this.mesh ? {
@@ -960,7 +943,8 @@ export abstract class Model extends StaticModel {
         isWalking: this.isWalking
       },
       modelInfo,
-      physics
+      physics,
+      moveSpeed:this.moveSpeed,
     };
   }
 

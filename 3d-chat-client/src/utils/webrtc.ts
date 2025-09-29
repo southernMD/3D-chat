@@ -104,6 +104,7 @@ export interface ModelStateData {
       isOnGround: boolean
       velocity: { x: number; y: number; z: number }
     }
+    moveSpeed:number
   }
 }
 
