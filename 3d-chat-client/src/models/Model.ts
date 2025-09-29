@@ -11,8 +11,7 @@ import { eventBus } from '@/utils/eventBus';
 
 // 基础模型类 - 继承StaticModel，专注于动态操作控制、物理、相机
 export abstract class Model extends StaticModel {
-  // 键盘控制相关
-  isWalking: boolean = false;
+
   keys: {
     ArrowUp: boolean;
     ArrowDown: boolean;

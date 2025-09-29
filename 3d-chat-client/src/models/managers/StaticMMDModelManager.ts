@@ -51,8 +51,8 @@ export class StaticMMDModelManager {
         if (isPMX) {
           // 创建静态MMD模型
           const pmxPath = modelPathRes.data?.resources.find(resource => resource.ext === '.pmx')?.path;
-          const walkVmdPath = modelPathRes.data?.resources.find(resource => resource.ext === '.vmd' && resource.path.includes('走路'))?.path;
-          const standVmdPath = modelPathRes.data?.resources.find(resource => resource.ext === '.vmd' && resource.path.includes('站立'))?.path;
+          const walkVmdPath = modelPathRes.data?.resources.find(resource => resource.ext === '.vmd' && resource.path.includes('walk'))?.path;
+          const standVmdPath = modelPathRes.data?.resources.find(resource => resource.ext === '.vmd' && resource.path.includes('stand'))?.path;
 
           if (pmxPath) {
             const staticModel = new StaticMMDModel();
@@ -72,6 +72,7 @@ export class StaticMMDModelManager {
             console.log(`✅ 用户 ${userId} 的静态GLTF模型加载完成`);
           }
         }
+        this.models.get(userId)?.stopWalking();
       }
     } catch (error) {
       console.error(`❌ 加载用户 ${userId} 的静态模型失败:`, error);
@@ -184,6 +185,65 @@ export class StaticMMDModelManager {
     // 更新昵称标签位置
     if (this.nameTagManager) {
       this.nameTagManager.updateAllNameTags();
+    }
+  }
+
+  /**
+   * 根据状态更新模型
+   * @param userId 用户ID
+   * @param state 模型状态数据
+   */
+  updateModelByState(userId: string, state: any): void {
+    const model = this.models.get(userId);
+    if (!model) {
+      console.warn(`⚠️ 用户 ${userId} 的模型不存在，无法更新状态`);
+      return;
+    }
+
+    try {
+      // 更新位置
+      if (state.position) {
+        model.mesh.position.set(state.position.x, state.position.y, state.position.z);
+      }
+
+      // 更新旋转
+      if (state.rotation) {
+        model.mesh.rotation.set(
+          state.rotation.x * Math.PI / 180, // 转换回弧度
+          state.rotation.y * Math.PI / 180,
+          state.rotation.z * Math.PI / 180
+        );
+      }
+
+      // 更新动画状态
+      if (state.animation) {
+        if(state.animation.currentAnimation === 'walking' && model.isWalking === false){
+          model.isWalking = true
+          model.startWalk()
+        }else if(state.animation.currentAnimation === 'standing' && model.isWalking === true){
+          model.isWalking = false
+          model.stopWalk()
+        }
+      }
+
+      // 更新胶囊体可视化位置
+      if (typeof model.updateCapsuleVisualPosition === 'function') {
+        model.updateCapsuleVisualPosition();
+      }
+
+      // 更新模型辅助器（包括包围盒）
+      if (typeof model.updateModelHelpers === 'function') {
+        model.updateModelHelpers();
+      }
+
+      // 更新昵称标签位置
+      if (this.nameTagManager) {
+        this.nameTagManager.updateModelPosition(userId, model.mesh.position);
+      }
+
+      console.log(`✅ 用户 ${userId} 的模型状态已更新`);
+    } catch (error) {
+      console.error(`❌ 更新用户 ${userId} 的模型状态失败:`, error);
     }
   }
 

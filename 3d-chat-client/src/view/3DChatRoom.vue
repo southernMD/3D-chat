@@ -328,16 +328,33 @@ onMounted(async () => {
         }
       };
 
+      // 监听模型状态更新事件
+      const handleModelStateUpdate = (data: { userName: string, modelState: any }) => {
+        console.log(`📡 收到模型状态更新: ${data.userName}`, data.modelState);
+        
+        // 根据用户名找到对应的peerId
+        const peer = webrtcStore.peers.find(p => p.name === data.userName);
+        if (peer) {
+          // 更新对应用户的静态模型状态
+          staticModelManager.updateModelByState(peer.id, data.modelState);
+          console.log(`✅ 用户 ${data.userName} 的模型状态已更新`);
+        } else {
+          console.warn(`⚠️ 未找到用户 ${data.userName} 的peer信息`);
+        }
+      };
+
       // 绑定 eventBus 监听器
       eventBus.on('user-joined', handleUserJoined);
       eventBus.on('user-left', handleUserLeft);
       eventBus.on('room-users-sync', handleRoomUsersSync);
+      eventBus.on('model-state-update', handleModelStateUpdate); // 添加模型状态更新监听
 
       // 保存清理函数
       const cleanupEventBusListeners = () => {
         eventBus.off('user-joined', handleUserJoined);
         eventBus.off('user-left', handleUserLeft);
         eventBus.off('room-users-sync', handleRoomUsersSync);
+        eventBus.off('model-state-update', handleModelStateUpdate); // 添加清理函数
       };
       stopWatchers.push(cleanupEventBusListeners);
 
@@ -640,6 +657,7 @@ onUnmounted(() => {
   eventBus.off('egg-cleared', () => {});
   eventBus.off('user-equipment-updated', () => {});
   eventBus.off('egg-quantity-updated', () => {});
+  eventBus.off('model-state-update', () => {}); // 添加清理模型状态更新监听器
 
   // 彻底清理事件总线
   eventBus.clear();
@@ -781,14 +799,15 @@ onUnmounted(() => {
 
   try {
     // 清理鸡蛋模型的静态缓存
-    if (Egg && typeof Egg.disposeStaticModels === 'function') {
-      Egg.disposeStaticModels();
-    }
+    // 注释掉不存在的方法调用
+    // if (Egg && typeof Egg.disposeStaticModels === 'function') {
+    //   Egg.disposeStaticModels();
+    // }
 
     // 清理树模型的静态缓存
-    if (Tree && typeof Tree.disposeStaticModels === 'function') {
-      Tree.disposeStaticModels();
-    }
+    // if (Tree && typeof Tree.disposeStaticModels === 'function') {
+    //   Tree.disposeStaticModels();
+    // }
 
     // 清理其他可能的静态模型缓存
     const globalKeys = Object.keys(window).filter(key =>

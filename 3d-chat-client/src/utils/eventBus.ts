@@ -16,6 +16,8 @@ export interface EventBusEvents {
   'user-joined': UserJoinedData
   'user-left': UserLeftData
   'room-users-sync': RoomUsersSyncData
+  // 模型状态更新事件
+  'model-state-update': ModelStateUpdateData
 }
 
 export interface EggBroadcastData {
@@ -92,6 +94,29 @@ export interface RoomUsersSyncData {
     userName: string
     modelHash: string
   }>
+}
+
+// 模型状态更新接口
+export interface ModelStateUpdateData {
+  userName: string
+  modelState:{
+    position: { x: number; y: number; z: number }
+    rotation: { x: number; y: number; z: number }
+    animation: {
+      currentAnimation: string
+      walkActionActive: boolean
+      standActionActive: boolean
+      isWalking?: boolean
+    }
+    modelInfo?: {
+      dimensions: { width: number; height: number; depth: number }
+      hasAnimations: boolean
+    }
+    physics?: {
+      isOnGround: boolean
+      velocity: { x: number; y: number; z: number }
+    }
+  }
 }
 
 // 事件总线实现

@@ -148,6 +148,11 @@ export const useWebRTCStore = defineStore('webrtc', () => {
       },
       (userName: string, modelState: ModelStateData['state'])=>{
         console.log(`${userName}的数据信息`,modelState);
+        // 通过事件总线发送模型状态更新事件
+        eventBus.emit('model-state-update', {
+          userName,
+          modelState
+        });
       }
     )
 

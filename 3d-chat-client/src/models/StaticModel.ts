@@ -7,6 +7,8 @@ import { Capsule } from 'three/examples/jsm/math/Capsule.js';
  * 不包含物理系统，只处理静态几何和可视化
  */
 export abstract class StaticModel {
+    // 键盘控制相关
+  public isWalking: boolean = false;
   abstract mesh: THREE.Object3D;
   protected mixer: THREE.AnimationMixer;
   protected modelSize: {
@@ -120,7 +122,7 @@ export abstract class StaticModel {
   /**
    * 更新胶囊体可视化位置
    */
-  protected updateCapsuleVisualPosition(): void {
+  public updateCapsuleVisualPosition(): void {
     if (!this.mesh || !this.capsuleGeometry) {
       return;
     }
