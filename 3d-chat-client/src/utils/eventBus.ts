@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+// import { ref } from 'vue' // 暂时不需要
 
 // 事件总线类型定义
 export interface EventBusEvents {
@@ -18,6 +18,9 @@ export interface EventBusEvents {
   'room-users-sync': RoomUsersSyncData
   // 模型状态更新事件
   'model-state-update': ModelStateUpdateData
+  // 门状态同步事件
+  'door-state-update': DoorStateUpdateData
+  'door-state-sync': DoorStateUpdateData
 }
 
 export interface EggBroadcastData {
@@ -119,6 +122,14 @@ export interface ModelStateUpdateData {
   }
 }
 
+// 门状态同步接口
+export interface DoorStateUpdateData {
+  doorName: string
+  doorNearName: string | undefined
+  visible: boolean
+  isOpen: boolean
+}
+
 // 事件总线实现
 class EventBus {
   private events: Map<string, Function[]> = new Map()
@@ -158,7 +169,7 @@ class EventBus {
     if (callbacks && callbacks.length > 0) {
       // 有监听器，直接触发
       callbacks.forEach(callback => callback(data))
-      console.log(`📡 EventBus: 事件 ${event} 已触发，监听器数量: ${callbacks.length}`)
+      if(event !== 'model-state-update')console.log(`📡 EventBus: 事件 ${event} 已触发，监听器数量: ${callbacks.length}`)
     } else {
       // 没有监听器，缓存消息
       this.messageCache.set(event, data)

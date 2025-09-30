@@ -330,17 +330,25 @@ onMounted(async () => {
 
       // 监听模型状态更新事件
       const handleModelStateUpdate = (data: { userName: string, modelState: any }) => {
-        console.log(`📡 收到模型状态更新: ${data.userName}`, data.modelState);
+        // console.log(`📡 收到模型状态更新: ${data.userName}`, data.modelState);
         
         // 根据用户名找到对应的peerId
         const peer = webrtcStore.peers.find(p => p.name === data.userName);
         if (peer) {
           // 更新对应用户的静态模型状态
           staticModelManager.updateModelByState(peer.id, data.modelState);
-          console.log(`✅ 用户 ${data.userName} 的模型状态已更新`);
+          // console.log(`✅ 用户 ${data.userName} 的模型状态已更新`);
         } else {
           console.warn(`⚠️ 未找到用户 ${data.userName} 的peer信息`);
         }
+      };
+
+      // 🚪 监听门状态更新事件
+      const handleDoorStateUpdate = (data: { doorName: string, doorNearName: string | undefined, visible: boolean, isOpen: boolean }) => {
+        console.log(`🚪 门状态更新事件: ${data.doorName}, 状态: ${data.isOpen ? '打开' : '关闭'}`);
+        
+        // 通过WebRTC发送门状态到其他客户端
+        webrtcStore.sendDoorState(data.doorName, data.doorNearName, data.visible, data.isOpen);
       };
 
       // 绑定 eventBus 监听器
@@ -348,6 +356,7 @@ onMounted(async () => {
       eventBus.on('user-left', handleUserLeft);
       eventBus.on('room-users-sync', handleRoomUsersSync);
       eventBus.on('model-state-update', handleModelStateUpdate); // 添加模型状态更新监听
+      eventBus.on('door-state-update', handleDoorStateUpdate); // 🚪 添加门状态更新监听
 
       // 保存清理函数
       const cleanupEventBusListeners = () => {
@@ -355,6 +364,7 @@ onMounted(async () => {
         eventBus.off('user-left', handleUserLeft);
         eventBus.off('room-users-sync', handleRoomUsersSync);
         eventBus.off('model-state-update', handleModelStateUpdate); // 添加清理函数
+        eventBus.off('door-state-update', handleDoorStateUpdate); // 🚪 添加门状态清理函数
       };
       stopWatchers.push(cleanupEventBusListeners);
 
@@ -512,6 +522,19 @@ onMounted(async () => {
 
     // 设置装备相关事件监听器
     setupEquipmentBusListeners();
+
+    // 🚪 设置门状态回调，用于接收其他客户端的门状态更新
+    if (mmdModelManager) {
+      webrtcStore.setDoorStateCallback((doorName: string, doorNearName: string | undefined, visible: boolean, isOpen: boolean) => {
+        console.log(`🚪 收到门状态同步: ${doorName}, 状态: ${isOpen ? '打开' : '关闭'}`);
+        
+        // 通过 eventBus 通知 Model 同步门状态
+        const model = mmdModelManager.getModel();
+        if (model) {
+          model.syncDoorState({ doorName, doorNearName, visible, isOpen }, scene);
+        }
+      });
+    }
 
     //发送自身状态
     webrtcStore.sendYouState(mmdModelManager.getModel()?.getModelState.bind(mmdModelManager.getModel())!,30)

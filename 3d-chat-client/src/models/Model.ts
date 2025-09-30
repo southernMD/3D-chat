@@ -82,6 +82,11 @@ export abstract class Model extends StaticModel {
       this.mapUserPositionDistance.delete(eggId);
       console.log(`🥚 Model: 已清理鸡蛋 ${eggId} 的位置距离映射`);
     });
+
+    // 监听门状态同步事件
+    eventBus.on('door-state-sync', (data: any) => {
+      this.syncDoorState(data);
+    });
   }
 
   // 这些抽象方法已在 StaticModel 中定义，这里不需要重复声明
@@ -394,8 +399,10 @@ export abstract class Model extends StaticModel {
       tempMat.copy(collider.matrixWorld).invert();
 
       // 重置segment到原始位置
-      tempSegment.start.copy(this.playerCapsule.start);
-      tempSegment.end.copy(this.playerCapsule.end);
+      if (this.playerCapsule) {
+        tempSegment.start.copy(this.playerCapsule.start);
+        tempSegment.end.copy(this.playerCapsule.end);
+      }
 
       // 转换到碰撞体局部空间
       tempSegment.start.applyMatrix4(tempMat);
@@ -452,7 +459,10 @@ export abstract class Model extends StaticModel {
                       activeMeshName: doorName,
                       onKeyPress: () => {
                         collider.userData.isOpen = true;
-                        if (doorNearName) colliders.get(`school-door-${doorNearName}`)!.userData.isOpen = true;
+                        if (doorNearName) {
+                          const nearCollider = colliders.get(`school-door-${doorNearName}`);
+                          if (nearCollider) nearCollider.userData.isOpen = true;
+                        }
                         const child = this.mapDoorNameMesh.get(doorName)
                         const childNear = this.mapDoorNameMesh.get(doorNearName)
                         if (child) child.visible = false
@@ -468,6 +478,14 @@ export abstract class Model extends StaticModel {
                             }
                           });
                         }
+
+                        // 🚪 发送门打开状态同步事件
+                        eventBus.emit('door-state-update', {
+                          doorName,
+                          doorNearName,
+                          visible: false,
+                          isOpen: true
+                        });
                       }
                     });
                   } else {
@@ -479,7 +497,10 @@ export abstract class Model extends StaticModel {
                       activeMeshName: doorName,
                       onKeyPress: () => {
                         collider.userData.isOpen = false;
-                        if (doorNearName) colliders.get(`school-door-${doorNearName}`)!.userData.isOpen = false;
+                        if (doorNearName) {
+                          const nearCollider = colliders.get(`school-door-${doorNearName}`);
+                          if (nearCollider) nearCollider.userData.isOpen = false;
+                        }
                         const child = this.mapDoorNameMesh.get(doorName)
                         const childNear = this.mapDoorNameMesh.get(doorNearName)
                         if (child) child.visible = true
@@ -495,6 +516,14 @@ export abstract class Model extends StaticModel {
                             }
                           });
                         }
+
+                        // 🚪 发送门关闭状态同步事件
+                        eventBus.emit('door-state-update', {
+                          doorName,
+                          doorNearName,
+                          visible: true,
+                          isOpen: false
+                        });
                       }
                     });
                   }
@@ -974,6 +1003,57 @@ export abstract class Model extends StaticModel {
       return model.standAction.isRunning() && model.standAction.getEffectiveWeight() > 0;
     }
     return false;
+  }
+
+  /**
+   * 🚪 同步门状态（接收其他客户端的门状态更新）
+   * @param data 门状态数据
+   * @param scene 场景对象（可选）
+   */
+  public syncDoorState(data: { doorName: string; doorNearName: string | undefined; visible: boolean; isOpen: boolean }, scene?: THREE.Scene): void {
+    const { doorName, doorNearName, visible, isOpen } = data;
+    
+    console.log(`🚪 同步门状态: ${doorName}, 可见性: ${visible}, 开启状态: ${isOpen}`);
+
+    // 更新物理碰撞体状态
+    if (this.bvhPhysics) {
+      const colliders = this.bvhPhysics.getColliders();
+      const doorCollider = colliders.get(`school-door-${doorName}`);
+      const nearCollider = doorNearName ? colliders.get(`school-door-${doorNearName}`) : null;
+
+      if (doorCollider) {
+        doorCollider.userData.isOpen = isOpen;
+      }
+      if (nearCollider) {
+        nearCollider.userData.isOpen = isOpen;
+      }
+    }
+
+    // 更新门的可视化状态
+    const child = this.mapDoorNameMesh.get(doorName);
+    const childNear = doorNearName ? this.mapDoorNameMesh.get(doorNearName) : null;
+
+    if (child) {
+      child.visible = visible;
+    }
+    if (childNear) {
+      childNear.visible = visible;
+    }
+
+    // 如果缓存中没有门的网格，尝试从场景中查找
+    if ((!child || (doorNearName && !childNear)) && scene) {
+      scene.traverse((sceneChild) => {
+        if (sceneChild.name === doorName && !child) {
+          sceneChild.visible = visible;
+          this.mapDoorNameMesh.set(doorName, sceneChild as THREE.Mesh);
+        } else if (doorNearName && sceneChild.name === doorNearName && !childNear) {
+          sceneChild.visible = visible;
+          this.mapDoorNameMesh.set(doorNearName, sceneChild as THREE.Mesh);
+        }
+      });
+    }
+
+    console.log(`✅ 门状态同步完成: ${doorName}`);
   }
 
 }

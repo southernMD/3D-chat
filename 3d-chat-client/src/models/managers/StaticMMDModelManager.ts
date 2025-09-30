@@ -530,7 +530,7 @@ export class StaticMMDModelManager {
         this.nameTagManager.updateModelPosition(userId, model.mesh.position);
       }
 
-      console.log(`✅ 用户 ${userId} 的模型状态已更新，移动速度: ${state.moveSpeed || 0}，置信度: ${confidence.toFixed(2)}，地面状态: ${state.physics?.isOnGround ? '地面' : '空中'}`);
+      // console.log(`✅ 用户 ${userId} 的模型状态已更新，移动速度: ${state.moveSpeed || 0}，置信度: ${confidence.toFixed(2)}，地面状态: ${state.physics?.isOnGround ? '地面' : '空中'}`);
     } catch (error) {
       console.error(`❌ 更新用户 ${userId} 的模型状态失败:`, error);
     }

@@ -108,13 +108,24 @@ export interface ModelStateData {
   }
 }
 
+// 门状态同步数据接口
+export interface DoorStateData {
+  type: 'doorState'
+  peerId: string
+  timestamp: number
+  doorName: string
+  doorNearName: string | undefined
+  visible: boolean
+  isOpen: boolean
+}
+
 // 数据通道消息类型
 export type DataChannelMessage = {
   type: 'chat'
   message: string
   peerId: string
   timestamp: number
-} | ModelStateData
+} | ModelStateData | DoorStateData
 
 // 应用程序状态接口
 export interface AppState {
@@ -142,6 +153,7 @@ type PeersListCallback = (peers: Peer[]) => void
 type MessageCallback = (content: string, isSent: boolean, senderName?: string) => void
 type EggPositionsCallback = (positions: EggPosintions) => void | undefined
 type ModelStateCallback = (userName: string, modelState: ModelStateData['state']) => void
+type DoorStateCallback = (doorName: string, doorNearName: string | undefined, visible: boolean, isOpen: boolean) => void
 export class WebRTCManager {
   private state: AppState = {
     socket: null,
@@ -172,6 +184,7 @@ export class WebRTCManager {
   private getEggPositionsCallback: EggPositionsCallback | undefined
   private updateRoomConfigCallback?: (config: RoomConfig) => void
   private modelStateCallback?: ModelStateCallback
+  private doorStateCallback?: DoorStateCallback
 
   // 模型状态传输相关
   private modelStateInterval?: number
@@ -197,7 +210,7 @@ export class WebRTCManager {
   }
 
   private log(message: string): void {
-    console.log(`[WebRTC] ${message}`)
+    // console.log(`[WebRTC] ${message}`)
     this.logCallback(message)
   }
 
@@ -1117,6 +1130,34 @@ export class WebRTCManager {
   }
 
   /**
+   * 🚪 发送门状态数据
+   */
+  public sendDoorState(doorName: string, doorNearName: string | undefined, visible: boolean, isOpen: boolean): void {
+    if (!this.state.dataProducer || !this.state.peerId) {
+      this.log('数据生产者未初始化，无法发送门状态')
+      return
+    }
+
+    try {
+      const doorStateMessage: DoorStateData = {
+        type: 'doorState',
+        peerId: this.state.peerId,
+        timestamp: Date.now(),
+        doorName,
+        doorNearName,
+        visible,
+        isOpen
+      }
+
+      const encodedMessage = new TextEncoder().encode(JSON.stringify(doorStateMessage))
+      this.state.dataProducer.send(encodedMessage)
+      this.log(`发送门状态数据: ${doorName}, 状态: ${isOpen ? '打开' : '关闭'}`)
+    } catch (error) {
+      this.log(`发送门状态失败: ${error instanceof Error ? error.message : '未知错误'}`)
+    }
+  }
+
+  /**
    * 开始模型状态传输
    * @param getModelStateFunction 获取模型状态的函数
    * @param updateRate 更新频率（每秒次数），默认60次
@@ -1166,6 +1207,13 @@ export class WebRTCManager {
    */
   public setModelStateCallback(callback: ModelStateCallback): void {
     this.modelStateCallback = callback
+  }
+
+  /**
+   * 🚪 设置门状态回调
+   */
+  public setDoorStateCallback(callback: DoorStateCallback): void {
+    this.doorStateCallback = callback
   }
 
   /**
@@ -1283,6 +1331,13 @@ export class WebRTCManager {
             this.log(`收到模型状态，来自 ${producerPeerId}`)
             if (this.modelStateCallback) {
               this.modelStateCallback(this.peerNames.get(producerPeerId)!, data.state)
+            }
+          } else if (data.type === 'doorState') {
+            // 🚪 处理门状态数据
+            const senderName = this.peerNames.get(producerPeerId) || producerPeerId
+            this.log(`收到门状态，来自 ${senderName}: ${data.doorName}, 状态: ${data.isOpen ? '打开' : '关闭'}`)
+            if (this.doorStateCallback) {
+              this.doorStateCallback(data.doorName, data.doorNearName, data.visible, data.isOpen)
             }
           }
         } catch (error) {

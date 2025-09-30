@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed } from 'vue'
 import { WebRTCManager, type ConnectionStatus, type RoomInfo, type Peer, type RoomConfig, type ModelStateData } from '@/utils/webrtc'
 import { showError, showSuccess, showInfo } from '@/utils/message'
 import { useAuthStore } from '@/stores/auth'
@@ -117,7 +117,9 @@ export const useWebRTCStore = defineStore('webrtc', () => {
 
     // 使用简单的回调函数，避免响应式引用
     webrtcManager = new WebRTCManager(
-      (message: string) => console.log(`[WebRTC] ${message}`),
+      (message: string) => {
+        // console.log(`[WebRTC] ${message}`)
+      },
       (status: ConnectionStatus, details?: string) => {
         connectionStatus.value = status
         console.log(`连接状态: ${status}`, details)
@@ -147,7 +149,7 @@ export const useWebRTCStore = defineStore('webrtc', () => {
 
       },
       (userName: string, modelState: ModelStateData['state'])=>{
-        console.log(`${userName}的数据信息`,modelState);
+        // console.log(`${userName}的数据信息`,modelState);
         // 通过事件总线发送模型状态更新事件
         eventBus.emit('model-state-update', {
           userName,
@@ -414,6 +416,37 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     webrtcManager?.startModelStateTransmission(getModelStateFunction,updateRate)
   }
 
+  // 🚪 发送门状态数据
+  const sendDoorState = (doorName: string, doorNearName: string | undefined, visible: boolean, isOpen: boolean): boolean => {
+    if (!webrtcManager) {
+      console.error('WebRTC管理器未初始化')
+      return false
+    }
+
+    if (!isConnected.value) {
+      console.error('未连接到服务器')
+      return false
+    }
+
+    try {
+      webrtcManager.sendDoorState(doorName, doorNearName, visible, isOpen)
+      return true
+    } catch (error) {
+      console.error('发送门状态失败:', error)
+      return false
+    }
+  }
+
+  // 🚪 设置门状态回调
+  const setDoorStateCallback = (callback: (doorName: string, doorNearName: string | undefined, visible: boolean, isOpen: boolean) => void): void => {
+    if (!webrtcManager) {
+      console.error('WebRTC管理器未初始化')
+      return
+    }
+
+    webrtcManager.setDoorStateCallback(callback)
+  }
+
   
 
   return {
@@ -452,6 +485,9 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     getUserEquipment,
     modifyEggQuantity,
 
-    sendYouState
+    sendYouState,
+    // 🚪 门状态相关方法
+    sendDoorState,
+    setDoorStateCallback
   }
 })
