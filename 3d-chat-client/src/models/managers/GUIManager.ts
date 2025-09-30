@@ -7,6 +7,7 @@ import { FPSMonitor } from '../../utils/FPSMonitor';
 import * as THREE from 'three';
 import { BVHPhysics } from '@/physics/BVHPhysics';
 import { nextTick } from 'vue';
+import type { StaticMMDModelManager } from './StaticMMDModelManager';
 
 export class GUIManager {
   private gui: GUI;
@@ -16,6 +17,7 @@ export class GUIManager {
   private bvhPhysics?: BVHPhysics;
   private renderer?: THREE.WebGLRenderer;
   private fpsMonitor?: FPSMonitor;
+  private staticMMDModelManager?: StaticMMDModelManager;
 
   // GUI 控制对象
   private guiFunctions: any = {};
@@ -33,7 +35,7 @@ export class GUIManager {
   private performanceFolder?: any;
 
   // 相机控制相关
-  private ifFirstPerson:Boolean
+  private ifFirstPerson:boolean
 
   constructor(    
     mmdModelManager: MMDModelManager,
@@ -42,7 +44,8 @@ export class GUIManager {
     bvhPhysics: BVHPhysics,
     renderer: THREE.WebGLRenderer,
     fpsMonitor: FPSMonitor,
-    ifFirstPerson:Boolean
+    ifFirstPerson:boolean,
+    staticMMDModelManager:StaticMMDModelManager
   ) {
     this.mmdModelManager = mmdModelManager;
     this.objectManager = objectManager;
@@ -50,6 +53,7 @@ export class GUIManager {
     this.bvhPhysics = bvhPhysics;
     this.renderer = renderer;
     this.fpsMonitor = fpsMonitor;
+    this.staticMMDModelManager = staticMMDModelManager
 
     this.gui = new GUI();
     this.ifFirstPerson = ifFirstPerson;
@@ -265,6 +269,7 @@ export class GUIManager {
       toggleHelpers: () => {
         // 使用MMDModelManager切换辅助线
         this.mmdModelManager?.toggleHelpers();
+        this.staticMMDModelManager?.toggleHelpers()
       },
       toggleCapsuleVisibility: () => {
         if (this.mmdModelManager && this.mmdModelManager.isModelLoaded()) {
@@ -272,6 +277,12 @@ export class GUIManager {
           if (model) {
             model.toggleCapsuleVisibility();
           }
+        }
+        if(this.staticMMDModelManager){
+          const models = this.staticMMDModelManager.getModels()
+          models.forEach((model) => {
+            model.toggleCapsuleVisibility();
+          });
         }
       },
       // 演示强制走路动画

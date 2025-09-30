@@ -190,14 +190,26 @@ export class Egg {
         // 临时变量用于碰撞检测
         const tempSphere = new THREE.Sphere();
         const deltaVec = new THREE.Vector3();
+        const collisionNormal = new THREE.Vector3(); // 用于存储碰撞法线
 
         tempSphere.copy(eggCollider);
         let collided = false;
         let colliderId: string | null = null;
 
         filterColliders(colliders, this.mapEggPositionDistance, this.mesh.position)
-
+        
         this.mapEggPositionDistance.forEach((collider, objectId) => { 
+            if (objectId.startsWith('user-capsule-')) {
+                if (this.isEggInsideCapsule(tempSphere, collider)) {
+                    collided = true;
+                    colliderId = objectId;
+                    const capsulePosition = new THREE.Vector3();
+                    collider.getWorldPosition(capsulePosition);
+                    collisionNormal.subVectors(tempSphere.center, capsulePosition).normalize();
+                    return;
+                }
+            }
+            
             if (collider.geometry && (collider.geometry as any).boundsTree) {
                 (collider.geometry as any).boundsTree.shapecast({
                     intersectsBounds: (box: THREE.Box3) => {
@@ -205,13 +217,16 @@ export class Egg {
                     },
 
                     intersectsTriangle: (tri: any) => {
-                        tri.closestPointToPoint(tempSphere.center, deltaVec);
-                        deltaVec.sub(tempSphere.center);
+                        const triPoint = new THREE.Vector3();
+                        tri.closestPointToPoint(tempSphere.center, triPoint);
+                        deltaVec.subVectors(triPoint, tempSphere.center);
                         const distance = deltaVec.length();
 
                         if (distance < tempSphere.radius) {
                             collided = true;
                             colliderId = objectId;
+                            // 计算碰撞法线（从三角形表面指向鸡蛋中心）
+                            collisionNormal.copy(deltaVec).normalize();
                         }
                     }
                 });
@@ -219,7 +234,7 @@ export class Egg {
         })
         // 如果发生碰撞，立刻替换为破碎的鸡蛋
         if (collided) {
-            this.onEggCollision(colliderId!, collided);
+            this.onEggCollision(colliderId!, collided, collisionNormal);
             return false; // 返回false表示需要移除这个鸡蛋
         }
 
@@ -229,7 +244,7 @@ export class Egg {
     /**
      * 鸡蛋碰撞事件处理
      */
-    private onEggCollision(objectId: string, object: any): void {
+    private onEggCollision(objectId: string, object: any, collisionNormal?: THREE.Vector3): void {
         if (!this.mesh || this.isCollided) return;
         
         this.isCollided = true;
@@ -248,14 +263,14 @@ export class Egg {
         // 移除完整的鸡蛋
         this.removeEgg();
         
-        // 加载并显示破碎的鸡蛋
-        this.loadBrokenEgg(collisionPosition);
+        // 加载并显示破碎的鸡蛋，传递碰撞法线信息
+        this.loadBrokenEgg(collisionPosition, collisionNormal);
     }
 
     /**
      * 获取破碎鸡蛋模型
      */
-    private loadBrokenEgg(position: THREE.Vector3): void {
+    private loadBrokenEgg(position: THREE.Vector3, collisionNormal?: THREE.Vector3): void {
         // 从静态模板获取破碎鸡蛋模型实例
         const brokenEgg = Egg.getBrokenEggInstance();
 
@@ -266,6 +281,22 @@ export class Egg {
 
         // 设置破碎鸡蛋的位置
         brokenEgg.position.copy(position);
+        console.log(collisionNormal,'我是法线');
+        
+        // 根据碰撞法线调整破碎鸡蛋的旋转
+        if (collisionNormal) {
+            // 检查是否与垂直平面碰撞（法线的Y分量接近0）
+            if (Math.abs(collisionNormal.y) < 0.5) {
+                console.log('垂直碰撞，我是法线');
+                brokenEgg.rotation.x = Math.PI / 2; 
+            }
+            
+            // 也可以根据法线方向进行其他调整
+            // 例如，使破碎鸡蛋面向碰撞表面
+            // const targetRotation = new THREE.Euler().setFromVector3(collisionNormal);
+            // brokenEgg.rotation.copy(targetRotation);
+        }
+        
         this.scene.add(brokenEgg);
 
         // 5秒后移除破碎的鸡蛋
@@ -462,4 +493,41 @@ export class Egg {
             brokenEggModel: Egg.brokenEggModel !== null
         };
     }
+
+    /**
+     * 检查鸡蛋是否在胶囊体内部
+     * @param eggSphere 鸡蛋的球体碰撞体
+     * @param capsule 胶囊体网格
+     * @returns 是否在胶囊体内部
+     */
+    private isEggInsideCapsule(eggSphere: THREE.Sphere, capsule: THREE.Mesh): boolean {
+        // 获取胶囊体的几何参数
+        // 尝试从用户数据获取真实的胶囊体参数，如果不存在则使用默认值
+        const capsuleRadius = capsule.userData?.radius ?? 2;
+        const capsuleHeight = capsule.userData?.height ?? 24; // 默认总高度24
+        const cylinderHeight = Math.max(0, capsuleHeight - 2 * capsuleRadius);
+        
+        // 获取胶囊体的世界矩阵
+        const capsuleMatrix = capsule.matrixWorld;
+        
+        // 计算胶囊体的两个端点（球心）
+        const startSphereCenter = new THREE.Vector3(0, -cylinderHeight/2, 0);
+        const endSphereCenter = new THREE.Vector3(0, cylinderHeight/2, 0);
+        
+        // 将端点转换到世界坐标
+        startSphereCenter.applyMatrix4(capsuleMatrix);
+        endSphereCenter.applyMatrix4(capsuleMatrix);
+        
+        // 计算鸡蛋中心到胶囊体线段的最近点
+        const closestPoint = new THREE.Vector3();
+        const capsuleLine = new THREE.Line3(startSphereCenter, endSphereCenter);
+        capsuleLine.closestPointToPoint(eggSphere.center, true, closestPoint);
+        
+        // 计算距离
+        const distance = closestPoint.distanceTo(eggSphere.center);
+        
+        // 检查是否碰撞（考虑两个球体的半径）
+        return distance < (eggSphere.radius + capsuleRadius);
+    }
+
 }

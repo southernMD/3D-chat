@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { MeshBVH, MeshBVHHelper, StaticGeometryGenerator } from 'three-mesh-bvh';
 import { doors as doorNames } from '@/models/architecture/doors';
 import { doorGroups } from '@/models/architecture/doors';
+import { eventBus } from '@/utils/eventBus';
 
 /**
  * BVH物理系统 - 完全基于three-mesh-bvh实现
@@ -13,9 +14,8 @@ export class BVHPhysics {
   private scene: THREE.Scene;
   private visualizer?: MeshBVHHelper;
 
-  // 新增：分离的碰撞体组和映射关系
+  // 实际的物理网格
   private colliders: Map<string, THREE.Mesh> = new Map();
-  private colliderMapping: Map<string, BaseModel> = new Map();
   private visualizers: Map<string, MeshBVHHelper> = new Map();
   
   // 物理参数
@@ -29,6 +29,22 @@ export class BVHPhysics {
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
+    this.initializeEventListeners();
+  }
+
+  /**
+   * 初始化事件监听器
+   */
+  private initializeEventListeners(): void {
+    // 监听用户胶囊体更新事件
+    eventBus.on('user-capsule-update', (data) => {
+      this.updateUserCapsule(data.userId, data.position, data.rotation, data.scale);
+    });
+
+    // 监听用户胶囊体移除事件
+    eventBus.on('user-capsule-remove', (data) => {
+      this.removeUserCapsule(data.userId);
+    });
   }
 
   /**
@@ -125,7 +141,6 @@ export class BVHPhysics {
 
       // 存储到映射中
       this.colliders.set(objectId, objectCollider);
-      this.colliderMapping.set(objectId, object);
       this.visualizers.set(objectId, visualizer);
 
       // 添加到场景
@@ -644,9 +659,8 @@ export class BVHPhysics {
       this.scene.remove(visualizer);
     });
 
-    // 清空映射
+    // 清空映射（包含所有碰撞体，包括用户胶囊体）
     this.colliders.clear();
-    this.colliderMapping.clear();
     this.visualizers.clear();
   }
 
@@ -657,12 +671,6 @@ export class BVHPhysics {
     return this.colliders;
   }
 
-  /**
-   * 获取碰撞体映射关系
-   */
-  public getColliderMapping(): Map<string, BaseModel> {
-    return this.colliderMapping;
-  }
 
   /**
    * 根据ID获取特定的碰撞体
@@ -872,5 +880,147 @@ export class BVHPhysics {
     });
 
     return collidedEggs;
+  }
+
+  /**
+   * 🧑‍🤝‍🧑 创建或更新用户胶囊体
+   * @param userId 用户ID
+   * @param position 位置
+   * @param rotation 旋转
+   * @param scale 缩放
+   * @param capsuleInfo 胶囊体信息（可选，使用真实数据）
+   */
+  updateUserCapsule(
+    userId: string, 
+    position: { x: number; y: number; z: number },
+    rotation: { x: number; y: number; z: number },
+    scale: { x: number; y: number; z: number },
+    capsuleInfo?: { radius: number; height: number }
+  ): void {
+    try {
+      const capsuleKey = `user-capsule-${userId}`;
+      
+      // 检查是否已存在该用户的胶囊体
+      let capsule = this.colliders.get(capsuleKey);
+      let visualizer = this.visualizers.get(capsuleKey);
+
+      if (!capsule) {
+        // 创建新的胶囊体
+        console.log(`👤 创建用户 ${userId} 的胶囊体...`);
+        
+        // 使用传入的胶囊体信息或默认值
+        const radius = capsuleInfo?.radius ?? 2;
+        const totalHeight = capsuleInfo?.height ?? 24; // 默认总高度24
+        const cylinderHeight = Math.max(0, totalHeight - 2 * radius);
+        
+        // 创建胶囊体几何体
+        const capsuleGeometry = new THREE.CapsuleGeometry(radius, cylinderHeight, 8, 16);
+        
+        // 创建BVH
+        capsuleGeometry.boundsTree = new MeshBVH(capsuleGeometry);
+
+        // 创建胶囊体材质
+        const capsuleMaterial = new THREE.MeshBasicMaterial({
+          wireframe: true,
+          opacity: 0.4,
+          transparent: true,
+          color: 0x00ff00, // 绿色表示其他用户
+          side: THREE.DoubleSide
+        });
+
+        // 创建胶囊体网格
+        capsule = new THREE.Mesh(capsuleGeometry, capsuleMaterial);
+        capsule.name = `UserCapsule_${userId}`;
+        capsule.userData = { 
+          type: 'user_capsule', 
+          userId: userId,
+          radius: radius,
+          height: totalHeight
+        };
+        capsule.visible = this.params.displayCollider;
+
+        // 创建BVH可视化器
+        visualizer = new MeshBVHHelper(capsule, this.params.visualizeDepth);
+        visualizer.visible = this.params.displayBVH;
+        visualizer.name = `UserCapsuleVisualizer_${userId}`;
+
+        // 直接存储到主要映射中
+        this.colliders.set(capsuleKey, capsule);
+        this.visualizers.set(capsuleKey, visualizer);
+
+        // 添加到场景
+        this.scene.add(capsule);
+        this.scene.add(visualizer);
+
+        console.log(`✅ 用户 ${userId} 的胶囊体创建完成`, {
+          radius: radius,
+          cylinderHeight: cylinderHeight,
+          totalHeight: totalHeight
+        });
+      }
+
+      // 更新位置、旋转和缩放
+      // 调整Y轴位置，使胶囊体底部与模型底部对齐
+      const radius = capsule.userData?.radius ?? 2;
+      const totalHeight = capsule.userData?.height ?? 24;
+      capsule.position.set(position.x, position.y + totalHeight/2 - radius, position.z);
+      capsule.rotation.set(rotation.x, rotation.y, rotation.z);
+      capsule.scale.set(scale.x, scale.y, scale.z);
+
+      // 更新可视化器位置
+      if (visualizer) {
+        visualizer.position.copy(capsule.position);
+        visualizer.rotation.copy(capsule.rotation);
+        visualizer.scale.copy(capsule.scale);
+      }
+
+    } catch (error) {
+      console.error(`❌ 更新用户 ${userId} 胶囊体失败:`, error);
+    }
+  }
+
+  /**
+   * 🗑️ 移除用户胶囊体
+   * @param userId 用户ID
+   */
+  removeUserCapsule(userId: string): void {
+    try {
+      console.log(`🗑️ 移除用户 ${userId} 的胶囊体...`);
+      
+      const capsuleKey = `user-capsule-${userId}`;
+
+      // 移除胶囊体
+      const capsule = this.colliders.get(capsuleKey);
+      if (capsule) {
+        this.scene.remove(capsule);
+        capsule.geometry.dispose();
+        if (Array.isArray(capsule.material)) {
+          capsule.material.forEach(mat => mat.dispose());
+        } else {
+          capsule.material.dispose();
+        }
+        this.colliders.delete(capsuleKey);
+      }
+
+      // 移除可视化器
+      const visualizer = this.visualizers.get(capsuleKey);
+      if (visualizer) {
+        this.scene.remove(visualizer);
+        this.visualizers.delete(capsuleKey);
+      }
+
+      console.log(`✅ 用户 ${userId} 的胶囊体已移除`);
+    } catch (error) {
+      console.error(`❌ 移除用户 ${userId} 胶囊体失败:`, error);
+    }
+  }
+
+  /**
+   * 🔍 获取用户胶囊体
+   * @param userId 用户ID
+   * @returns 胶囊体网格或null
+   */
+  getUserCapsule(userId: string): THREE.Mesh | null {
+    return this.colliders.get(`user-capsule-${userId}`) || null;
   }
 }

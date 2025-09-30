@@ -363,7 +363,6 @@ export abstract class Model extends StaticModel {
     if (!this.bvhPhysics) return;
 
     const colliders = this.bvhPhysics.getColliders();
-    const colliderMapping = this.bvhPhysics.getColliderMapping();
     const capsuleInfo = this.getCapsuleInfo();
 
     if (!this.mesh || !this.playerCapsule || !capsuleInfo) return;
@@ -593,12 +592,12 @@ export abstract class Model extends StaticModel {
         // 记录碰撞信息
         collisionInfo.push({
           objectId: objectId,
-          object: colliderMapping.get(objectId),
+          object: null, // 移除了 colliderMapping
           deltaVector: deltaVector.clone()
         });
 
         // console.log(`🎯 角色碰撞: ${objectId}`, {
-        //   objectName: colliderMapping.get(objectId)?.constructor.name || 'Unknown',
+        //   objectName: 'Unknown',
         //   deltaVector: deltaVector
         // });
       }
@@ -828,33 +827,29 @@ export abstract class Model extends StaticModel {
    * @param mouseX 鼠标X坐标（标准化设备坐标）
    * @param mouseY 鼠标Y坐标（标准化设备坐标）
    */
-  public shootEgg(camera: THREE.Camera, scene: THREE.Scene, mouseX: number, mouseY: number): void {
+  public shootEgg(camera: THREE.Camera, scene: THREE.Scene, mouseX: number, mouseY: number): Boolean {
     if (!this.bvhPhysics) {
       console.warn('❌ BVH物理系统未初始化，无法发射鸡蛋');
-      return;
+      return true;
     }
     const egg = new Egg(scene, this.bvhPhysics);
 
     // 等待鸡蛋模型加载完成后再发射
-    const waitForEggReady = () => {
-      if (egg.isReady()) {
-        egg.shoot(camera, mouseX, mouseY);
-        this.eggs.push(egg);
+    if (egg.isReady()) {
+      egg.shoot(camera, mouseX, mouseY);
+      this.eggs.push(egg);
 
-        // 限制鸡蛋数量，防止内存泄漏
-        if (this.eggs.length > this.eggParams.maxEggs) {
-          const oldEgg = this.eggs.shift();
-          if (oldEgg) {
-            oldEgg.removeEgg();
-          }
+      // 限制鸡蛋数量，防止内存泄漏
+      if (this.eggs.length > this.eggParams.maxEggs) {
+        const oldEgg = this.eggs.shift();
+        if (oldEgg) {
+          oldEgg.removeEgg();
         }
-      } else {
-        // 如果模型还没加载完成，等待50ms后重试
-        setTimeout(waitForEggReady, 50);
       }
-    };
-
-    waitForEggReady();
+      return true
+    }else{
+      return false;
+    }
   }
 
   /**
@@ -919,7 +914,8 @@ export abstract class Model extends StaticModel {
       isOnGround: boolean;
       velocity: { x: number; y: number; z: number };
     };
-    moveSpeed:number
+    moveSpeed:number;
+    capsuleInfo?: { radius: number; height: number }; // 添加胶囊体信息
   } {
     // 获取位置信息
     const position = this.mesh ? {
@@ -962,6 +958,10 @@ export abstract class Model extends StaticModel {
       hasAnimations: this.mixer !== undefined && this.mixer !== null
     };
 
+    // 获取胶囊体信息
+    const capsuleData = this.getCapsuleInfo();
+    const capsuleInfo = capsuleData ? { radius: capsuleData.radius, height: capsuleData.height } : undefined;
+
     return {
       position,
       rotation,
@@ -974,6 +974,7 @@ export abstract class Model extends StaticModel {
       modelInfo,
       physics,
       moveSpeed:this.moveSpeed,
+      capsuleInfo // 包含胶囊体信息
     };
   }
 

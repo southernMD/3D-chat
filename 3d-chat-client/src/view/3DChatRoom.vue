@@ -237,7 +237,8 @@ onMounted(async () => {
       bvhPhysics,
       renderer,
       fpsMonitor,
-      false // 默认为第三人称视角（场景相机）
+      false, // 默认为第三人称视角（场景相机）
+      staticModelManager
     );
 
     nextTick(() => {
@@ -420,9 +421,9 @@ onMounted(async () => {
           const model = mmdModelManager.getModel();
           const currentCamera = guiManager.getHadRenderCamera() || hadRenderCamera;
           if (model && currentCamera) {
-            model.shootEgg(currentCamera, scene, mouseX, mouseY);
+            const flag = model.shootEgg(currentCamera, scene, mouseX, mouseY);
             // 消耗1个鸡蛋
-            webrtcStore.modifyEggQuantity(-1);
+            if(flag)webrtcStore.modifyEggQuantity(-1);
             console.log('🥚🚀 发射鸡蛋，库存-1');
           }
         }

@@ -4,7 +4,7 @@ const STATIC_BVH = ['main-ground','main-track','boundary-walls']
 export const filterColliders = (
     colliders: Map<string, THREE.Mesh>,
     mapPositionDistance: Map<string, THREE.Mesh>,
-    objectPosition: THREE.Vector3
+    objectPosition: THREE.Vector3,
 ) => {
     colliders.forEach((collider, objectId) => {
       // 🚀 距离预筛选优化：根据碰撞体类型使用不同的筛选策略
@@ -27,6 +27,8 @@ export const filterColliders = (
           }else if(!isInside && distanceToBox > 150){
             mapPositionDistance.delete(objectId);
           }
+        } else if(objectId.includes('user-capsule')){
+          mapPositionDistance.set(objectId, collider);
         } else {
           // 其他碰撞体：判断到中心点的距离
           const colliderBounds = new THREE.Box3().setFromObject(collider);

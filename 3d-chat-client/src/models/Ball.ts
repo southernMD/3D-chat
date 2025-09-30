@@ -12,7 +12,7 @@ export class Ball {
         this.bvhPhysics = bvhPhysics;
     }
 
-    private createProjectileSphere(scene: THREE.Scene): THREE.Mesh {
+    private createProjectileSphere(_scene: THREE.Scene): THREE.Mesh {
         // 随机颜色
         const white = new THREE.Color(0xffffff);
         const color = new THREE.Color(0x263238 / 2).lerp(white, Math.random() * 0.5 + 0.5);
@@ -118,7 +118,6 @@ export class Ball {
 
         // 获取分离的碰撞体组
         const colliders = this.bvhPhysics.getColliders();
-        const colliderMapping = this.bvhPhysics.getColliderMapping();
 
         // 临时变量用于碰撞检测
         const tempSphere = new THREE.Sphere();
@@ -127,7 +126,7 @@ export class Ball {
         // 对每个分离的碰撞体进行碰撞检测
         tempSphere.copy(sphereCollider);
         let collided = false;
-        let collisionInfo: { objectId: string; object: any } | undefined = undefined;
+        let collisionInfo: { objectId: string; object: any | null } | undefined;
         const colliderArr = Array.from(colliders.values());
         const objectIdArr = Array.from(colliders.keys());
         for (let j = 0; j < colliderArr.length; j++) { 
@@ -158,7 +157,7 @@ export class Ball {
                             // 记录碰撞信息
                             collisionInfo = {
                                 objectId: objectId,
-                                object: colliderMapping.get(objectId)
+                                object: null // 移除了 colliderMapping
                             };
                         }
                     }
@@ -227,7 +226,7 @@ export class Ball {
      * @param objectId 碰撞对象的ID
      * @param object 碰撞的对象
      */
-    private onSphereCollision(sphere: THREE.Mesh, objectId: string, object: any): void {
+    private onSphereCollision(_sphere: THREE.Mesh, _objectId: string, _object: any): void {
         // console.log(`🎯 小球碰撞事件:`, {
         //     spherePosition: sphere.position,
         //     objectId: objectId,

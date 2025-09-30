@@ -3,6 +3,7 @@ import { StaticMMDModel } from '../StaticMMDModel';
 import { StaticGLTFModel } from '../StaticGLTFModel';
 import { getModelFilePathByHash } from '@/api/modelApi';
 import { NameTagManager } from '@/utils/NameTagManager';
+import { eventBus } from '@/utils/eventBus';
 
 /**
  * StaticMMDModelManager类 - 管理其他用户的静态模型
@@ -137,6 +138,9 @@ export class StaticMMDModelManager {
       this.nicknames.delete(userId);
       this.targetStates.delete(userId); // 同时清理目标状态
 
+      // 🚌 发送胶囊体移除事件到BVHPhysics
+      eventBus.emit('user-capsule-remove', { userId });
+
       console.log(`✅ 用户 ${userId} 的静态模型完全移除`);
     } else {
       console.warn(`⚠️ 用户 ${userId} 的模型不存在，无需移除`);
@@ -250,6 +254,9 @@ export class StaticMMDModelManager {
       // 🔧 同步更新胶囊体和包围盒位置
       this.updateModelHelpers(model);
       
+      // 🚌 发送胶囊体位置更新事件到BVHPhysics
+      this.sendCapsuleUpdateEvent(userId, model);
+      
       // 更新动画状态
       this.updateAnimationState(model, targetState.animationState);
       return;
@@ -269,6 +276,9 @@ export class StaticMMDModelManager {
 
     // 🔧 同步更新胶囊体和包围盒位置
     this.updateModelHelpers(model);
+
+    // 🚌 发送胶囊体位置更新事件到BVHPhysics
+    this.sendCapsuleUpdateEvent(userId, model);
 
     // 更新动画状态
     this.updateAnimationState(model, targetState.animationState);
@@ -436,6 +446,47 @@ export class StaticMMDModelManager {
   }
 
   /**
+   * 🚌 发送胶囊体更新事件到BVHPhysics
+   */
+  private sendCapsuleUpdateEvent(userId: string, model: StaticMMDModel | StaticGLTFModel): void {
+    try {
+      if (!model.mesh) return;
+      
+      // 获取胶囊体信息
+      let capsuleInfo: { radius: number; height: number } | undefined;
+      if (typeof (model as any).getCapsuleInfo === 'function') {
+        const info = (model as any).getCapsuleInfo();
+        if (info) {
+          capsuleInfo = { radius: info.radius, height: info.height };
+        }
+      }
+      
+      // 发送胶囊体位置更新事件
+      eventBus.emit('user-capsule-update', {
+        userId: userId,
+        position: {
+          x: model.mesh.position.x,
+          y: model.mesh.position.y,
+          z: model.mesh.position.z
+        },
+        rotation: {
+          x: model.mesh.rotation.x,
+          y: model.mesh.rotation.y,
+          z: model.mesh.rotation.z
+        },
+        scale: {
+          x: model.mesh.scale.x,
+          y: model.mesh.scale.y,
+          z: model.mesh.scale.z
+        },
+        capsuleInfo: capsuleInfo // 包含胶囊体信息
+      });
+    } catch (error) {
+      console.error(`❌ 发送用户 ${userId} 胶囊体更新事件失败:`, error);
+    }
+  }
+
+  /**
    * 更新模型的辅助器（胶囊体和包围盒）
    */
   private updateModelHelpers(model: StaticMMDModel | StaticGLTFModel): void {
@@ -563,10 +614,16 @@ export class StaticMMDModelManager {
   }
 
   /**
-   * 获取模型数量
+   * 获取所有模型
    */
-  getModelCount(): number {
-    return this.models.size;
+  getModels() {
+    return this.models
+  }
+
+  toggleHelpers(): void {
+    this.models.forEach((model)=>{
+      model?.toggleHelpers()
+    })
   }
 
   /**
@@ -580,7 +637,7 @@ export class StaticMMDModelManager {
     userIds.forEach(userId => {
       try {
         console.log(`🗑️ 清理用户 ${userId} 的静态模型...`);
-        this.removeModel(userId);
+        this.removeModel(userId); // removeModel方法内部会发送胶囊体移除事件
       } catch (error) {
         console.error(`❌ 清理用户 ${userId} 的模型失败:`, error);
       }

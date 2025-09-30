@@ -21,6 +21,9 @@ export interface EventBusEvents {
   // 门状态同步事件
   'door-state-update': DoorStateUpdateData
   'door-state-sync': DoorStateUpdateData
+  // 用户胶囊体更新事件
+  'user-capsule-update': UserCapsuleUpdateData
+  'user-capsule-remove': UserCapsuleRemoveData
 }
 
 export interface EggBroadcastData {
@@ -128,6 +131,19 @@ export interface DoorStateUpdateData {
   doorNearName: string | undefined
   visible: boolean
   isOpen: boolean
+}
+
+// 用户胶囊体相关接口
+export interface UserCapsuleUpdateData {
+  userId: string
+  position: { x: number; y: number; z: number }
+  rotation: { x: number; y: number; z: number }
+  scale: { x: number; y: number; z: number }
+  capsuleInfo?: { radius: number; height: number } // 添加胶囊体信息
+}
+
+export interface UserCapsuleRemoveData {
+  userId: string
 }
 
 // 事件总线实现
