@@ -1,0 +1,14 @@
+node_modules
+logs
+3d-chat-client
+app-vite
+*.md
+*.log
+.git
+.gitignore
+.vscode
+*.swp
+*.swo
+*.DS_Store
+dist
+*.ndm2

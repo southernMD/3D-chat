@@ -80,10 +80,10 @@ export class RoomManager {
       modelHash: new Map([[userName, modelHash]]),
       userEquipments: new Map(), // 初始化用户装备列表
     };
-    console.log(config.map,"地图是");
+    console.log(config?.map,"地图是");
     
     // 如果是学校类型房间，创建SchoolRoom实例
-    if (config.map === RoomType.SCHOOL && this.io) {
+    if (config?.map === RoomType.SCHOOL && this.io) {
       room.schoolRoom = new SchoolRoom(roomId, this.io);
       room.schoolRoom.startBroadcast();
       console.log(`🏫 School room features enabled for room ${roomId}`);

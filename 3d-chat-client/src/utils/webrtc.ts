@@ -729,7 +729,11 @@ export class WebRTCManager {
       iceParameters: producerTransportInfo.iceParameters,
       iceCandidates: producerTransportInfo.iceCandidates,
       dtlsParameters: producerTransportInfo.dtlsParameters,
-      sctpParameters: producerTransportInfo.sctpParameters
+      sctpParameters: producerTransportInfo.sctpParameters,
+      iceServers:import.meta.env.DEV ? [
+        { urls: 'stun:stun.l.google.com:19302' }
+      ] :
+      []
     })
 
     // 处理生产者传输连接事件
@@ -876,7 +880,11 @@ export class WebRTCManager {
             iceParameters: response.iceParameters,
             iceCandidates: response.iceCandidates,
             dtlsParameters: response.dtlsParameters,
-            sctpParameters: response.sctpParameters
+            sctpParameters: response.sctpParameters,
+            iceServers:import.meta.env.DEV ? [
+              { urls: 'stun:stun.l.google.com:19302' }
+            ] :
+            []
           })
 
           // 监听连接事件
