@@ -24,6 +24,9 @@ export interface EventBusEvents {
   // 用户胶囊体更新事件
   'static-user-capsule-update': UserCapsuleUpdateData
   'user-capsule-remove': UserCapsuleRemoveData
+
+  //向指定用户发送弹窗信息
+  'send-popup-message':UserPopupMessageData
 }
 
 export interface EggBroadcastData {
@@ -159,6 +162,11 @@ export interface EggShootOtherData {
   userName: string
   position: { x: number; y: number; z: number }
   velocity: { x: number; y: number; z: number }
+}
+
+export interface UserPopupMessageData{
+  peerId:string
+  message:string
 }
 
 // 事件总线实现

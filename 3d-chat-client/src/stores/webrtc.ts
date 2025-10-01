@@ -4,7 +4,7 @@ import { WebRTCManager, type ConnectionStatus, type RoomInfo, type Peer, type Ro
 import { showError, showSuccess, showInfo } from '@/utils/message'
 import { useAuthStore } from '@/stores/auth'
 import type { EggPosintions } from '@/types/types'
-import { eventBus } from '@/utils/eventBus'
+import { eventBus, type UserPopupMessageData } from '@/utils/eventBus'
 
 // 消息接口
 export interface ChatMessage {
@@ -478,7 +478,18 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     webrtcManager.setEggShootCallback(callback)
   }
 
+  const sendPopupMessage = ( {peerId,message} :UserPopupMessageData)=>{
+    webrtcManager?.sendPopupMessageToUser(peerId,message)
+  }
 
+  const setPopupMessageCallback = (callback: (message:string) => void): void => {
+    if (!webrtcManager) {
+      console.error('WebRTC管理器未初始化')
+      return
+    }
+
+    webrtcManager.setPopupMessageCallback(callback)
+  }
 
   return {
     // 状态
@@ -522,6 +533,9 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     setDoorStateCallback,
     // 🥚 鸡蛋发射相关方法
     sendEggShoot,
-    setEggShootCallback
+    setEggShootCallback,
+
+    sendPopupMessage,
+    setPopupMessageCallback
   }
 })

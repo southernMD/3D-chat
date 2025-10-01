@@ -16,7 +16,7 @@ import LoadingProgress from '@/components/LoadingProgress.vue';
 // 导入WebRTC store和相关工具
 import { useWebRTCStore } from '@/stores/webrtc';
 import { useAuthStore } from '@/stores/auth';
-import { showError, showSuccess, showInfo } from '@/utils/message';
+import { showError, showSuccess, showInfo, showMessage } from '@/utils/message';
 import { eventBus } from '@/utils/eventBus';
 import { Egg } from '@/models/Egg';
 import { Tree } from '@/models/architecture/Tree';
@@ -550,6 +550,18 @@ onMounted(async () => {
         }
       })
     }
+
+    //监听消息弹窗发送事件
+    eventBus.on('send-popup-message',(data)=>{
+      webrtcStore.sendPopupMessage(data)
+    })
+
+    webrtcStore.setPopupMessageCallback((message)=>{
+      ElMessage.info({
+        message,
+        grouping:true
+      })
+    })
 
     // 设置装备相关事件监听器
     setupEquipmentBusListeners();

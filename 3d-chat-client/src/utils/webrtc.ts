@@ -134,7 +134,15 @@ export type DataChannelMessage = {
   message: string
   peerId: string
   timestamp: number
-} | ModelStateData | DoorStateData | EggShootData
+} | ModelStateData | DoorStateData | EggShootData | PopupData
+
+export interface PopupData {
+  type: 'popup'
+  peerId: string
+  timestamp: number
+  message:string
+  toPeerId:string
+}
 
 // 应用程序状态接口
 export interface AppState {
@@ -164,6 +172,7 @@ type EggPositionsCallback = (positions: EggPosintions) => void | undefined
 type ModelStateCallback = (userName: string, modelState: ModelStateData['state']) => void
 type DoorStateCallback = (doorName: string, doorNearName: string | undefined, visible: boolean, isOpen: boolean) => void
 type EggShootCallback = (userName: string, position: { x: number; y: number; z: number }, velocity: { x: number; y: number; z: number }) => void
+type PopupMessageCallback = (message:string) => void
 export class WebRTCManager {
   private state: AppState = {
     socket: null,
@@ -196,6 +205,8 @@ export class WebRTCManager {
   private modelStateCallback?: ModelStateCallback
   private doorStateCallback?: DoorStateCallback
   private eggShootCallback?: EggShootCallback
+  private popupMessageCallback?: PopupMessageCallback
+  
 
   // 模型状态传输相关
   private modelStateInterval?: number
@@ -1195,6 +1206,32 @@ export class WebRTCManager {
   }
 
   /**
+   * 发送弹窗信息
+   */
+  public sendPopupMessageToUser(peerId:string,message:string):void{
+    try {
+      if (!this.state.dataProducer || !this.state.peerId) {
+        this.log('数据生产者未初始化，无法发送弹窗数据')
+        return
+      }
+      debugger
+      const popupMessage: PopupData = {
+        type: 'popup',
+        peerId: this.state.peerId!,
+        toPeerId:peerId,
+        timestamp: Date.now(),
+        message
+      }
+      const encodedMessage = new TextEncoder().encode(JSON.stringify(popupMessage))
+
+      this.state.dataProducer.send(encodedMessage)
+    }
+    catch (error) {
+      this.log(`发送鸡蛋发射数据失败: ${error instanceof Error ? error.message : '未知错误'}`)
+    }
+  }
+
+  /**
    * 开始模型状态传输
    * @param getModelStateFunction 获取模型状态的函数
    * @param updateRate 更新频率（每秒次数），默认60次
@@ -1259,6 +1296,11 @@ export class WebRTCManager {
   public setEggShootCallback(callback: EggShootCallback): void {
     this.eggShootCallback = callback
   }
+
+  public setPopupMessageCallback(callback: PopupMessageCallback): void {
+    this.popupMessageCallback = callback
+  }
+
 
   /**
    * 启用数据通道
@@ -1389,6 +1431,14 @@ export class WebRTCManager {
             this.log(`收到鸡蛋发射数据，来自 ${senderName}`)
             if (this.eggShootCallback) {
               this.eggShootCallback(senderName, data.position, data.velocity)
+            }
+          } else if(data.type === 'popup') {
+            debugger
+            if(data.toPeerId === this.state.peerId) {
+              this.log(`收到弹窗信息，来自 ${data.peerId}: ${data.message}`)
+              if(this.popupMessageCallback) {
+                this.popupMessageCallback(data.message)
+              }
             }
           }
         } catch (error) {

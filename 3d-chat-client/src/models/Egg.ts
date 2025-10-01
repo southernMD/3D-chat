@@ -1,4 +1,5 @@
 import { BVHPhysics } from '@/physics/BVHPhysics';
+import { eventBus } from '@/utils/eventBus';
 import { filterColliders } from '@/utils/filterColliders';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -226,7 +227,7 @@ export class Egg {
         let colliderId: string | null = null;
 
         filterColliders(colliders, this.mapEggPositionDistance, this.mesh.position)
-        
+        let attackUser:string | null = null
         this.mapEggPositionDistance.forEach((collider, objectId) => { 
             if (objectId.startsWith('user-capsule-')) {
                 if (this.isEggInsideCapsule(tempSphere, collider)) {
@@ -235,6 +236,7 @@ export class Egg {
                     const capsulePosition = new THREE.Vector3();
                     collider.getWorldPosition(capsulePosition);
                     collisionNormal.subVectors(tempSphere.center, capsulePosition).normalize();
+                    attackUser = objectId.split('user-capsule-')[1]
                     return;
                 }
             }
@@ -263,7 +265,7 @@ export class Egg {
         })
         // 如果发生碰撞，立刻替换为破碎的鸡蛋
         if (collided) {
-            this.onEggCollision(colliderId!, collided, collisionNormal);
+            this.onEggCollision(colliderId!, collided, collisionNormal,attackUser);
             return false; // 返回false表示需要移除这个鸡蛋
         }
 
@@ -273,7 +275,7 @@ export class Egg {
     /**
      * 鸡蛋碰撞事件处理
      */
-    private onEggCollision(objectId: string, object: any, collisionNormal?: THREE.Vector3): void {
+    private onEggCollision(objectId: string, object: any, collisionNormal: THREE.Vector3,attackUser:string | null): void {
         if (!this.mesh || this.isCollided) return;
         
         this.isCollided = true;
@@ -294,6 +296,12 @@ export class Egg {
         
         // 加载并显示破碎的鸡蛋，传递碰撞法线信息
         this.loadBrokenEgg(collisionPosition, collisionNormal);
+        if(attackUser){
+            eventBus.emit('send-popup-message',{
+                peerId:attackUser,
+                message:'你被鸡蛋击中了'
+            })
+        }
     }
 
     /**
