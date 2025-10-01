@@ -28,8 +28,8 @@ export class GLTFModel extends Model {
   walkAction?: THREE.AnimationAction;
   standAction?: THREE.AnimationAction;
   animations: THREE.AnimationClip[] = [];
-  constructor(bvhPhysics: BVHPhysics) {
-    super(bvhPhysics);
+  constructor(bvhPhysics: BVHPhysics,userPeerId:string) {
+    super(bvhPhysics,userPeerId);
     this.mesh = new THREE.Object3D();
     this.mixer = new THREE.AnimationMixer(this.mesh);
   }
@@ -228,6 +228,7 @@ export class GLTFModel extends Model {
     return this.modelSize;
   }
 
+
   /**
    * 彻底清理GLTF模型资源
    */
@@ -240,18 +241,15 @@ export class GLTFModel extends Model {
       this.mixer.stopAllAction();
       // 清理所有剪辑
       this.mixer.uncacheRoot(this.mesh);
-      this.mixer = null;
       console.log('✅ GLTF动画混合器已清理');
     }
 
     // 2. 清理动画动作
     if (this.walkAction) {
       this.walkAction.stop();
-      this.walkAction = null;
     }
     if (this.standAction) {
       this.standAction.stop();
-      this.standAction = null;
     }
 
     // 3. 清理动画剪辑
@@ -271,7 +269,6 @@ export class GLTFModel extends Model {
     // 4. 深度清理模型网格和所有资源
     if (this.mesh) {
       this.deepDisposeObject3D(this.mesh);
-      this.mesh = null;
       console.log('✅ GLTF模型网格已清理');
     }
 

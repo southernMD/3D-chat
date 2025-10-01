@@ -447,7 +447,38 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     webrtcManager.setDoorStateCallback(callback)
   }
 
-  
+  // 🥚 发送鸡蛋发射数据
+  const sendEggShoot = (position: { x: number; y: number; z: number }, velocity: { x: number; y: number; z: number }): boolean => {
+    if (!webrtcManager) {
+      console.error('WebRTC管理器未初始化')
+      return false
+    }
+
+    if (!isConnected.value) {
+      console.error('未连接到服务器')
+      return false
+    }
+
+    try {
+      webrtcManager.sendEggShoot(position, velocity)
+      return true
+    } catch (error) {
+      console.error('发送鸡蛋发射数据失败:', error)
+      return false
+    }
+  }
+
+  // 🥚 设置鸡蛋发射回调
+  const setEggShootCallback = (callback: (userName: string, position: { x: number; y: number; z: number }, velocity: { x: number; y: number; z: number }) => void): void => {
+    if (!webrtcManager) {
+      console.error('WebRTC管理器未初始化')
+      return
+    }
+
+    webrtcManager.setEggShootCallback(callback)
+  }
+
+
 
   return {
     // 状态
@@ -488,6 +519,9 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     sendYouState,
     // 🚪 门状态相关方法
     sendDoorState,
-    setDoorStateCallback
+    setDoorStateCallback,
+    // 🥚 鸡蛋发射相关方法
+    sendEggShoot,
+    setEggShootCallback
   }
 })

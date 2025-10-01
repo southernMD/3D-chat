@@ -62,9 +62,9 @@ export abstract class Model extends StaticModel {
   //用户位置与具体bvh距离缓存
   private mapUserPositionDistance: Map<string, THREE.Mesh> = new Map();
 
+  private userPeerId:string
 
-
-  constructor(bvhPhysics: BVHPhysics) {
+  constructor(bvhPhysics: BVHPhysics,userPeerId:string) {
     super(); // 调用父类构造函数（不传递物理系统）
 
     this.bvhPhysics = bvhPhysics; // 在Model中管理物理系统
@@ -77,6 +77,7 @@ export abstract class Model extends StaticModel {
       Space: false,
     };
 
+    this.userPeerId = userPeerId
     // 监听清理鸡蛋距离映射事件
     eventBus.on('clear-egg-mapUserPositionDistance', ({ eggId }) => {
       this.mapUserPositionDistance.delete(eggId);
@@ -215,6 +216,15 @@ export abstract class Model extends StaticModel {
 
     // 更新静态胶囊体可视化位置
     this.updateCapsuleVisualPosition();
+
+    //更新静态胶囊体
+    this.bvhPhysics.updateUserCapsule(
+      this.userPeerId,
+      this.mesh.position,
+      this.mesh.rotation,
+      this.mesh.scale,
+      this.getCapsuleInfo()
+    )
 
     // 如果角色掉得太低，重置位置
     if (this.mesh.position.y < -25) {
@@ -383,7 +393,7 @@ export abstract class Model extends StaticModel {
     let hasCollision = false;
     let collisionInfo: Array<{ objectId: string; object: any; deltaVector: THREE.Vector3 }> = [];
 
-    filterColliders(colliders, this.mapUserPositionDistance, this.mesh.position)
+    filterColliders(colliders, this.mapUserPositionDistance, this.mesh.position,this.userPeerId)
 
     // if(Math.random() < 0.05){
     //   console.log(this.mapUserPositionDistance);
@@ -826,17 +836,18 @@ export abstract class Model extends StaticModel {
    * @param scene 场景对象
    * @param mouseX 鼠标X坐标（标准化设备坐标）
    * @param mouseY 鼠标Y坐标（标准化设备坐标）
+   * @returns 返回发射参数（用于同步给其他客户端）或 null
    */
-  public shootEgg(camera: THREE.Camera, scene: THREE.Scene, mouseX: number, mouseY: number): Boolean {
+  public shootEgg(camera: THREE.Camera, scene: THREE.Scene, mouseX: number, mouseY: number): { position: THREE.Vector3; velocity: THREE.Vector3 } | null {
     if (!this.bvhPhysics) {
       console.warn('❌ BVH物理系统未初始化，无法发射鸡蛋');
-      return true;
+      return null;
     }
     const egg = new Egg(scene, this.bvhPhysics);
 
     // 等待鸡蛋模型加载完成后再发射
     if (egg.isReady()) {
-      egg.shoot(camera, mouseX, mouseY);
+      const shootParams = egg.shoot(camera, mouseX, mouseY);
       this.eggs.push(egg);
 
       // 限制鸡蛋数量，防止内存泄漏
@@ -846,9 +857,41 @@ export abstract class Model extends StaticModel {
           oldEgg.removeEgg();
         }
       }
-      return true
+      return shootParams;
     }else{
-      return false;
+      return null;
+    }
+  }
+
+  /**
+   * 发射其他客户端的鸡蛋（通过参数）
+   * @param scene 场景对象
+   * @param position 发射位置
+   * @param velocity 发射速度
+   */
+  public shootOtherEgg(scene: THREE.Scene, position: THREE.Vector3, velocity: THREE.Vector3): void {
+    if (!this.bvhPhysics) {
+      console.warn('❌ BVH物理系统未初始化，无法发射其他客户端的鸡蛋');
+      return;
+    }
+
+    const egg = new Egg(scene, this.bvhPhysics);
+
+    // 等待鸡蛋模型加载完成后再发射
+    if (egg.isReady()) {
+      egg.shootByParams(position, velocity);
+      this.eggs.push(egg);
+
+      // 限制鸡蛋数量，防止内存泄漏
+      if (this.eggs.length > this.eggParams.maxEggs) {
+        const oldEgg = this.eggs.shift();
+        if (oldEgg) {
+          oldEgg.removeEgg();
+        }
+      }
+      console.log('🥚🌐 其他客户端的鸡蛋已发射');
+    } else {
+      console.warn('❌ 鸡蛋模型未准备好，无法发射其他客户端的鸡蛋');
     }
   }
 

@@ -119,13 +119,22 @@ export interface DoorStateData {
   isOpen: boolean
 }
 
+// 鸡蛋发射数据接口
+export interface EggShootData {
+  type: 'eggShoot'
+  peerId: string
+  timestamp: number
+  position: { x: number; y: number; z: number }
+  velocity: { x: number; y: number; z: number }
+}
+
 // 数据通道消息类型
 export type DataChannelMessage = {
   type: 'chat'
   message: string
   peerId: string
   timestamp: number
-} | ModelStateData | DoorStateData
+} | ModelStateData | DoorStateData | EggShootData
 
 // 应用程序状态接口
 export interface AppState {
@@ -154,6 +163,7 @@ type MessageCallback = (content: string, isSent: boolean, senderName?: string) =
 type EggPositionsCallback = (positions: EggPosintions) => void | undefined
 type ModelStateCallback = (userName: string, modelState: ModelStateData['state']) => void
 type DoorStateCallback = (doorName: string, doorNearName: string | undefined, visible: boolean, isOpen: boolean) => void
+type EggShootCallback = (userName: string, position: { x: number; y: number; z: number }, velocity: { x: number; y: number; z: number }) => void
 export class WebRTCManager {
   private state: AppState = {
     socket: null,
@@ -185,6 +195,7 @@ export class WebRTCManager {
   private updateRoomConfigCallback?: (config: RoomConfig) => void
   private modelStateCallback?: ModelStateCallback
   private doorStateCallback?: DoorStateCallback
+  private eggShootCallback?: EggShootCallback
 
   // 模型状态传输相关
   private modelStateInterval?: number
@@ -1158,6 +1169,32 @@ export class WebRTCManager {
   }
 
   /**
+   * 🥚 发送鸡蛋发射数据
+   */
+  public sendEggShoot(position: { x: number; y: number; z: number }, velocity: { x: number; y: number; z: number }): void {
+    if (!this.state.dataProducer || !this.state.peerId) {
+      this.log('数据生产者未初始化，无法发送鸡蛋发射数据')
+      return
+    }
+
+    try {
+      const eggShootMessage: EggShootData = {
+        type: 'eggShoot',
+        peerId: this.state.peerId,
+        timestamp: Date.now(),
+        position,
+        velocity
+      }
+
+      const encodedMessage = new TextEncoder().encode(JSON.stringify(eggShootMessage))
+      this.state.dataProducer.send(encodedMessage)
+      this.log(`发送鸡蛋发射数据: position(${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`)
+    } catch (error) {
+      this.log(`发送鸡蛋发射数据失败: ${error instanceof Error ? error.message : '未知错误'}`)
+    }
+  }
+
+  /**
    * 开始模型状态传输
    * @param getModelStateFunction 获取模型状态的函数
    * @param updateRate 更新频率（每秒次数），默认60次
@@ -1214,6 +1251,13 @@ export class WebRTCManager {
    */
   public setDoorStateCallback(callback: DoorStateCallback): void {
     this.doorStateCallback = callback
+  }
+
+  /**
+   * 🥚 设置鸡蛋发射回调
+   */
+  public setEggShootCallback(callback: EggShootCallback): void {
+    this.eggShootCallback = callback
   }
 
   /**
@@ -1338,6 +1382,13 @@ export class WebRTCManager {
             this.log(`收到门状态，来自 ${senderName}: ${data.doorName}, 状态: ${data.isOpen ? '打开' : '关闭'}`)
             if (this.doorStateCallback) {
               this.doorStateCallback(data.doorName, data.doorNearName, data.visible, data.isOpen)
+            }
+          } else if (data.type === 'eggShoot') {
+            // 🥚 处理鸡蛋发射数据
+            const senderName = this.peerNames.get(producerPeerId) || producerPeerId
+            this.log(`收到鸡蛋发射数据，来自 ${senderName}`)
+            if (this.eggShootCallback) {
+              this.eggShootCallback(senderName, data.position, data.velocity)
             }
           }
         } catch (error) {

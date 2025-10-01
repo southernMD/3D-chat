@@ -209,12 +209,17 @@ export abstract class StaticModel {
   /**
    * 获取胶囊体尺寸信息（供子类创建物理胶囊体使用）
    */
-  protected getCapsuleInfo(): { radius: number; height: number } | null {
-    if (!this.capsuleGeometry) return null;
+  protected getCapsuleInfo(): { radius: number; height: number } | undefined {
+    if (!this.capsuleGeometry) return undefined;
     return {
       radius: this.capsuleGeometry.radius,
       height: this.capsuleGeometry.height
     };
+  }
+
+  
+  getMesh(){
+    return this.mesh
   }
 
   /**

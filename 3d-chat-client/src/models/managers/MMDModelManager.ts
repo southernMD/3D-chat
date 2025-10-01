@@ -115,7 +115,7 @@ export class MMDModelManager {
   /**
    * @param modelHash
    */
-  async loadModel(modelHash:string): Promise<void> {
+  async loadModel(modelHash:string,peerId:string): Promise<void> {
     try {
       const modelPathRes = await getModelFilePathByHash(modelHash)
       if(modelPathRes.success){
@@ -124,11 +124,11 @@ export class MMDModelManager {
           const pmxPath = modelPathRes.data?.resources.find(resource => resource.ext === '.pmx')?.path!
           const walkAnimPath = modelPathRes.data?.resources.find(resource => resource.path.includes('walk.vmd'))?.path!
           const standAnimPath = modelPathRes.data?.resources.find(resource => resource.path.includes('stand.vmd'))?.path!
-          this.mmdModel = new MMDModel(this.bvhPhysics);
+          this.mmdModel = new MMDModel(this.bvhPhysics,peerId);
           await this.mmdModel.load(this.scene, pmxPath, walkAnimPath, standAnimPath);
         }else{
           const glbPath = modelPathRes.data?.resources.find(resource => resource.ext === '.glb')?.path!
-          this.mmdModel = new GLTFModel(this.bvhPhysics);
+          this.mmdModel = new GLTFModel(this.bvhPhysics,peerId);
           await this.mmdModel.load(this.scene, glbPath);
         }
       }else{
@@ -149,6 +149,9 @@ export class MMDModelManager {
         this.renderer
       );
       
+      //添加bvh物理体
+      const { position,rotation,capsuleInfo } = this.mmdModel.getModelState()
+      this.bvhPhysics.updateUserCapsule(peerId,position,rotation,this.mmdModel.getMesh().scale,capsuleInfo)
       console.log('MMD模型加载完成');
     } catch (error) {
       console.error('加载MMD模型时出错:', error);

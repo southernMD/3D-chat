@@ -22,7 +22,7 @@ export interface EventBusEvents {
   'door-state-update': DoorStateUpdateData
   'door-state-sync': DoorStateUpdateData
   // 用户胶囊体更新事件
-  'user-capsule-update': UserCapsuleUpdateData
+  'static-user-capsule-update': UserCapsuleUpdateData
   'user-capsule-remove': UserCapsuleRemoveData
 }
 
@@ -144,6 +144,21 @@ export interface UserCapsuleUpdateData {
 
 export interface UserCapsuleRemoveData {
   userId: string
+}
+
+// 鸡蛋发射数据接口（本地发射，需要转发给其他客户端）
+export interface EggShootData {
+  position: { x: number; y: number; z: number }
+  velocity: { x: number; y: number; z: number }
+  mouseX: number
+  mouseY: number
+}
+
+// 其他客户端鸡蛋发射数据接口（接收到的其他客户端发射的鸡蛋）
+export interface EggShootOtherData {
+  userName: string
+  position: { x: number; y: number; z: number }
+  velocity: { x: number; y: number; z: number }
 }
 
 // 事件总线实现

@@ -37,8 +37,8 @@ export class BVHPhysics {
    */
   private initializeEventListeners(): void {
     // 监听用户胶囊体更新事件
-    eventBus.on('user-capsule-update', (data) => {
-      this.updateUserCapsule(data.userId, data.position, data.rotation, data.scale);
+    eventBus.on('static-user-capsule-update', ({userId,position,rotation,scale,capsuleInfo}) => {
+      this.updateUserCapsule(userId, position, rotation,scale,capsuleInfo);
     });
 
     // 监听用户胶囊体移除事件
@@ -938,7 +938,6 @@ export class BVHPhysics {
           height: totalHeight
         };
         capsule.visible = this.params.displayCollider;
-
         // 创建BVH可视化器
         visualizer = new MeshBVHHelper(capsule, this.params.visualizeDepth);
         visualizer.visible = this.params.displayBVH;
@@ -960,10 +959,8 @@ export class BVHPhysics {
       }
 
       // 更新位置、旋转和缩放
-      // 调整Y轴位置，使胶囊体底部与模型底部对齐
-      const radius = capsule.userData?.radius ?? 2;
       const totalHeight = capsule.userData?.height ?? 24;
-      capsule.position.set(position.x, position.y + totalHeight/2 - radius, position.z);
+      capsule.position.set(position.x, position.y + totalHeight/2, position.z);
       capsule.rotation.set(rotation.x, rotation.y, rotation.z);
       capsule.scale.set(scale.x, scale.y, scale.z);
 

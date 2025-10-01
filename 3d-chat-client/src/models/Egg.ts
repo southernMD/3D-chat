@@ -112,10 +112,10 @@ export class Egg {
     /**
      * 发射鸡蛋
      */
-    public shoot(camera: THREE.Camera, mouseX: number, mouseY: number): void {
+    public shoot(camera: THREE.Camera, mouseX: number, mouseY: number): { position: THREE.Vector3; velocity: THREE.Vector3 } | null {
         if (!this.mesh) {
             console.warn('❌ 鸡蛋模型未加载完成');
-            return;
+            return null;
         }
 
         const raycaster = new THREE.Raycaster();
@@ -137,6 +137,35 @@ export class Egg {
             position: this.mesh.position.clone(),
             velocity: velocity.clone(),
             direction: raycaster.ray.direction.clone()
+        });
+
+        // 返回发射参数，用于同步给其他客户端
+        return {
+            position: this.mesh.position.clone(),
+            velocity: velocity.clone()
+        };
+    }
+
+    /**
+     * 通过参数发射鸡蛋（用于接收其他客户端的发射参数）
+     * @param position 发射位置
+     * @param velocity 发射速度
+     */
+    public shootByParams(position: THREE.Vector3, velocity: THREE.Vector3): void {
+        if (!this.mesh) {
+            console.warn('❌ 鸡蛋模型未加载完成');
+            return;
+        }
+
+        // 设置发射位置
+        this.mesh.position.copy(position);
+
+        // 设置发射速度
+        this.mesh.userData.velocity = velocity.clone();
+
+        console.log('🥚🚀 通过参数发射鸡蛋!', {
+            position: this.mesh.position.clone(),
+            velocity: velocity.clone()
         });
     }
 

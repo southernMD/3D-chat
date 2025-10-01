@@ -200,7 +200,7 @@ onMounted(async () => {
     // 步骤3: 加载主机用户模型（有物理）
     updateLoadingStep(3, 'loading', '正在加载角色模型和动画数据...')
     mmdModelManager = new MMDModelManager(scene, renderer, bvhPhysics);
-    await mmdModelManager.loadModel(history.state.modelHash);
+    await mmdModelManager.loadModel(history.state.modelHash,webrtcStore.getYouPeer().id);
     updateLoadingStep(3, 'completed')
     hadRenderCamera = sceneManager.getCamera()
 
@@ -332,7 +332,7 @@ onMounted(async () => {
       // 监听模型状态更新事件
       const handleModelStateUpdate = (data: { userName: string, modelState: any }) => {
         // console.log(`📡 收到模型状态更新: ${data.userName}`, data.modelState);
-        
+
         // 根据用户名找到对应的peerId
         const peer = webrtcStore.peers.find(p => p.name === data.userName);
         if (peer) {
@@ -347,7 +347,7 @@ onMounted(async () => {
       // 🚪 监听门状态更新事件
       const handleDoorStateUpdate = (data: { doorName: string, doorNearName: string | undefined, visible: boolean, isOpen: boolean }) => {
         console.log(`🚪 门状态更新事件: ${data.doorName}, 状态: ${data.isOpen ? '打开' : '关闭'}`);
-        
+
         // 通过WebRTC发送门状态到其他客户端
         webrtcStore.sendDoorState(data.doorName, data.doorNearName, data.visible, data.isOpen);
       };
@@ -421,10 +421,14 @@ onMounted(async () => {
           const model = mmdModelManager.getModel();
           const currentCamera = guiManager.getHadRenderCamera() || hadRenderCamera;
           if (model && currentCamera) {
-            const flag = model.shootEgg(currentCamera, scene, mouseX, mouseY);
-            // 消耗1个鸡蛋
-            if(flag)webrtcStore.modifyEggQuantity(-1);
-            console.log('🥚🚀 发射鸡蛋，库存-1');
+            const result = model.shootEgg(currentCamera, scene, mouseX, mouseY);
+            if (result) {
+              // 通过 eventBus 发射事件，触发 WebRTC 同步
+              webrtcStore.sendEggShoot(result.position,result.velocity)
+              // 消耗1个鸡蛋
+              webrtcStore.modifyEggQuantity(-1);
+              console.log('🥚🚀 发射鸡蛋，库存-1');
+            }
           }
         }
       }
@@ -459,9 +463,9 @@ onMounted(async () => {
         }
 
         // 创建鸡蛋模型
-        setTimeout(() => { 
+        setTimeout(() => {
           console.log("创建鸡蛋模型");
-          
+
           const createdEggs = objectManager.createEggBroadcast(data)
 
           // 为每个创建的鸡蛋创建BVH碰撞体
@@ -509,8 +513,8 @@ onMounted(async () => {
       })
 
       // 监听鸡蛋被清除事件（房间内广播）
-      eventBus.on('egg-cleared', ({ eggId}) => {
-        eventBus.emit('egg-clear', { eggId});
+      eventBus.on('egg-cleared', ({ eggId }) => {
+        eventBus.emit('egg-clear', { eggId });
         // 从BVH物理系统中移除鸡蛋碰撞体
         bvhPhysics?.removeEggBVH(eggId)
 
@@ -519,26 +523,39 @@ onMounted(async () => {
         // 通过事件总线通知Model清理位置距离映射
         eventBus.emit('clear-egg-mapUserPositionDistance', { eggId })
       })
+
+      // 🚪 设置门状态回调，用于接收其他客户端的门状态更新
+      if (mmdModelManager) {
+        webrtcStore.setDoorStateCallback((doorName: string, doorNearName: string | undefined, visible: boolean, isOpen: boolean) => {
+          console.log(`🚪 收到门状态同步: ${doorName}, 状态: ${isOpen ? '打开' : '关闭'}`);
+
+          // 通过 eventBus 通知 Model 同步门状态
+          const model = mmdModelManager.getModel();
+          if (model) {
+            model.syncDoorState({ doorName, doorNearName, visible, isOpen }, scene);
+          }
+        });
+      }
+
+      //同步其他客户端的鸡蛋发射
+      webrtcStore.setEggShootCallback((userName, position, velocity) => {
+        const model = mmdModelManager.getModel();
+        if (model) {
+
+          model.shootOtherEgg(
+            scene,
+            new THREE.Vector3(position.x, position.y, position.z),
+            new THREE.Vector3(velocity.x, velocity.y, velocity.z),
+          )
+        }
+      })
     }
 
     // 设置装备相关事件监听器
     setupEquipmentBusListeners();
 
-    // 🚪 设置门状态回调，用于接收其他客户端的门状态更新
-    if (mmdModelManager) {
-      webrtcStore.setDoorStateCallback((doorName: string, doorNearName: string | undefined, visible: boolean, isOpen: boolean) => {
-        console.log(`🚪 收到门状态同步: ${doorName}, 状态: ${isOpen ? '打开' : '关闭'}`);
-        
-        // 通过 eventBus 通知 Model 同步门状态
-        const model = mmdModelManager.getModel();
-        if (model) {
-          model.syncDoorState({ doorName, doorNearName, visible, isOpen }, scene);
-        }
-      });
-    }
-
     //发送自身状态
-    webrtcStore.sendYouState(mmdModelManager.getModel()?.getModelState.bind(mmdModelManager.getModel())!,30)
+    webrtcStore.sendYouState(mmdModelManager.getModel()?.getModelState.bind(mmdModelManager.getModel())!, 30)
 
   } catch (error) {
     console.error('❌ 加载过程中发生错误:', error)
@@ -642,13 +659,13 @@ onUnmounted(() => {
   });
 
   // 移除自定义事件监听器
-  window.removeEventListener('wallsRecreated', () => {});
+  window.removeEventListener('wallsRecreated', () => { });
 
   // 移除渲染器事件监听器
   if (renderer && renderer.domElement) {
-    renderer.domElement.removeEventListener('mousedown', () => {});
-    renderer.domElement.removeEventListener('mouseup', () => {});
-    renderer.domElement.removeEventListener('contextmenu', () => {});
+    renderer.domElement.removeEventListener('mousedown', () => { });
+    renderer.domElement.removeEventListener('mouseup', () => { });
+    renderer.domElement.removeEventListener('contextmenu', () => { });
   }
 
   // ==================== 3. 清理 Vue watch 监听器 ====================
@@ -675,13 +692,13 @@ onUnmounted(() => {
   }
 
   // 清理所有其他事件总线监听器
-  eventBus.off('clear-egg-server', () => {});
-  eventBus.off('reinsert-egg', () => {});
-  eventBus.off('egg-collected', () => {});
-  eventBus.off('egg-cleared', () => {});
-  eventBus.off('user-equipment-updated', () => {});
-  eventBus.off('egg-quantity-updated', () => {});
-  eventBus.off('model-state-update', () => {}); // 添加清理模型状态更新监听器
+  eventBus.off('clear-egg-server', () => { });
+  eventBus.off('reinsert-egg', () => { });
+  eventBus.off('egg-collected', () => { });
+  eventBus.off('egg-cleared', () => { });
+  eventBus.off('user-equipment-updated', () => { });
+  eventBus.off('egg-quantity-updated', () => { });
+  eventBus.off('model-state-update', () => { }); // 添加清理模型状态更新监听器
 
   // 彻底清理事件总线
   eventBus.clear();
@@ -872,7 +889,7 @@ onUnmounted(() => {
   console.log('✅ 3DChatRoom 资源清理完成');
 })
 
-let animateId:number
+let animateId: number
 function animate(timestamp?: number) {
   // 使用FPS监控器进行帧率控制和显示更新
   if (fpsMonitor && !fpsMonitor.update(timestamp)) {
@@ -1041,9 +1058,8 @@ const handleCopyRoomCode = (success: boolean, roomCode?: string) => {
     <!-- 游戏UI界面 -->
     <GameUI v-show="showGameUI && !isLoading" :webrtc-connected="isWebRTCConnected" :room-info="roomInfo" :peers="peers"
       :messages="messages" :microphone-enabled="microphoneEnabled" :user-equipment="userEquipment"
-      :selected-slot="selectedSlot"
-      @send-message="handleSendMessage" @toggle-microphone="handleToggleMicrophone" @exit-room="handleExitRoom"
-      @copy-room-code="handleCopyRoomCode" @slot-selection="handleSlotSelection" />
+      :selected-slot="selectedSlot" @send-message="handleSendMessage" @toggle-microphone="handleToggleMicrophone"
+      @exit-room="handleExitRoom" @copy-room-code="handleCopyRoomCode" @slot-selection="handleSlotSelection" />
   </div>
 </template>
 

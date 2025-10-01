@@ -5,9 +5,11 @@ export const filterColliders = (
     colliders: Map<string, THREE.Mesh>,
     mapPositionDistance: Map<string, THREE.Mesh>,
     objectPosition: THREE.Vector3,
+    userPeerId?:string
 ) => {
     colliders.forEach((collider, objectId) => {
       // 🚀 距离预筛选优化：根据碰撞体类型使用不同的筛选策略
+      if(objectId === `user-capsule-${userPeerId}`)return
       if(!STATIC_BVH.includes(objectId)){
         if (objectId.startsWith('school-building-region-region')) {
           const colliderBounds = new THREE.Box3().setFromObject(collider);

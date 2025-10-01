@@ -15,8 +15,8 @@ export class MMDModel extends Model {
   standAction?: AnimationAction;
   private helper: MMDAnimationHelper | null = null;
 
-  constructor(bvhPhysics: BVHPhysics) {
-    super(bvhPhysics);
+  constructor(bvhPhysics: BVHPhysics,userPeerId:string) {
+    super(bvhPhysics,userPeerId);
     this.mesh = new THREE.SkinnedMesh();
   }
   update(): void {
