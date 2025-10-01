@@ -416,18 +416,28 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
     }
   });
 
-  // 获取可用房间列表
+  // 获取所有房间详细数据（包括私密房间）
   socket.on('getRooms', (callback) => {
     try {
-      const rooms = roomManager.getAllRoomsSummary();
-      callback({ rooms });
+      const roomsMap = roomManager.getAllRooms();
+      const rooms = Array.from(roomsMap.values());
+      if (typeof callback === 'function') {
+        callback({ rooms });
+      } else {
+        socket.emit('roomsData', rooms);
+      }
     } catch (error) {
-      console.error('Error in getRooms:', error);
-      callback({ error: 'Failed to get rooms' });
+      if (typeof callback === 'function') {
+        callback({ error: 'Failed to get rooms' });
+      } else {
+        socket.emit('roomsData', []);
+      }
     }
   });
 
-  // 在 socket-controller.ts 中添加
+  // 房间增删时主动推送最新房间列表（你可以在 createRoom/deleteRoom 后调用 io.emit('roomsUpdate', rooms)）
+  // 这里只给出示例，具体调用时机请在房间创建/删除逻辑中补充：
+  // io.emit('roomsUpdate', Array.from(roomManager.getAllRooms().values()));
 
   // 创建 DataProducer
   socket.on('produceData', async (data, callback) => {

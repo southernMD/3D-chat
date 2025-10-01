@@ -50,12 +50,12 @@
         <div
           v-for="room in filteredRooms"
           :key="room.id"
-          :class="['room-card', { 'private-room': room.privacy === 'private' }]"
+          :class="['room-card', { 'private-room': room.config?.isPrivate || room.privacy === 'private' }]"
           @click="joinRoom(room)"
         >
           <div class="room-image">
             <img :src="room.image" :alt="room.name" />
-            <div v-if="room.privacy === 'private'" class="private-badge">
+            <div v-if="room.config?.isPrivate || room.privacy === 'private'" class="private-badge">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18,8H17V6A5,5 0 0,0 12,1A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M12,3A3,3 0 0,1 15,6V8H9V6A3,3 0 0,1 12,3Z"/>
               </svg>
@@ -153,90 +153,24 @@ const filters = [
   { key: 'public', label: 'lobby.filters.public' }
 ]
 
-// 模拟房间数据
-const rooms = ref([
-  {
-    id: '2',
-    name: '森林聊天小屋',
-    description: '在宁静的森林中与朋友们自由交流',
-    image: '/images/forest-cabin.jpg',
-    currentUsers: 3,
-    maxUsers: 8,
-    mode: 'chat',
-    privacy: 'public'
-  },
-  {
-    id: '3',
-    name: '未来都市会议',
-    description: '科技感十足的都市环境，适合严肃讨论',
-    image: '/images/city-rooftop.jpg',
-    currentUsers: 15,
-    maxUsers: 20,
-    mode: 'chat',
-    privacy: 'public'
-  },
-  {
-    id: '6',
-    name: '赛博朋克酒吧',
-    description: '未来科技与怀旧情怀的完美结合',
-    image: '/images/cyberpunk-bar.jpg',
-    currentUsers: 12,
-    maxUsers: 16,
-    mode: 'chat',
-    privacy: 'public'
-  },
-  {
-    id: '8',
-    name: '沙漠绿洲',
-    description: '沙漠中的生机与希望',
-    image: '/images/desert-oasis.jpg',
-    currentUsers: 5,
-    maxUsers: 10,
-    mode: 'chat',
-    privacy: 'public'
-  },
-  {
-    id: '9',
-    name: '秘密基地',
-    description: '神秘的私人聚会场所，需要密码进入',
-    image: '/images/secret-base.jpg',
-    currentUsers: 4,
-    maxUsers: 6,
-    mode: 'chat',
-    privacy: 'private',
-    pinCode: '123456'
-  },
-  {
-    id: '10',
-    name: '私人会所',
-    description: '高端私密空间，仅限会员',
-    image: '/images/private-club.jpg',
-    currentUsers: 2,
-    maxUsers: 4,
-    mode: 'chat',
-    privacy: 'private',
-    pinCode: '888888'
-  }
-])
+// 房间数据（从后端获取）
+const rooms = ref<any[]>([])
 
 // 计算过滤后的房间
 const filteredRooms = computed(() => {
   let filtered = rooms.value
-
   // 根据搜索词过滤
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
     filtered = filtered.filter(room =>
-      room.name.toLowerCase().includes(query) ||
-      room.description.toLowerCase().includes(query)
+      room.name?.toLowerCase().includes(query) ||
+      room.description?.toLowerCase().includes(query)
     )
   }
-
   // 根据筛选条件过滤
   if (activeFilter.value === 'public') {
-    filtered = filtered.filter(room => room.privacy === 'public')
+    filtered = filtered.filter(room => room.config?.isPrivate === false || room.privacy === 'public')
   }
-
   return filtered
 })
 
@@ -247,14 +181,12 @@ const setFilter = (filter: string) => {
 
 // 加入房间
 const joinRoom = (room: any) => {
-  if (room.privacy === 'private') {
-    // 私密房间，显示PIN码输入框
+  if (room.config?.isPrivate || room.privacy === 'private') {
     selectedRoom.value = room
     showPinDialog.value = true
     pinInput.value = ''
     pinError.value = ''
   } else {
-    // 公开房间，直接加入
     console.log('加入公开房间:', room.name)
     // 这里可以添加加入房间的逻辑
   }
@@ -263,14 +195,11 @@ const joinRoom = (room: any) => {
 // 确认PIN码
 const confirmPin = () => {
   if (!selectedRoom.value) return
-  
   if (pinInput.value === selectedRoom.value.pinCode) {
-    // PIN码正确，加入房间
     console.log('加入私密房间:', selectedRoom.value.name)
     closePinDialog()
     // 这里可以添加加入房间的逻辑
   } else {
-    // PIN码错误
     pinError.value = 'PIN码错误，请重新输入'
     pinInput.value = ''
   }
@@ -289,9 +218,21 @@ const goBack = () => {
   router.back()
 }
 
-// 组件挂载
-onMounted(() => {
-  console.log('RoomLobby mounted')
+// 组件挂载，HTTP获取房间列表（用fetch）
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/rooms')
+    if (res.ok) {
+      const data = await res.json()
+      if (data && data.data && data.data.rooms) {
+        rooms.value = data.data.rooms
+      }
+    } else {
+      console.error('获取房间列表失败', res.status)
+    }
+  } catch (e) {
+    console.error('获取房间列表失败', e)
+  }
 })
 </script>
 

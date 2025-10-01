@@ -232,14 +232,16 @@ export class FileService {
           }
         }
       }
-
+      console.log(modelInfo,userId,"谁没有");
+      
       // 保存模型信息到StaticResourceMessage表
       if (modelInfo && userId) {
         // 检查是否已存在相同hash的模型信息
         const existingMessage = await manager.findOne(StaticResourceMessage, {
           where: { hash: zipHash }
         })
-
+        console.log(existingMessage,"存在相同");
+        
         if (!existingMessage) {
           const staticResourceMessage = new StaticResourceMessage()
           staticResourceMessage.hash = zipHash

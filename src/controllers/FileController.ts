@@ -51,7 +51,8 @@ export class FileController {
 
       // 从验证装饰器中获取解析后的模型信息
       const modelInfo: ModelInfo | null = (req as any).parsedModelInfo || null
-
+      const user = JSON.parse(req.body.user)
+      console.log(user);
       let result: FileUploadResult
 
       if (fileExtension === '.zip') {
@@ -59,7 +60,7 @@ export class FileController {
         result = await fileService.processZipFile(
           filePath,
           originalName,
-          req.user?.userId || null,
+          user,
           modelInfo
         )
       } else {

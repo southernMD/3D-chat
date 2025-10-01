@@ -29,6 +29,8 @@ export class RequestError extends Error {
 
 // 获取API基础URL
 const getBaseURL = (): string => {
+  console.log(import.meta.env,'base');
+  
   return import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 }
 

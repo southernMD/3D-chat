@@ -7,6 +7,9 @@ WORKDIR /app
 # 复制 package.json 和 package-lock.json
 COPY package.json package-lock.json ./
 
+# 安装 python3 和 pip，解决 mediasoup worker 编译依赖
+RUN apt-get update && apt-get install -y python3 python3-pip
+
 # 安装依赖（包括 devDependencies，因为需要编译）
 RUN npm install
 

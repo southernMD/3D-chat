@@ -26,11 +26,13 @@ router.get('/status', (req: Request, res: Response) => {
   }
 });
 
-// 获取所有房间
+// 获取所有房间（详细数据，包括私密房间）
 router.get('/rooms', (req: Request, res: Response) => {
   try {
-    const rooms = roomManager.getAllRoomsSummary();
-    
+    // 直接返回所有房间详细数据
+    const roomsMap = roomManager.getAllRooms();
+    // Map 转为数组，包含所有 Room 对象
+    const rooms = Array.from(roomsMap.values());
     res.json({
       status: 'success',
       data: { rooms },

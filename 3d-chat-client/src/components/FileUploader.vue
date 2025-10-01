@@ -594,7 +594,7 @@ const uploadWithXHR = async (zipBlob: Blob, files: UploadFile[], modelHash: stri
                 screenshot: modelScreenshot // 直接添加base64截图字符串
             }
             formData.append('modelInfo', JSON.stringify(modelData))
-
+            formData.append('user',JSON.stringify(authStore.user))
             // 监听上传进度
             xhr.upload.addEventListener('progress', (event) => {
                 if (event.lengthComputable) {

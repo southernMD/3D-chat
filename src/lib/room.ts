@@ -61,6 +61,11 @@ export class RoomManager {
   private rooms: Map<string, Room> = new Map();
   private io: Server | null = null;
 
+  // 新增：暴露 rooms 的只读访问
+  public getAllRooms(): Map<string, Room> {
+    return this.rooms;
+  }
+
   // 设置Socket.IO实例
   setIO(io: Server): void {
     this.io = io;

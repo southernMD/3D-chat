@@ -731,9 +731,20 @@ export class WebRTCManager {
       dtlsParameters: producerTransportInfo.dtlsParameters,
       sctpParameters: producerTransportInfo.sctpParameters,
       iceServers:import.meta.env.DEV ? [
-        { urls: 'stun:stun.l.google.com:19302' }
+        { urls: 'stun:stun.l.google.com:19302' },
+        {
+          urls:import.meta.env.VITE_TURN_URL,
+          username: import.meta.env.VITE_TURN_USERNAME,
+          credential: import.meta.env.VITE_TURN_PASSWORD,
+        }
       ] :
-      []
+      [
+        {
+          urls:import.meta.env.VITE_TURN_URL,
+          username: import.meta.env.VITE_TURN_USERNAME,
+          credential: import.meta.env.VITE_TURN_PASSWORD,
+        }
+      ]
     })
 
     // 处理生产者传输连接事件
@@ -882,9 +893,20 @@ export class WebRTCManager {
             dtlsParameters: response.dtlsParameters,
             sctpParameters: response.sctpParameters,
             iceServers:import.meta.env.DEV ? [
-              { urls: 'stun:stun.l.google.com:19302' }
+              { urls: 'stun:stun.l.google.com:19302' },
+              {
+                urls:import.meta.env.VITE_TURN_URL,
+                username: import.meta.env.VITE_TURN_USERNAME,
+                credential: import.meta.env.VITE_TURN_PASSWORD,
+              }
             ] :
-            []
+            [
+              {
+                urls:import.meta.env.VITE_TURN_URL,
+                username: import.meta.env.VITE_TURN_USERNAME,
+                credential: import.meta.env.VITE_TURN_PASSWORD,
+              }
+            ]
           })
 
           // 监听连接事件
