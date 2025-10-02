@@ -1025,7 +1025,6 @@ const handleToggleMicrophone = async (userId: string) => {
   try {
     if (userId === 'self') {
       // 切换自己的麦克风
-      debugger
       const enabled = await webrtcStore.toggleMicrophone()
       microphoneEnabled.value = enabled
       console.log(`麦克风${enabled ? '已开启' : '已关闭'}`)

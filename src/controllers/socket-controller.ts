@@ -302,6 +302,7 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
   // 创建Consumer（接收媒体流）
   socket.on('consume', async ({ roomId, consumerPeerId, producerId, rtpCapabilities }, callback) => {
     try {
+      
       // 保存消费者的RTP能力
       roomManager.setPeerRtpCapabilities(roomId, consumerPeerId, rtpCapabilities);
 

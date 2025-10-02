@@ -29,6 +29,8 @@ export interface EventBusEvents {
   'send-popup-message':UserPopupMessageData
 
   'change-mico-status':ChangeMicoStatus
+
+  'volume-level-update': VolumeLevelUpdateData
 }
 
 export interface EggBroadcastData {
@@ -172,6 +174,11 @@ export interface UserPopupMessageData{
 export interface ChangeMicoStatus{
   peerId:string
   status:boolean
+}
+
+export interface VolumeLevelUpdateData{
+  peerId:string
+  volume:number
 }
 
 // 事件总线实现

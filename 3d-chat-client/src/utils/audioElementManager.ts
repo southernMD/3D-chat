@@ -9,6 +9,10 @@ export class AudioElementManager {
   private audioElements: Map<string, HTMLAudioElement> = new Map()
   // 本地静音peerId集合
   private mutedPeerIds: Set<string> = new Set()
+  // 音量检测器映射
+  private volumeAnalyzers: Map<string, { analyser: AnalyserNode, dataArray: Uint8Array, audioContext: AudioContext }> = new Map()
+  // 实时音量数据
+  private volumeLevels: Map<string, number> = new Map()
   
   /**
    * 创建音频元素
@@ -50,6 +54,9 @@ export class AudioElementManager {
     this.audioElements.set(producerPeerId, audioElement)
     // 新增：将peerId加入activeMicPeerIds
     eventBus.emit('change-mico-status',{peerId:producerPeerId,status:true})
+    
+    // 设置音量检测
+    this.setupVolumeAnalyzer(producerPeerId, mediaStream)
 
     // 监听音频播放事件
     audioElement.addEventListener('loadedmetadata', () => {
@@ -76,6 +83,8 @@ export class AudioElementManager {
       audioElement.remove()
       // 从映射中删除
       this.audioElements.delete(producerPeerId)
+      // 清理音量检测器
+      this.cleanupVolumeAnalyzer(producerPeerId)
       // 新增：将peerId从activeMicPeerIds移除
       eventBus.emit('change-mico-status',{peerId:producerPeerId,status:false})
       return true
@@ -170,21 +179,98 @@ export class AudioElementManager {
   }
 
   /**
-   * 清理所有音频元素
-   */
-  clearAll(): void {
-    for (const [peerId, audioElement] of this.audioElements.entries()) {
-      audioElement.remove()
-    }
-    this.audioElements.clear()
-  }
-
-  /**
    * 获取当前管理的音频元素数量
    * @returns 音频元素数量
    */
   getCount(): number {
     return this.audioElements.size
+  }
+
+  /**
+   * 设置音量检测器
+   */
+  private setupVolumeAnalyzer(peerId: string, mediaStream: MediaStream): void {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const source = audioContext.createMediaStreamSource(mediaStream)
+      const analyser = audioContext.createAnalyser()
+      
+      analyser.fftSize = 256
+      const dataArray = new Uint8Array(analyser.frequencyBinCount)
+      
+      source.connect(analyser)
+      
+      this.volumeAnalyzers.set(peerId, { analyser, dataArray, audioContext })
+      
+      // 开始音量检测循环
+      this.startVolumeDetection(peerId)
+    } catch (error) {
+      console.warn(`音量检测器设置失败 ${peerId}:`, error)
+    }
+  }
+
+  /**
+   * 开始音量检测循环
+   */
+  private startVolumeDetection(peerId: string): void {
+    const analyzer = this.volumeAnalyzers.get(peerId)
+    if (!analyzer) return
+
+    const detectVolume = () => {
+      if (!this.volumeAnalyzers.has(peerId)) return // 已被清理
+
+      analyzer.analyser.getByteFrequencyData(analyzer.dataArray)
+      
+      // 计算平均音量
+      let sum = 0
+      for (let i = 0; i < analyzer.dataArray.length; i++) {
+        sum += analyzer.dataArray[i]
+      }
+      const average = sum / analyzer.dataArray.length
+      const volumePercent = Math.min(100, (average / 255) * 100)
+      
+      // 更新音量数据
+      this.volumeLevels.set(peerId, volumePercent * 2)
+      
+      // 通过eventBus触发UI更新
+      eventBus.emit('volume-level-update', { peerId, volume: volumePercent * 2 })
+      
+      // 继续检测
+      requestAnimationFrame(detectVolume)
+    }
+    
+    detectVolume()
+  }
+
+  /**
+   * 清理音量检测器
+   */
+  private cleanupVolumeAnalyzer(peerId: string): void {
+    const analyzer = this.volumeAnalyzers.get(peerId)
+    if (analyzer) {
+      analyzer.audioContext.close()
+      this.volumeAnalyzers.delete(peerId)
+      this.volumeLevels.delete(peerId)
+    }
+  }
+
+  /**
+   * 获取实时音量
+   */
+  public getVolumeLevel(peerId: string): number {
+    return this.volumeLevels.get(peerId) || 0
+  }
+
+  /**
+   * 清理所有音频元素和检测器
+   */
+  clearAll(): void {
+    for (const [peerId, audioElement] of this.audioElements.entries()) {
+      audioElement.remove()
+      this.cleanupVolumeAnalyzer(peerId)
+    }
+    this.audioElements.clear()
+    this.volumeLevels.clear()
   }
 }
 

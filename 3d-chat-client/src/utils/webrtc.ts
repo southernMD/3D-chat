@@ -177,6 +177,9 @@ type DoorStateCallback = (doorName: string, doorNearName: string | undefined, vi
 type EggShootCallback = (userName: string, position: { x: number; y: number; z: number }, velocity: { x: number; y: number; z: number }) => void
 type PopupMessageCallback = (message:string) => void
 export class WebRTCManager {
+  // 自己的音量检测器
+  private selfVolumeAnalyzer: { analyser: AnalyserNode, dataArray: Uint8Array, audioContext: AudioContext } | null = null
+  
   private state: AppState = {
     socket: null,
     device: null,
@@ -621,7 +624,8 @@ export class WebRTCManager {
     // 监听新的音频生产者事件
     this.state.socket.on('newProducer', async ({ producerId, producerPeerId, kind }) => {
       this.log(`新的${kind}生产者: ${producerPeerId}`)
-
+      console.log("newProducer from", producerPeerId, "myPeerId", this.state.peerId);
+      debugger
       // 只处理音频生产者
       if (kind === 'audio') {
         // 检查是否已经有这个生产者的消费者
@@ -1537,6 +1541,9 @@ export class WebRTCManager {
 
       this.log('获取到麦克风音频轨道')
 
+      // 设置自己的音量检测
+      this.setupSelfVolumeAnalyzer(stream)
+
       this.state.audioProducer = await this.state.producerTransport.produce({
         track,
         codecOptions: {
@@ -1552,7 +1559,6 @@ export class WebRTCManager {
       this.log(`音频生产者已创建，ID: ${this.state.audioProducer.id}`)
 
       this.state.audioProducer.on('transportclose', () => {
-        debugger
         this.log('音频生产者传输关闭')
         this.state.audioProducer = null
         this.state.microphoneEnabled = false
@@ -1589,6 +1595,72 @@ export class WebRTCManager {
       this.state.microphoneEnabled = false
       this.log('麦克风已关闭')
       this.state.socket?.emit("change-mico-status",{roomId:this.state.roomId,peerId:this.state.peerId})
+      
+      // 清理自己的音量检测器
+      this.cleanupSelfVolumeAnalyzer()
+    }
+  }
+
+  /**
+   * 设置自己的音量检测器
+   */
+  private setupSelfVolumeAnalyzer(mediaStream: MediaStream): void {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const source = audioContext.createMediaStreamSource(mediaStream)
+      const analyser = audioContext.createAnalyser()
+      
+      analyser.fftSize = 256
+      const dataArray = new Uint8Array(analyser.frequencyBinCount)
+      
+      source.connect(analyser)
+      debugger
+      this.selfVolumeAnalyzer = { analyser, dataArray, audioContext }
+      
+      // 开始自己的音量检测循环
+      this.startSelfVolumeDetection()
+    } catch (error) {
+      console.warn('自己的音量检测器设置失败:', error)
+    }
+  }
+
+  /**
+   * 开始自己的音量检测循环
+   */
+  private startSelfVolumeDetection(): void {
+    if (!this.selfVolumeAnalyzer) return
+
+    const detectVolume = () => {
+      if (!this.selfVolumeAnalyzer) return // 已被清理或麦克风关闭
+
+      this.selfVolumeAnalyzer.analyser.getByteFrequencyData(this.selfVolumeAnalyzer.dataArray)
+      
+      // 计算平均音量
+      let sum = 0
+      for (let i = 0; i < this.selfVolumeAnalyzer.dataArray.length; i++) {
+        sum += this.selfVolumeAnalyzer.dataArray[i]
+      }
+      const average = sum / this.selfVolumeAnalyzer.dataArray.length
+      const volumePercent = Math.min(100, (average / 255) * 100 * 2) // 乘以2增强效果
+      console.log(volumePercent);
+      
+      // 通过eventBus触发UI更新
+      eventBus.emit('volume-level-update', { peerId: 'self', volume: volumePercent })
+      
+      // 继续检测
+      requestAnimationFrame(detectVolume)
+    }
+    
+    detectVolume()
+  }
+
+  /**
+   * 清理自己的音量检测器
+   */
+  private cleanupSelfVolumeAnalyzer(): void {
+    if (this.selfVolumeAnalyzer) {
+      this.selfVolumeAnalyzer.audioContext.close()
+      this.selfVolumeAnalyzer = null
     }
   }
 

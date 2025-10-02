@@ -211,6 +211,9 @@ interface InventoryItem {
   description: string
 }
 
+// 实时音量数据（响应式）
+const volumeLevels = ref<Map<string, number>>(new Map())
+
 // 响应式数据 - 现在从WebRTC获取
 const onlineUsers = computed<User[]>(() => {
   const users: User[] = []
@@ -219,7 +222,7 @@ const onlineUsers = computed<User[]>(() => {
     id: 'self',
     name: '我',
     micOn: props.microphoneEnabled || false,
-    volume: props.microphoneEnabled ? 75 : 0,
+    volume: volumeLevels.value.get('self') || 0, // 使用自己的实时音量检测
     isSelf: true,
     isMuted: audioElementManager.isMuted(webrtcStore.getYouPeer().id)
   })
@@ -230,7 +233,7 @@ const onlineUsers = computed<User[]>(() => {
         id: peer.id,
         name: peer.name,
         micOn: peer.micOn, // 其他用户的麦克风状态
-        volume: audioElementManager.isMuted(peer.id) ? 0 : 50, // 静音状态由audioElementManager决定
+        volume: volumeLevels.value.get(peer.id) || 0, // 使用响应式音量数据
         isSelf: false,
         isMuted: audioElementManager.isMuted(peer.id)
       })
@@ -503,12 +506,21 @@ const changeMicoStatus = ({peerId,status}:ChangeMicoStatus)=>{
   }
 }
 
+// 音量更新处理
+const handleVolumeUpdate = ({ peerId, volume }: { peerId: string, volume: number }) => {
+  volumeLevels.value.set(peerId, volume)
+  // 触发响应式更新
+  volumeLevels.value = new Map(volumeLevels.value)
+}
+
 onMounted(()=>{
   eventBus.on('change-mico-status',changeMicoStatus)
+  eventBus.on('volume-level-update', handleVolumeUpdate)
 })
 
 onUnmounted(()=>{
   eventBus.off('change-mico-status',changeMicoStatus)
+  eventBus.off('volume-level-update', handleVolumeUpdate)
 })
 </script>
 
