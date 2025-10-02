@@ -59,7 +59,10 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: true },
         beforeEnter: (to, from, next) => {
             // 只允许从创建房间页面跳转过来
-            if (from.name === 'create-room' || from.name === 'mode-selection' && from.query.pingCode?.length !== 0) {
+            if (from.name === 'create-room' || 
+                from.name === 'mode-selection' && from.query.pingCode?.length !== 0 ||
+                from.name === 'lobby' && from.query.pingCode?.length !== 0
+            ) {
                 next()
             } else {
                 // 直接访问或从其他页面跳转，重定向到首页

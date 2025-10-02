@@ -62,6 +62,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { onMounted, onUnmounted } from 'vue'
 import { gsap } from 'gsap'
+import { checkRoomExists } from '@/api/roomApi'
 // import { showError, showSuccess } from '@/utils/message'
 
 const { t } = useI18n()
@@ -109,31 +110,17 @@ const selectMode = async (mode: 'create' | 'join' | 'lobby') => {
 
         // 先检查房间是否存在 (使用HTTP接口，无需WebRTC连接)
         try {
-          // 构建HTTP URL
-          const host = import.meta.env.VITE_APP_HOST || 'localhost'
-          const port = import.meta.env.VITE_APP_HOST_PORT || '3000'
-          const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
-          const serverUrl = `${protocol}://${host}:${port}`
+          const response = await checkRoomExists(roomId)
 
-          const response = await fetch(`${serverUrl}/api/rooms/${roomId}/exists`)
-
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          if (!response.success) {
+            throw new Error(response.message)
           }
-
-          const data = await response.json()
-
-          if (data.status === 'success' && data.data.exists) {
-            // 跳转到模型选择页面，并传递ping码
-            router.push({
-              path: '/model-selection',
-              query: {
-                pingCode: roomId
-              }
-            })
-          } else {
-            ElMessage.error('房间不存在或已被删除，请检查房间码是否正确')
-          }
+          router.push({
+            path: '/model-selection',
+            query: {
+              pingCode: roomId
+            }
+          })
         } catch (error) {
           console.error('检查房间失败:', error)
           ElMessage.error('检查房间失败，请重试')

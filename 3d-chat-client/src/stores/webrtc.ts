@@ -227,21 +227,6 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     }
   }
 
-  // 检查房间是否存在
-  const checkRoomExists = async (roomId: string): Promise<{ exists: boolean; roomInfo?: any; error?: string }> => {
-    if (!webrtcManager) {
-      throw new Error('WebRTC管理器未初始化')
-    }
-
-    try {
-      const result = await webrtcManager.checkRoomExists(roomId)
-      return result
-    } catch (error) {
-      console.error('检查房间失败:', error)
-      return { exists: false, error: error instanceof Error ? error.message : '检查房间失败' }
-    }
-  }
-
   // 通过房间UUID加入房间
   const joinRoomByUUID = async (
     roomUUID: string,
@@ -512,7 +497,6 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     initializeWebRTCManager,
     connectToServer,
     createAndJoinRoom,
-    checkRoomExists,
     joinRoomByUUID,
     sendMessage,
     toggleMicrophone,

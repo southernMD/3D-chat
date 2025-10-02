@@ -279,7 +279,8 @@ const zh = {
     empty: {
       title: '暂无房间',
       description: '当前没有符合条件的房间，请尝试其他搜索条件或稍后再试。'
-    }
+    },
+    noDescription: '暂无房间描述'
   },
   footer: {
     subtitle: '在第三维度聊天',
@@ -584,7 +585,8 @@ const en = {
     empty: {
       title: 'No Rooms Found',
       description: 'No rooms match your current search criteria. Try different filters or check back later.'
-    }
+    },
+    noDescription: 'No room description'
   },
   footer: {
     subtitle: 'Chat in the Third Dimension',

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { roomManager } from '../lib/room';
 import { mediasoupHandler } from '../lib/mediasoup';
+import { logger } from '../lib/logger';
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.get('/status', (req: Request, res: Response) => {
       data: status,
     });
   } catch (error) {
+    logger.error((error as any).toString())
     res.status(500).json({
       status: 'error',
       message: 'Internal server error',
@@ -32,15 +34,27 @@ router.get('/rooms', (req: Request, res: Response) => {
     // 直接返回所有房间详细数据
     const roomsMap = roomManager.getAllRooms();
     // Map 转为数组，包含所有 Room 对象
-    const rooms = Array.from(roomsMap.values());
+    
+    const rooms = Array.from(roomsMap.values()).map((item)=>{
+      return {
+        id:item.id,
+        name:item.name,
+        createdAt:item.createdAt,
+        config:item.config,
+        onlineNumber:item.peers.size
+      }
+    });
     res.json({
-      status: 'success',
+      success: true,
       data: { rooms },
     });
-  } catch (error) {
+  } catch (error : any) {
+    logger.error((error as any).toString())
     res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
+      success: false,
+      error: error.message || '获取所有房间失败',
+      data: undefined,
+      message: error.message || '获取所有房间失败',
     });
   }
 });
@@ -53,7 +67,7 @@ router.get<{ roomId: string }>('/rooms/:roomId/exists', (req: Request<{ roomId: 
 
     if (!room) {
       res.json({
-        status: 'success',
+        success: true,
         data: {
           exists: false
         },
@@ -62,21 +76,18 @@ router.get<{ roomId: string }>('/rooms/:roomId/exists', (req: Request<{ roomId: 
     }
 
     res.json({
-      status: 'success',
+      success: true,
       data: {
-        exists: true,
-        roomInfo: {
-          id: room.id,
-          name: room.name,
-          peerCount: room.peers.size,
-          createdAt: room.createdAt
-        }
+        exists: true
       },
     });
-  } catch (error) {
+  } catch (error:any) {
+    logger.error((error as any).toString())
     res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
+      success: false,
+      error: error.message || '检测房间失败',
+      data: undefined,
+      message: error.message || '检测房间失败',
     });
   }
 });
@@ -89,8 +100,10 @@ router.get<{ roomId: string }>('/rooms/:roomId', (req: Request<{ roomId: string 
 
     if (!room) {
       res.status(404).json({
-        status: 'error',
-        message: 'Room not found',
+        success: false,
+        error: '房间不存在',
+        data: undefined,
+        message: '房间不存在'
       });
       return;
     }
@@ -100,9 +113,12 @@ router.get<{ roomId: string }>('/rooms/:roomId', (req: Request<{ roomId: string 
       data: { room },
     });
   } catch (error) {
+    logger.error((error as any).toString())
     res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
+      success: false,
+      error: '获取指定房间信息失败',
+      data: undefined,
+      message: '获取指定房间信息失败'
     });
   }
 });
@@ -113,39 +129,6 @@ interface CreateRoomRequestBody {
   name: string;
 }
 
-// // 修改POST /rooms路由
-// router.post<{}, {}, CreateRoomRequestBody>('/rooms', (req: Request<{}, {}, CreateRoomRequestBody>, res: Response) => {
-//   try {
-//     const { name } = req.body;
-    
-//     if (!name) {
-//       res.status(400).json({
-//         status: 'error',
-//         message: 'Room name is required',
-//       });
-//       return;
-//     }
-    
-//     const room = roomManager.createRoom(name);
-    
-//     res.status(201).json({
-//       status: 'success',
-//       data: { 
-//         room: {
-//           id: room.id,
-//           name: room.name,
-//           createdAt: room.createdAt,
-//         }
-//       },
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       status: 'error',
-//       message: 'Internal server error',
-//     });
-//   }
-// });
-
 // 删除房间
 router.delete<{ roomId: string }>('/rooms/:roomId', (req: Request<{ roomId: string }>, res: Response) => {
   try {
@@ -154,20 +137,23 @@ router.delete<{ roomId: string }>('/rooms/:roomId', (req: Request<{ roomId: stri
     
     if (!success) {
       res.status(404).json({
-        status: 'error',
-        message: 'Room not found',
+        success: false,
+        message: '房间不存在',
       });
       return;
     }
     
     res.json({
-      status: 'success',
-      message: 'Room deleted successfully',
+      success: true,
+      message: '房间已删除',
     });
   } catch (error) {
+    logger.error((error as any).toString())
     res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
+      success: false,
+      error: '删除房间失败',
+      data: undefined,
+      message: '删除房间失败'
     });
   }
 });

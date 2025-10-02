@@ -17,23 +17,13 @@ export interface RoomConfig {
 export interface RoomInfo {
   id: string
   name: string
-  description: string
-  maxUsers: number
-  isPrivate: boolean
-  enableVoice: boolean
-  enableText: boolean
-  map: string
-  modelHash?: string
-  createdAt: string
-  createdBy?: {
-    id: string
-    nickname: string
-  }
-  currentUsers: number
-  peers: Array<{
-    id: string
-    name: string
-  }>
+  onlineNumber:number
+  createdAt:Date
+  config:Omit<RoomConfig, 'modelHash'>
+}
+
+export interface RoomCheck{
+  exists:boolean
 }
 
 // 创建房间响应
@@ -67,19 +57,9 @@ export interface RoomListResponse {
 /**
  * 获取房间列表
  */
-export const getRoomList = async (params?: {
-  page?: number
-  limit?: number
-  search?: string
-}): Promise<ApiResponse<RoomListResponse>> => {
+export const getRoomList = async (): Promise<ApiResponse<RoomListResponse>> => {
   try {
-    const queryParams = new URLSearchParams()
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.limit) queryParams.append('limit', params.limit.toString())
-    if (params?.search) queryParams.append('search', params.search)
-    
-    const url = `/api/rooms${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
-    const response = await get<ApiResponse<RoomListResponse>>(url)
+    const response = await get<ApiResponse<RoomListResponse>>('/rooms')
     return response
   } catch (error: any) {
     return {
@@ -104,6 +84,22 @@ export const getRoomDetail = async (roomId: string): Promise<ApiResponse<RoomInf
       error: error.message || '获取房间详情失败',
       data: undefined,
       message: error.message || '创建房间失败',
+    }
+  }
+}
+/**
+ * 
+ * 检测指定房间是否存在
+ */
+export const checkRoomExists = async (roomId:string):Promise<ApiResponse<RoomCheck>>=>{
+  try {
+    return await get<ApiResponse<RoomCheck>>(`/rooms/${roomId}/exists`)
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || '检查失败',
+      data: undefined,
+      message: error.message || '检查失败',
     }
   }
 }

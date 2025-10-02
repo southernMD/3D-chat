@@ -901,7 +901,6 @@ export class BVHPhysics {
       // 检查是否已存在该用户的胶囊体
       let capsule = this.colliders.get(capsuleKey);
       let visualizer = this.visualizers.get(capsuleKey);
-      debugger
       if (!capsuleInfo) return
       if (!capsule) {
         // 创建新的胶囊体
@@ -934,7 +933,6 @@ export class BVHPhysics {
         };
         capsule.visible = this.params.displayCollider;
         // 更新位置、旋转和缩放
-        debugger
         capsule.position.set(position.x, position.y, position.z);
         // 创建BVH可视化器
         visualizer = new MeshBVHHelper(capsule, this.params.visualizeDepth);

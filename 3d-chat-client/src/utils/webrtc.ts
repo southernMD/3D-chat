@@ -1051,35 +1051,6 @@ export class WebRTCManager {
     this.peerNames.clear()
   }
 
-
-
-  /**
-   * 检查房间是否存在 (使用HTTP接口)
-   */
-  public async checkRoomExists(roomId: string): Promise<{ exists: boolean; roomInfo?: any; error?: string }> {
-    try {
-      const response = await fetch(`${this.state.serverUrl}/api/rooms/${roomId}/exists`)
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const data = await response.json()
-
-      if (data.status === 'success') {
-        return data.data
-      } else {
-        return { exists: false, error: data.message || 'Unknown error' }
-      }
-    } catch (error) {
-      console.error('检查房间失败:', error)
-      return {
-        exists: false,
-        error: error instanceof Error ? error.message : '网络错误'
-      }
-    }
-  }
-
   /**
    * 通过房间UUID加入房间
    */

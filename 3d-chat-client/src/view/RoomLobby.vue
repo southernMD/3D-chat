@@ -50,12 +50,12 @@
         <div
           v-for="room in filteredRooms"
           :key="room.id"
-          :class="['room-card', { 'private-room': room.config?.isPrivate || room.privacy === 'private' }]"
+          :class="['room-card', { 'private-room': room.config?.isPrivate}]"
           @click="joinRoom(room)"
         >
           <div class="room-image">
-            <img :src="room.image" :alt="room.name" />
-            <div v-if="room.config?.isPrivate || room.privacy === 'private'" class="private-badge">
+            <img :src="`/${room.config.map}.png`" :alt="room.name" />
+            <div v-if="room.config?.isPrivate" class="private-badge">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18,8H17V6A5,5 0 0,0 12,1A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M12,3A3,3 0 0,1 15,6V8H9V6A3,3 0 0,1 12,3Z"/>
               </svg>
@@ -65,15 +65,16 @@
           
           <div class="room-info">
             <h3 class="room-name">{{ room.name }}</h3>
-            <p class="room-description">{{ room.description }}</p>
+            <p class="room-description">{{ room.config.description || $t('lobby.noDescription') }}</p>
             
             <div class="room-meta">
               <div class="room-users">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.996 1.996 0 0 0 18.06 7h-.72c-.8 0-1.54.5-1.85 1.26l-1.92 5.79c-.16.5.08 1.04.56 1.26l2.87.87V18h-2v3h4v-3h-1zm-12.5-11.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S6 8.17 6 9s.67 1.5 1.5 1.5zM5.5 12h3c.28 0 .5.22.5.5s-.22.5-.5.5h-3c-.28 0-.5-.22-.5-.5s.22-.5.5-.5zm0 4h3c.28 0 .5.22.5.5s-.22.5-.5.5h-3c-.28 0-.5-.22-.5-.5s.22-.5.5-.5zm0-8h3c.28 0 .5.22.5.5s-.22.5-.5.5h-3c-.28 0-.5-.22-.5-.5s.22-.5.5-.5z"/>
                 </svg>
-                {{ room.currentUsers }}/{{ room.maxUsers }}
+                {{ room.onlineNumber }}/{{ room.config.maxUsers }}
               </div>
+              <div class="room-map-label">{{ room.config.map }}</div>
             </div>
           </div>
         </div>
@@ -132,18 +133,18 @@
 </template>
 
 <script setup lang="ts">
+import { checkRoomExists, getRoomList, type RoomInfo } from '@/api/roomApi'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
-const { t } = useI18n()
 const router = useRouter()
 
 // 响应式数据
 const searchQuery = ref('')
 const activeFilter = ref('all')
 const showPinDialog = ref(false)
-const selectedRoom = ref(null)
+const selectedRoom = ref<RoomInfo | null>(null)
 const pinInput = ref('')
 const pinError = ref('')
 
@@ -154,7 +155,7 @@ const filters = [
 ]
 
 // 房间数据（从后端获取）
-const rooms = ref<any[]>([])
+const rooms = ref<RoomInfo[]>([])
 
 // 计算过滤后的房间
 const filteredRooms = computed(() => {
@@ -164,12 +165,12 @@ const filteredRooms = computed(() => {
     const query = searchQuery.value.toLowerCase()
     filtered = filtered.filter(room =>
       room.name?.toLowerCase().includes(query) ||
-      room.description?.toLowerCase().includes(query)
+      room.config.description?.toLowerCase().includes(query)
     )
   }
   // 根据筛选条件过滤
   if (activeFilter.value === 'public') {
-    filtered = filtered.filter(room => room.config?.isPrivate === false || room.privacy === 'public')
+    filtered = filtered.filter(room => room.config?.isPrivate === false)
   }
   return filtered
 })
@@ -180,8 +181,8 @@ const setFilter = (filter: string) => {
 }
 
 // 加入房间
-const joinRoom = (room: any) => {
-  if (room.config?.isPrivate || room.privacy === 'private') {
+const joinRoom = async (room: RoomInfo) => {
+  if (room.config?.isPrivate) {
     selectedRoom.value = room
     showPinDialog.value = true
     pinInput.value = ''
@@ -189,6 +190,17 @@ const joinRoom = (room: any) => {
   } else {
     console.log('加入公开房间:', room.name)
     // 这里可以添加加入房间的逻辑
+    const response = await checkRoomExists(room.id)
+
+    if (!response.success) {
+      throw new Error(response.message)
+    }
+    router.push({
+      path: '/model-selection',
+      query: {
+        pingCode: room.id
+      }
+    })
   }
 }
 
@@ -221,14 +233,12 @@ const goBack = () => {
 // 组件挂载，HTTP获取房间列表（用fetch）
 onMounted(async () => {
   try {
-    const res = await fetch('/api/rooms')
-    if (res.ok) {
-      const data = await res.json()
-      if (data && data.data && data.data.rooms) {
-        rooms.value = data.data.rooms
-      }
-    } else {
-      console.error('获取房间列表失败', res.status)
+    const res = await getRoomList()
+    if(res.success){
+      rooms.value = res.data?.rooms ?? []
+      console.log(rooms.value);
+    }else {
+      console.error('获取房间列表失败')
     }
   } catch (e) {
     console.error('获取房间列表失败', e)
@@ -491,7 +501,8 @@ onMounted(async () => {
 
 .room-meta {
   display: flex;
-  justify-content: flex-start;
+  justify-content: space-between; /* Changed to space-between */
+  align-items: center;
   margin-bottom: 15px;
 }
 
@@ -506,6 +517,18 @@ onMounted(async () => {
     width: 16px;
     height: 16px;
   }
+}
+
+.room-map-label {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
 }
 
 .empty-state {

@@ -152,6 +152,7 @@ import {
 import { showError, showSuccess } from '@/utils/message'
 import { useAuthStore } from '@/stores/auth'
 import { useWebRTCStore } from '@/stores/webrtc'
+import { checkRoomExists } from '@/api/roomApi'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -436,9 +437,9 @@ const joinRoomByPingCode = async (selected: any) => {
 
     // 再次检查房间是否存在（防止在选择模型期间房间被删除）
     console.log('4. 再次检查房间是否存在...')
-    const roomCheck = await webrtcStore.checkRoomExists(pingCode.value!)
+    const roomCheck = await checkRoomExists(pingCode.value!)
 
-    if (!roomCheck.exists) {
+    if (!roomCheck.data?.exists) {
       showError('房间已不存在或被删除，请重新获取房间码')
       return
     }
