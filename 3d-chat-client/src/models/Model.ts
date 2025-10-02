@@ -221,9 +221,7 @@ export abstract class Model extends StaticModel {
     this.bvhPhysics.updateUserCapsule(
       this.userPeerId,
       this.mesh.position,
-      this.mesh.rotation,
-      this.mesh.scale,
-      this.getCapsuleInfo()
+      this.getCapsuleInfo()!
     )
 
     // 如果角色掉得太低，重置位置

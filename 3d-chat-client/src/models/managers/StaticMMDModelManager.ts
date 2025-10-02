@@ -470,16 +470,6 @@ export class StaticMMDModelManager {
           y: model.mesh.position.y,
           z: model.mesh.position.z
         },
-        rotation: {
-          x: model.mesh.rotation.x,
-          y: model.mesh.rotation.y,
-          z: model.mesh.rotation.z
-        },
-        scale: {
-          x: model.mesh.scale.x,
-          y: model.mesh.scale.y,
-          z: model.mesh.scale.z
-        },
         capsuleInfo: capsuleInfo // 包含胶囊体信息
       });
     } catch (error) {

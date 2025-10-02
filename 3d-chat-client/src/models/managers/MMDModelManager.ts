@@ -150,8 +150,8 @@ export class MMDModelManager {
       );
       
       //添加bvh物理体
-      const { position,rotation,capsuleInfo } = this.mmdModel.getModelState()
-      this.bvhPhysics.updateUserCapsule(peerId,position,rotation,this.mmdModel.getMesh().scale,capsuleInfo)
+      const { position,capsuleInfo } = this.mmdModel.getModelState()
+      this.bvhPhysics.updateUserCapsule(peerId,position,capsuleInfo!)
       console.log('MMD模型加载完成');
     } catch (error) {
       console.error('加载MMD模型时出错:', error);

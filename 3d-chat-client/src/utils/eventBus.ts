@@ -140,8 +140,6 @@ export interface DoorStateUpdateData {
 export interface UserCapsuleUpdateData {
   userId: string
   position: { x: number; y: number; z: number }
-  rotation: { x: number; y: number; z: number }
-  scale: { x: number; y: number; z: number }
   capsuleInfo?: { radius: number; height: number } // 添加胶囊体信息
 }
 

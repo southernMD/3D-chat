@@ -37,8 +37,8 @@ export class BVHPhysics {
    */
   private initializeEventListeners(): void {
     // 监听用户胶囊体更新事件
-    eventBus.on('static-user-capsule-update', ({userId,position,rotation,scale,capsuleInfo}) => {
-      this.updateUserCapsule(userId, position, rotation,scale,capsuleInfo);
+    eventBus.on('static-user-capsule-update', ({userId,position,capsuleInfo}) => {
+      this.updateUserCapsule(userId, position,capsuleInfo!);
     });
 
     // 监听用户胶囊体移除事件
@@ -893,9 +893,7 @@ export class BVHPhysics {
   updateUserCapsule(
     userId: string, 
     position: { x: number; y: number; z: number },
-    rotation: { x: number; y: number; z: number },
-    scale: { x: number; y: number; z: number },
-    capsuleInfo?: { radius: number; height: number }
+    capsuleInfo: { radius: number; height: number }
   ): void {
     try {
       const capsuleKey = `user-capsule-${userId}`;
@@ -903,18 +901,15 @@ export class BVHPhysics {
       // 检查是否已存在该用户的胶囊体
       let capsule = this.colliders.get(capsuleKey);
       let visualizer = this.visualizers.get(capsuleKey);
-
+      debugger
+      if (!capsuleInfo) return
       if (!capsule) {
         // 创建新的胶囊体
         console.log(`👤 创建用户 ${userId} 的胶囊体...`);
-        
-        // 使用传入的胶囊体信息或默认值
-        const radius = capsuleInfo?.radius ?? 2;
-        const totalHeight = capsuleInfo?.height ?? 24; // 默认总高度24
-        const cylinderHeight = Math.max(0, totalHeight - 2 * radius);
-        
+        const { height,radius } = capsuleInfo
+        const cylinderHeight = Math.max(0, height - 2 * radius);
         // 创建胶囊体几何体
-        const capsuleGeometry = new THREE.CapsuleGeometry(radius, cylinderHeight, 8, 16);
+        const capsuleGeometry = new THREE.CapsuleGeometry(capsuleInfo.radius, cylinderHeight, 8, 16);
         
         // 创建BVH
         capsuleGeometry.boundsTree = new MeshBVH(capsuleGeometry);
@@ -922,7 +917,7 @@ export class BVHPhysics {
         // 创建胶囊体材质
         const capsuleMaterial = new THREE.MeshBasicMaterial({
           wireframe: true,
-          opacity: 0.4,
+          opacity: 0.5,
           transparent: true,
           color: 0x00ff00, // 绿色表示其他用户
           side: THREE.DoubleSide
@@ -934,10 +929,13 @@ export class BVHPhysics {
         capsule.userData = { 
           type: 'user_capsule', 
           userId: userId,
-          radius: radius,
-          height: totalHeight
+          radius: capsuleInfo.radius,
+          height:  capsuleInfo.height
         };
         capsule.visible = this.params.displayCollider;
+        // 更新位置、旋转和缩放
+        debugger
+        capsule.position.set(position.x, position.y, position.z);
         // 创建BVH可视化器
         visualizer = new MeshBVHHelper(capsule, this.params.visualizeDepth);
         visualizer.visible = this.params.displayBVH;
@@ -951,18 +949,9 @@ export class BVHPhysics {
         this.scene.add(capsule);
         this.scene.add(visualizer);
 
-        console.log(`✅ 用户 ${userId} 的胶囊体创建完成`, {
-          radius: radius,
-          cylinderHeight: cylinderHeight,
-          totalHeight: totalHeight
-        });
+      }else{
+        this.resetUserCapsule(capsuleKey,position,capsuleInfo)
       }
-
-      // 更新位置、旋转和缩放
-      const totalHeight = capsule.userData?.height ?? 24;
-      capsule.position.set(position.x, position.y + totalHeight/2, position.z);
-      capsule.rotation.set(rotation.x, rotation.y, rotation.z);
-      capsule.scale.set(scale.x, scale.y, scale.z);
 
       // 更新可视化器位置
       if (visualizer) {
@@ -974,6 +963,19 @@ export class BVHPhysics {
     } catch (error) {
       console.error(`❌ 更新用户 ${userId} 胶囊体失败:`, error);
     }
+  }
+
+  resetUserCapsule(
+    capsuleKey:string,
+    position: { x: number; y: number; z: number },
+    capsuleInfo: { radius: number; height: number }
+  ){
+    const collider = this.colliders.get(capsuleKey)!;
+    const visualizer = this.visualizers.get(capsuleKey)!;
+
+    collider.position.set(position.x,position.y + capsuleInfo.height / 2,position.z)
+    visualizer.position.set(position.x,position.y + capsuleInfo.height / 2,position.z)
+
   }
 
   /**

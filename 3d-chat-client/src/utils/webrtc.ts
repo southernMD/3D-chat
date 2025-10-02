@@ -1244,7 +1244,6 @@ export class WebRTCManager {
         this.log('数据生产者未初始化，无法发送弹窗数据')
         return
       }
-      debugger
       const popupMessage: PopupData = {
         type: 'popup',
         peerId: this.state.peerId!,
@@ -1463,7 +1462,6 @@ export class WebRTCManager {
               this.eggShootCallback(senderName, data.position, data.velocity)
             }
           } else if(data.type === 'popup') {
-            debugger
             if(data.toPeerId === this.state.peerId) {
               this.log(`收到弹窗信息，来自 ${data.peerId}: ${data.message}`)
               if(this.popupMessageCallback) {
