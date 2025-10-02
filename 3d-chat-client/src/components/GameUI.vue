@@ -40,13 +40,40 @@
           <div class="user-info">
             <span class="user-name">{{ user.name }}</span>
             <div class="user-status">
+              <!-- 麦克风按钮 -->
               <span
-                class="mic-status"
-                :class="{ 'active': user.micOn, 'muted': !user.micOn }"
-                @click.stop="toggleMic(user.id)"
+                class="mic-button"
+                :class="{ 
+                  'active': user.micOn,
+                  'disabled': !user.isSelf
+                }"
+                @click.stop="user.isSelf ? toggleMicrophone(user.id) : null"
+                :title="user.isSelf ? 
+                  (user.micOn ? '点击关闭麦克风' : '点击开启麦克风') : 
+                  (user.micOn ? '用户麦克风已开启' : '用户麦克风已关闭')"
               >
-                {{ user.micOn ? '🎤' : '🔇' }}
+                <img 
+                  :src="user.micOn ? '/m-open.png' : '/m-close.png'" 
+                  :alt="user.micOn ? '麦克风开启' : '麦克风关闭'"
+                  class="mic-icon"
+                />
               </span>
+              
+              <!-- 声音按钮 -->
+              <span
+                class="sound-button"
+                :class="{ 
+                  'active': !user.isMuted,
+                  'muted': user.isMuted
+                }"
+                @click.stop="toggleSound(user.id)"
+                :title="user.isSelf ? 
+                  (user.isMuted ? '点击取消静音所有人' : '点击静音所有人') : 
+                  (user.isMuted ? '点击取消静音此用户' : '点击静音此用户')"
+              >
+                {{ user.isMuted ? '🔇' : '🔊' }}
+              </span>
+              
               <div class="volume-bar">
                 <div 
                   class="volume-level" 
@@ -119,7 +146,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
+import { audioElementManager } from '@/utils/audioElementManager'
+import { useWebRTCStore } from '@/stores/webrtc'
+import { eventBus, type ChangeMicoStatus } from '@/utils/eventBus'
 
+const webrtcStore = useWebRTCStore()
 // Props定义
 interface Props {
   webrtcConnected?: boolean
@@ -146,7 +177,8 @@ const props = withDefaults(defineProps<Props>(), {
 // Events定义
 const emit = defineEmits<{
   sendMessage: [message: string]
-  toggleMicrophone: []
+  toggleMicrophone: [userPeerId: string]
+  toggleSound: [userPeerId: string]
   exitRoom: []
   copyRoomCode: [success: boolean, roomCode?: string]
   slotSelection: [slotIndex: number]
@@ -159,6 +191,7 @@ interface User {
   micOn: boolean
   volume: number
   isSelf: boolean
+  isMuted?: boolean  // 添加本地静音状态
 }
 
 interface ChatMessage {
@@ -181,29 +214,28 @@ interface InventoryItem {
 // 响应式数据 - 现在从WebRTC获取
 const onlineUsers = computed<User[]>(() => {
   const users: User[] = []
-
   // 添加自己
   users.push({
     id: 'self',
     name: '我',
     micOn: props.microphoneEnabled || false,
     volume: props.microphoneEnabled ? 75 : 0,
-    isSelf: true
+    isSelf: true,
+    isMuted: audioElementManager.isMuted(webrtcStore.getYouPeer().id)
   })
-
   // 添加其他用户
   if (props.peers) {
     props.peers.forEach(peer => {
       users.push({
         id: peer.id,
         name: peer.name,
-        micOn: false, // 其他用户的麦克风状态可以从peer数据获取
-        volume: 0,
-        isSelf: false
+        micOn: peer.micOn, // 其他用户的麦克风状态
+        volume: audioElementManager.isMuted(peer.id) ? 0 : 50, // 静音状态由audioElementManager决定
+        isSelf: false,
+        isMuted: audioElementManager.isMuted(peer.id)
       })
     })
   }
-
   return users
 })
 
@@ -379,11 +411,16 @@ const handleCopyRoomCode = async () => {
   }
 }
 
-const toggleMic = (userId: string) => {
-  // 只允许控制自己的麦克风
+// 麦克风控制（只有自己可以操作）
+const toggleMicrophone = (userId: string) => {
   if (userId === 'self') {
-    emit('toggleMicrophone')
+    emit('toggleMicrophone', userId)
   }
+}
+
+// 声音控制（所有人都可以操作）
+const toggleSound = (userId: string) => {
+  emit('toggleSound', userId)
 }
 
 const sendMessage = () => {
@@ -459,6 +496,19 @@ onMounted(() => {
   return () => {
     window.removeEventListener('keydown', handleKeyDown)
   }
+})
+const changeMicoStatus = ({peerId,status}:ChangeMicoStatus)=>{
+  if(peerId !== webrtcStore.getYouPeer().id){
+    webrtcStore.peers.find(peer=>peer.id === peerId)!.micOn = status
+  }
+}
+
+onMounted(()=>{
+  eventBus.on('change-mico-status',changeMicoStatus)
+})
+
+onUnmounted(()=>{
+  eventBus.off('change-mico-status',changeMicoStatus)
 })
 </script>
 
@@ -643,18 +693,65 @@ onMounted(() => {
   gap: 8px;
 }
 
-.mic-status {
+/* 麦克风按钮样式 */
+.mic-button {
   cursor: pointer;
   font-size: 16px;
-  transition: transform 0.2s ease;
+  transition: all 0.2s ease;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.mic-status:hover {
+.mic-button:hover:not(.disabled) {
   transform: scale(1.2);
 }
 
-.mic-status.muted {
-  opacity: 0.5;
+.mic-button.active {
+  color: #4CAF50;
+}
+
+.mic-button.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 麦克风图标样式 */
+.mic-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  transition: all 0.2s ease;
+}
+
+.mic-button.active .mic-icon {
+  filter: brightness(1.2) saturate(1.3);
+}
+
+.mic-button.disabled .mic-icon {
+  filter: grayscale(1) opacity(0.6);
+}
+
+/* 声音按钮样式 */
+.sound-button {
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  margin-right: 8px;
+}
+
+.sound-button:hover {
+  transform: scale(1.2);
+}
+
+.sound-button.active {
+  color: #2196F3;
+}
+
+.sound-button.muted {
+  color: #ff6b6b;
+  opacity: 0.8;
 }
 
 .volume-bar {

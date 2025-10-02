@@ -557,10 +557,7 @@ onMounted(async () => {
     })
 
     webrtcStore.setPopupMessageCallback((message)=>{
-      ElMessage.info({
-        message,
-        grouping:true
-      })
+      showInfo(message)
     })
 
     // 设置装备相关事件监听器
@@ -1023,15 +1020,54 @@ const handleSendMessage = (message: string) => {
   }
 }
 
-const handleToggleMicrophone = async () => {
+// 麦克风控制（只能控制自己的麦克风）
+const handleToggleMicrophone = async (userId: string) => {
   try {
-    const enabled = await webrtcStore.toggleMicrophone()
-    microphoneEnabled.value = enabled
-    console.log(`麦克风${enabled ? '已开启' : '已关闭'}`)
-    showSuccess(`麦克风${enabled ? '已开启' : '已关闭'}`)
+    if (userId === 'self') {
+      // 切换自己的麦克风
+      debugger
+      const enabled = await webrtcStore.toggleMicrophone()
+      microphoneEnabled.value = enabled
+      console.log(`麦克风${enabled ? '已开启' : '已关闭'}`)
+      showSuccess(`麦克风${enabled ? '已开启' : '已关闭'}`)
+    }
   } catch (error) {
     console.error('麦克风操作失败:', error)
     showError('麦克风操作失败')
+  }
+}
+
+// 声音控制（可以控制所有人的声音接收）
+const handleToggleSound = async (userId: string) => {
+  try {
+    const { audioElementManager } = await import('@/utils/audioElementManager')
+    if (userId === 'self') {
+      // 静音/取消静音所有人
+      const allPeerIds = [...webrtcStore.peers,webrtcStore.getYouPeer()]
+      const isAllMuted = audioElementManager.isMuted(webrtcStore.getYouPeer().id)
+      allPeerIds.forEach(pid => {
+        audioElementManager.setPeerMuted(pid.id, !isAllMuted)
+      })
+      // 同步peers的isMuted属性（仅用于UI）
+      webrtcStore.peers = peers.value.map(peer => ({
+        ...peer,
+        isMuted: !isAllMuted
+      }))
+      showSuccess(`${!isAllMuted ? '已静音' : '已取消静音'}所有用户`)
+    } else {
+      // 单独静音/取消静音某人
+      const muted = !audioElementManager.isMuted(userId)
+      audioElementManager.setPeerMuted(userId, muted)
+      // UI同步
+      webrtcStore.peers = peers.value.map(peer =>
+        peer.id === userId ? { ...peer, isMuted: muted } : peer
+      )
+      showSuccess(`${muted ? '已静音' : '已取消静音'}用户`)
+    }
+  } catch (error) {
+    console.log(error);
+    
+    showError('声音操作失败')
   }
 }
 
@@ -1071,7 +1107,8 @@ const handleCopyRoomCode = (success: boolean, roomCode?: string) => {
     <GameUI v-show="showGameUI && !isLoading" :webrtc-connected="isWebRTCConnected" :room-info="roomInfo" :peers="peers"
       :messages="messages" :microphone-enabled="microphoneEnabled" :user-equipment="userEquipment"
       :selected-slot="selectedSlot" @send-message="handleSendMessage" @toggle-microphone="handleToggleMicrophone"
-      @exit-room="handleExitRoom" @copy-room-code="handleCopyRoomCode" @slot-selection="handleSlotSelection" />
+      @toggle-sound="handleToggleSound" @exit-room="handleExitRoom" @copy-room-code="handleCopyRoomCode" 
+      @slot-selection="handleSlotSelection" />
   </div>
 </template>
 

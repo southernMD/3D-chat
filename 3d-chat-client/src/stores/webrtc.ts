@@ -305,13 +305,7 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     }
 
     try {
-      const enabled = await webrtcManager.toggleMicrophone()
-      if (enabled) {
-        showSuccess('麦克风已开启')
-      } else {
-        showInfo('麦克风已关闭')
-      }
-      return enabled
+      return await webrtcManager.toggleMicrophone()
     } catch (error) {
       console.error('切换麦克风失败:', error)
       showError('切换麦克风失败')

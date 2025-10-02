@@ -276,7 +276,7 @@ onMounted(async () => {
 }
 
 .header-content {
-  max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
   padding: 0 20px;
   display: flex;
@@ -323,7 +323,7 @@ onMounted(async () => {
 
 .search-section {
   padding: 40px 0;
-  max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -404,7 +404,7 @@ onMounted(async () => {
 }
 
 .rooms-section {
-  max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
   padding: 0 20px 60px;
   /* 确保有足够的内容高度产生滚动 */

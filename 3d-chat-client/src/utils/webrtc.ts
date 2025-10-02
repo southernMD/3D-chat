@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client'
 import type { types as mediasoupTypes } from 'mediasoup-client'
 import type { EggPosintions } from '@/types/types'
 import { eventBus } from '@/utils/eventBus'
+import { audioElementManager } from '@/utils/audioElementManager'
 
 // 连接状态类型
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
@@ -18,6 +19,8 @@ export interface Peer {
   id: string
   name: string
   modelHash?: string // 用户的模型hash
+  micOn?: boolean // 麦克风开启状态
+  isMuted?: boolean // 本地静音状态
 }
 
 // 房间配置接口
@@ -232,7 +235,7 @@ export class WebRTCManager {
   }
 
   private log(message: string): void {
-    // console.log(`[WebRTC] ${message}`)
+    console.log(`[WebRTC] ${message}`)
     this.logCallback(message)
   }
 
@@ -563,10 +566,7 @@ export class WebRTCManager {
           this.log(`关闭了来自 ${peerId} 的音频消费者`)
 
           // 移除对应的音频元素
-          const audioElement = document.getElementById(`audio-${producerId}`) as HTMLAudioElement
-          if (audioElement) {
-            audioElement.remove()
-          }
+          audioElementManager.removeAudioElement(producerPeerId)
         }
       }
 
@@ -649,10 +649,7 @@ export class WebRTCManager {
         this.state.audioConsumers.delete(producerId)
 
         // 移除对应的音频元素
-        const audioElement = document.getElementById(`audio-${producerId}`) as HTMLAudioElement
-        if (audioElement) {
-          audioElement.remove()
-        }
+        audioElementManager.removeAudioElement(producerPeerId)
       }
     })
 
@@ -660,6 +657,10 @@ export class WebRTCManager {
     this.state.socket.on('error', ({ message }) => {
       this.log(`服务器错误: ${message}`)
       this.updateConnectionStatusCallback('disconnected', `错误: ${message}`)
+    })
+    //麦克风关闭房间内同步
+    this.state.socket.on('change-mico-status',({ peerId, status})=>{
+      eventBus.emit('change-mico-status',{peerId,status})
     })
   }
 
@@ -1303,31 +1304,6 @@ export class WebRTCManager {
 
 
   /**
-   * 启用数据通道
-   */
-  public async enableDataChannel(): Promise<void> {
-    if (!this.state.producerTransport) {
-      throw new Error('生产者传输未初始化')
-    }
-
-    try {
-      this.state.dataProducer = await this.state.producerTransport.produceData({
-        label: 'chat',
-        protocol: 'simple-chat'
-      })
-
-      this.log('数据通道已启用')
-    } catch (error) {
-      this.log(`启用数据通道失败: ${error instanceof Error ? error.message : '未知错误'}`)
-      throw error
-    }
-  }
-
-
-
-
-
-  /**
    * 获取当前状态
    */
   public getState(): AppState {
@@ -1491,26 +1467,19 @@ export class WebRTCManager {
         this.log(`音频消费者传输关闭: ${producerPeerId}`)
         this.state.audioConsumers.delete(producerId)
       })
+      // consumer.on('producerclose',()=>{
+      //   debugger
+      //   eventBus.emit('change-mico-status',{peerId:this.state.peerId!,status:false})
+      // })
 
       // 创建音频元素播放音频
-      const audioElement = document.createElement('audio')
-      audioElement.id = `audio-${producerId}`
-      audioElement.srcObject = new MediaStream([consumer.track])
-      audioElement.autoplay = true
-      audioElement.controls = false
-      audioElement.muted = false
-      audioElement.volume = 0.8
-      audioElement.style.display = 'none'
-      document.body.appendChild(audioElement)
-
-      // 监听音频播放事件
-      audioElement.addEventListener('loadedmetadata', () => {
-        this.log(`音频元素已加载，来自 ${producerPeerId}`)
-      })
-
-      audioElement.addEventListener('error', (e) => {
-        this.log(`音频播放错误: ${e}`)
-      })
+      audioElementManager.createAudioElement(
+        producerId,
+        producerPeerId,
+        new MediaStream([consumer.track]),
+        this.log.bind(this)
+      )
+      
 
       // 恢复消费者
       await this.emitAsync('resumeConsumer', {
@@ -1583,6 +1552,7 @@ export class WebRTCManager {
       this.log(`音频生产者已创建，ID: ${this.state.audioProducer.id}`)
 
       this.state.audioProducer.on('transportclose', () => {
+        debugger
         this.log('音频生产者传输关闭')
         this.state.audioProducer = null
         this.state.microphoneEnabled = false
@@ -1618,6 +1588,7 @@ export class WebRTCManager {
       this.state.audioProducer = null
       this.state.microphoneEnabled = false
       this.log('麦克风已关闭')
+      this.state.socket?.emit("change-mico-status",{roomId:this.state.roomId,peerId:this.state.peerId})
     }
   }
 

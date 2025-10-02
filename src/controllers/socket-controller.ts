@@ -742,4 +742,8 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
       console.error('Error handling disconnect:', error);
     }
   });
+
+  socket.on("change-mico-status", ({ roomId, peerId }) => {
+    socket.to(roomId).emit("change-mico-status", { peerId, status: false });
+  });
 }; 

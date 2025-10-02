@@ -27,6 +27,8 @@ export interface EventBusEvents {
 
   //向指定用户发送弹窗信息
   'send-popup-message':UserPopupMessageData
+
+  'change-mico-status':ChangeMicoStatus
 }
 
 export interface EggBroadcastData {
@@ -167,6 +169,11 @@ export interface UserPopupMessageData{
   message:string
 }
 
+export interface ChangeMicoStatus{
+  peerId:string
+  status:boolean
+}
+
 // 事件总线实现
 class EventBus {
   private events: Map<string, Function[]> = new Map()
@@ -206,7 +213,7 @@ class EventBus {
     if (callbacks && callbacks.length > 0) {
       // 有监听器，直接触发
       callbacks.forEach(callback => callback(data))
-      if(event !== 'model-state-update')console.log(`📡 EventBus: 事件 ${event} 已触发，监听器数量: ${callbacks.length}`)
+      // if(event !== 'model-state-update')console.log(`📡 EventBus: 事件 ${event} 已触发，监听器数量: ${callbacks.length}`)
     } else {
       // 没有监听器，缓存消息
       this.messageCache.set(event, data)
