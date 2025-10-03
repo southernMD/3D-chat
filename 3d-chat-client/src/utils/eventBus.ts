@@ -99,6 +99,7 @@ export interface UserJoinedData {
 
 export interface UserLeftData {
   peerId: string
+  newHost:string
 }
 
 export interface RoomUsersSyncData {

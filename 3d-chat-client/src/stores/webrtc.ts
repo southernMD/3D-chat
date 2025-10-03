@@ -470,6 +470,17 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     webrtcManager.setPopupMessageCallback(callback)
   }
 
+  //重新设置房间参数
+  const updateRoomConfig = (config:Omit<RoomConfig,'map'>,callback:Function)=>{
+    if(!webrtcManager) return
+    const socket = webrtcManager.getSocket()
+    socket?.emit('updateRoomConfig', {
+      roomId: roomInfo.value?.roomId,
+      peerId: roomInfo.value?.peerId,
+      config
+    },callback)
+  }
+
   return {
     // 状态
     connectionStatus,
@@ -514,6 +525,8 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     setEggShootCallback,
 
     sendPopupMessage,
-    setPopupMessageCallback
+    setPopupMessageCallback,
+
+    updateRoomConfig
   }
 })

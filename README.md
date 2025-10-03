@@ -131,7 +131,7 @@ DELETE /api/rooms/:roomId
 
 - `joined`: 已加入房间
 - `peerJoined`: 新成员加入房间
-- `peerLeft`: 成员离开房间
+- `peerLeave`: 成员离开房间
 - `newProducer`: 新的生产者
 - `producerClosed`: 生产者已关闭
 - `error`: 错误信息

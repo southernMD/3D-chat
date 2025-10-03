@@ -151,7 +151,7 @@ import {
 } from '@/api/modelApi'
 import { showError, showSuccess } from '@/utils/message'
 import { useAuthStore } from '@/stores/auth'
-import { useWebRTCStore } from '@/stores/webrtc'
+import { useWebRTCStore, type RoomConfig } from '@/stores/webrtc'
 import { checkRoomExists } from '@/api/roomApi'
 
 const router = useRouter()
@@ -339,7 +339,7 @@ const confirmModelSelection = async () => {
   }
 
   // 创建新房间的逻辑
-  let roomConfig
+  let roomConfig:RoomConfig
   try {
     roomConfig = JSON.parse(history.state.mapConfig)
   } catch (error) {
@@ -415,6 +415,8 @@ const joinRoomByPingCode = async (selected: any) => {
   console.log('用户信息:', authStore.user)
 
   try {
+    //检查对应房间是否需要密码
+    
     // 初始化WebRTC管理器
     console.log('1. 初始化WebRTC管理器...')
     webrtcStore.initializeWebRTCManager()

@@ -14,7 +14,7 @@ router.get('/status', (req: Request, res: Response) => {
       },
       rooms: roomManager.getAllRoomsSummary(),
     };
-    
+
     res.json({
       status: 'success',
       data: status,
@@ -34,21 +34,20 @@ router.get('/rooms', (req: Request, res: Response) => {
     // 直接返回所有房间详细数据
     const roomsMap = roomManager.getAllRooms();
     // Map 转为数组，包含所有 Room 对象
-    
-    const rooms = Array.from(roomsMap.values()).map((item)=>{
+
+    const rooms = Array.from(roomsMap.values()).map((item) => {
       return {
-        id:item.id,
-        name:item.name,
-        createdAt:item.createdAt,
-        config:item.config,
-        onlineNumber:item.peers.size
+        id: item.id,
+        createdAt: item.createdAt,
+        config: item.config,
+        onlineNumber: item.peers.size
       }
     });
     res.json({
       success: true,
       data: { rooms },
     });
-  } catch (error : any) {
+  } catch (error: any) {
     logger.error((error as any).toString())
     res.status(500).json({
       success: false,
@@ -81,13 +80,103 @@ router.get<{ roomId: string }>('/rooms/:roomId/exists', (req: Request<{ roomId: 
         exists: true
       },
     });
-  } catch (error:any) {
+  } catch (error: any) {
     logger.error((error as any).toString())
     res.status(500).json({
       success: false,
       error: error.message || '检测房间失败',
       data: undefined,
       message: error.message || '检测房间失败',
+    });
+  }
+});
+
+// 检查房间是否存在密码
+router.get<{ roomId: string }>('/rooms/:roomId/password', (req: Request<{ roomId: string }>, res: Response) => {
+  try {
+    const { roomId } = req.params;
+    const room = roomManager.getRoom(roomId);
+    if (!room) {
+      res.status(404).json({
+        success: false,
+        error: '房间不存在',
+        data: undefined,
+        message: '房间不存在'
+      });
+      return;
+    }
+    if (room.config?.isPrivate) {
+      res.json({
+        success: true,
+        data: {
+          exists: true
+        },
+      });
+    } else {
+      res.json({
+        success: true,
+        data: {
+          exists: false
+        },
+      });
+    }
+  } catch (error: any) {
+    logger.error((error as any).toString())
+    res.status(500).json({
+      success: false,
+      error: error.message || '检测房间密码失败',
+      data: undefined,
+      message: error.message || '检测房间密码失败',
+    });
+  }
+});
+
+//验证房间密码是否正确
+router.post<{ roomId: string }>('/rooms/:roomId/password/verify', (req: Request<{ roomId: string }>, res: Response) => {
+  try {
+    const { roomId } = req.params;
+    const room = roomManager.getRoom(roomId);
+    const { password } = req.body;
+    if (!room) {
+      res.status(404).json({
+        success: false,
+        error: '房间不存在',
+        data: undefined,
+        message: '房间不存在'
+      });
+      return;
+    }
+    if (room.config?.isPrivate) {
+      if(password === room.config?.password){
+        res.json({
+          success: true,
+          data: {
+            isRight: true
+          },
+        });
+      } else {
+        res.json({
+          success: true,
+          data: {
+            isRight: false
+          },
+        });
+      }
+    } else {
+      res.json({
+        success: true,
+        data: {
+          isRight: false
+        },
+      });
+    }
+  } catch (error: any) {
+    logger.error((error as any).toString())
+    res.status(500).json({
+      success: false,
+      error: error.message || '验证房间密码失败',
+      data: undefined,
+      message: error.message || '验证房间密码失败',
     });
   }
 });
@@ -134,7 +223,7 @@ router.delete<{ roomId: string }>('/rooms/:roomId', (req: Request<{ roomId: stri
   try {
     const { roomId } = req.params;
     const success = roomManager.deleteRoom(roomId);
-    
+
     if (!success) {
       res.status(404).json({
         success: false,
@@ -142,7 +231,7 @@ router.delete<{ roomId: string }>('/rooms/:roomId', (req: Request<{ roomId: stri
       });
       return;
     }
-    
+
     res.json({
       success: true,
       message: '房间已删除',

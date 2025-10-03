@@ -48,7 +48,8 @@ export const showInfo = (message: string, options?: Partial<MessageOptions>) => 
     message,
     type: 'info',
     duration: 3000,
-    ...options
+    ...options,
+    grouping:true
   })
 }
 

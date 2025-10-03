@@ -16,7 +16,6 @@ export interface RoomConfig {
 // 房间信息接口
 export interface RoomInfo {
   id: string
-  name: string
   onlineNumber:number
   createdAt:Date
   config:Omit<RoomConfig, 'modelHash'>

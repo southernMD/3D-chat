@@ -64,10 +64,13 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
       let room:Room | null;
       let roomId = providedRoomId;
 
+      // 生成唯一的参与者ID
+      const peerId = uuidv4();
+
       // 如果没有提供roomId，创建新房间
       if (!roomId) {
         const roomName = roomConfig?.name || `${userName}'s Room`;
-        room = roomManager.createRoom(roomName, roomConfig, modelHash,userName);
+        room = roomManager.createRoom(roomName, roomConfig, modelHash,userName,peerId);
         roomId = room.id;
       } else {
         // 尝试加入现有房间
@@ -84,8 +87,6 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
         }
       }
 
-      // 生成唯一的参与者ID
-      const peerId = uuidv4();
 
       // 将客户端加入房间
       socket.join(roomId);
@@ -98,7 +99,10 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
         return;
       }
       //加入房间是不传roomConfig的所以roomConfig是null
-      const endRoomCongig = roomConfig ? roomConfig : roomManager.getRoom(roomId)?.config
+      const endRoomCongig = roomManager.getRoom(roomId)?.config
+
+      console.log(endRoomCongig,"endRoomCongig");
+      
 
       // 通知客户端已加入房间
       socket.emit('joined', {
@@ -141,11 +145,24 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
   // 离开房间
   socket.on('leave', ({ roomId, peerId }: { roomId: string, peerId: string }) => {
     try {
+      let newHost;
+      const room = roomManager.getRoom(roomId);
+      
+      if(room && peerId === roomManager.getRoom(roomId)?.config?.hostId){
+        const vls = room.peers.values();
+        
+        for (const peer of vls) {
+          if (peer.id !== peerId) {   
+            newHost = peer.id;
+            break; 
+          }
+        }
+      }
       // 通知房间内其他客户端有成员离开（在移除之前通知）
-      socket.to(roomId).emit('peerLeft', { peerId });
+      socket.to(roomId).emit('peerLeave', { peerId,newHost });
 
       // 从房间移除参与者（这可能会删除房间如果是最后一个成员）
-      const success = roomManager.removePeer(roomId, peerId);
+      const success = roomManager.removePeer(roomId, peerId,newHost);
 
       if (success) {
         // 离开socket.io房间
@@ -154,8 +171,8 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
         console.log(`Peer ${peerId} left room ${roomId}`);
 
         // 检查房间是否还存在（可能已被删除）
-        const room = roomManager.getRoom(roomId);
-        if (!room) {
+        const roomAfter = roomManager.getRoom(roomId);
+        if (!roomAfter) {
           console.log(`Room ${roomId} was deleted because it became empty`);
         }
       }
@@ -721,18 +738,30 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
       if (peerInfo) {
         const { roomId, peer } = peerInfo;
 
+        let newHost;
+        const room = roomManager.getRoom(roomId);
+        if(room && peer.id === roomManager.getRoom(roomId)?.config?.hostId){
+          const vls = room.peers.values();
+          
+          for (const peer of vls) {
+            if (peer.id !== peer.id) {   
+              newHost = peer.id;
+              break; 
+            }
+          }
+        }
         // 通知房间内其他客户端peer离开（在移除之前通知）
-        socket.to(roomId).emit('peerLeft', { peerId: peer.id });
+        socket.to(roomId).emit('peerLeave', { peerId: peer.id,newHost });
 
         // 从房间移除peer（这可能会删除房间如果是最后一个成员）
-        const removed = roomManager.removePeer(roomId, peer.id);
+        const removed = roomManager.removePeer(roomId, peer.id,newHost);
 
         if (removed) {
           console.log(`Peer ${peer.name} (${peer.id}) disconnected from room ${roomId}`);
 
           // 检查房间是否还存在（可能已被删除）
-          const room = roomManager.getRoom(roomId);
-          if (!room) {
+          const roomAfter = roomManager.getRoom(roomId);
+          if (!roomAfter) {
             console.log(`Room ${roomId} was deleted because it became empty`);
           }
         }
@@ -744,7 +773,23 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
     }
   });
 
+  //麦克风的ui同步函数
   socket.on("change-mico-status", ({ roomId, peerId }) => {
     socket.to(roomId).emit("change-mico-status", { peerId, status: false });
   });
+
+  socket.on('updateRoomConfig',({roomId,peerId,config:roomConfig},callback)=>{
+    const oldRoom = roomManager.getRoom(roomId)
+    if(!oldRoom || oldRoom.config?.hostId !== peerId)callback({success:false,message:'你不是房主'})
+    if((oldRoom?.peers.size ?? 0) > (+(roomConfig as RoomConfig).maxUsers))callback({success:false,message:'超过最大允许人数'})
+  
+    const success = roomManager.updateRoomConfig(roomId,roomConfig)
+    if(success){
+      callback({success:true,message:"更新信息成功"})
+      io.to(roomId).emit('roomConfig',roomConfig)
+    }else{
+      callback({success:false,message:"更新信息失败"})
+    }
+    
+  })
 }; 

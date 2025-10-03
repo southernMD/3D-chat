@@ -29,9 +29,11 @@ export interface RoomConfig {
   description: string
   maxUsers: string
   isPrivate: boolean
+  password?:string
   enableVoice: boolean
   enableText: boolean
   map: string
+  hostId:string
 }
 
 // Socket.IO响应接口
@@ -549,8 +551,8 @@ export class WebRTCManager {
     })
 
     // 监听成员离开事件
-    this.state.socket.on('peerLeft', ({ peerId }) => {
-      this.log(`成员离开: ${peerId}`)
+    this.state.socket.on('peerLeave', ({ peerId,newHost }) => {
+      this.log(`成员离开: ${peerId}新房主${newHost}`)
 
       // 从消费者列表中移除该成员的数据消费者
       for (const [dataProducerId, { producerPeerId, dataConsumer }] of this.state.dataConsumers) {
@@ -588,7 +590,7 @@ export class WebRTCManager {
 
       // 🆕 通过 eventBus 通知页面有用户离开
       eventBus.emit('user-left', {
-        peerId
+        peerId,newHost
       })
     })
 
@@ -625,7 +627,6 @@ export class WebRTCManager {
     this.state.socket.on('newProducer', async ({ producerId, producerPeerId, kind }) => {
       this.log(`新的${kind}生产者: ${producerPeerId}`)
       console.log("newProducer from", producerPeerId, "myPeerId", this.state.peerId);
-      debugger
       // 只处理音频生产者
       if (kind === 'audio') {
         // 检查是否已经有这个生产者的消费者
@@ -1614,7 +1615,6 @@ export class WebRTCManager {
       const dataArray = new Uint8Array(analyser.frequencyBinCount)
       
       source.connect(analyser)
-      debugger
       this.selfVolumeAnalyzer = { analyser, dataArray, audioContext }
       
       // 开始自己的音量检测循环

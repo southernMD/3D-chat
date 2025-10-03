@@ -139,8 +139,12 @@ export class MMDModelManager {
       // this.mmdModel = new MMDModel(this.bvhPhysics);
       // await this.mmdModel.load(this.scene, '/lm/楈柌v2.pmx', '/lm/走路.vmd', '/lm/站立.vmd');
       
+      //添加bvh物理体
+      const { position,capsuleInfo } = this.mmdModel.getModelState()
+      this.bvhPhysics.updateUserCapsule(peerId,position,capsuleInfo!)
+            
       // 创建跟随相机
-      this.lookCamera = this.mmdModel!.createLookCamera(this.scene);
+      this.lookCamera = this.mmdModel!.createLookCamera(this.scene,capsuleInfo?.radius);
       
       // 创建相机控制器
       this.cameraControls = this.mmdModel!.createCameraControls(
@@ -148,10 +152,6 @@ export class MMDModelManager {
         this.renderer.domElement, 
         this.renderer
       );
-      
-      //添加bvh物理体
-      const { position,capsuleInfo } = this.mmdModel.getModelState()
-      this.bvhPhysics.updateUserCapsule(peerId,position,capsuleInfo!)
       console.log('MMD模型加载完成');
     } catch (error) {
       console.error('加载MMD模型时出错:', error);

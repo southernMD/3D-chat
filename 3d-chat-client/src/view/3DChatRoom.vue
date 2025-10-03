@@ -17,7 +17,7 @@ import LoadingProgress from '@/components/LoadingProgress.vue';
 import { useWebRTCStore } from '@/stores/webrtc';
 import { useAuthStore } from '@/stores/auth';
 import { showError, showSuccess, showInfo, showMessage } from '@/utils/message';
-import { eventBus } from '@/utils/eventBus';
+import { eventBus, type UserLeftData } from '@/utils/eventBus';
 import { Egg } from '@/models/Egg';
 import { Tree } from '@/models/architecture/Tree';
 
@@ -297,16 +297,19 @@ onMounted(async () => {
       };
 
       // 监听用户离开事件
-      const handleUserLeft = (data: { peerId: string }) => {
-        console.log(`👋 EventBus用户离开: ${data.peerId}`);
+      const handleUserLeft = ({ peerId , newHost}:UserLeftData) => {
+        console.log(`👋 EventBus用户离开: ${peerId}`);
 
         try {
           // 移除用户的静态模型
-          staticModelManager.removeModel(data.peerId);
-          console.log(`✅ 用户 ${data.peerId} 的静态模型已移除`);
+          staticModelManager.removeModel(peerId);
+          console.log(`✅ 用户 ${peerId} 的静态模型已移除`);
           showInfo('有成员离开房间');
+          if(newHost){
+            webrtcStore.roomConfig!.hostId = newHost
+          }
         } catch (error) {
-          console.error(`❌ 移除用户 ${data.peerId} 的静态模型失败:`, error);
+          console.error(`❌ 移除用户 ${peerId} 的静态模型失败:`, error);
         }
       };
 
@@ -985,9 +988,9 @@ function handleKeyDown(event: KeyboardEvent) {
       console.log('🎛️ GUI显示状态已切换');
     }
   }
-
-  // FPS显示切换快捷键 - 按F键切换FPS显示
-  if (event.key === 'f' || event.key === 'F') {
+  console.log(event.key);
+  // FPS显示切换快捷键 - 按F2键切换FPS显示
+  if (event.key === 'F2') {
     if (fpsMonitor) {
       fpsMonitor.toggle();
       console.log('📊 FPS显示状态已切换');

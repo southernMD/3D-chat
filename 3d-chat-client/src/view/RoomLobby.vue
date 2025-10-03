@@ -54,7 +54,7 @@
           @click="joinRoom(room)"
         >
           <div class="room-image">
-            <img :src="`/${room.config.map}.png`" :alt="room.name" />
+            <img :src="`/${room.config.map}.png`" :alt="room.config.name" />
             <div v-if="room.config?.isPrivate" class="private-badge">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18,8H17V6A5,5 0 0,0 12,1A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M12,3A3,3 0 0,1 15,6V8H9V6A3,3 0 0,1 12,3Z"/>
@@ -64,7 +64,7 @@
           </div>
           
           <div class="room-info">
-            <h3 class="room-name">{{ room.name }}</h3>
+            <h3 class="room-name">{{ room.config.name }}</h3>
             <p class="room-description">{{ room.config.description || $t('lobby.noDescription') }}</p>
             
             <div class="room-meta">
@@ -151,7 +151,8 @@ const pinError = ref('')
 // 筛选选项
 const filters = [
   { key: 'all', label: 'lobby.filters.all' },
-  { key: 'public', label: 'lobby.filters.public' }
+  { key: 'public', label: 'lobby.filters.public' },
+  { key: 'private', label: 'lobby.filters.private' }
 ]
 
 // 房间数据（从后端获取）
@@ -164,13 +165,15 @@ const filteredRooms = computed(() => {
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
     filtered = filtered.filter(room =>
-      room.name?.toLowerCase().includes(query) ||
+      room.config.name?.toLowerCase().includes(query) ||
       room.config.description?.toLowerCase().includes(query)
     )
   }
   // 根据筛选条件过滤
   if (activeFilter.value === 'public') {
     filtered = filtered.filter(room => room.config?.isPrivate === false)
+  } else if (activeFilter.value === 'private') {
+    filtered = filtered.filter(room => room.config?.isPrivate === true)
   }
   return filtered
 })
@@ -188,7 +191,7 @@ const joinRoom = async (room: RoomInfo) => {
     pinInput.value = ''
     pinError.value = ''
   } else {
-    console.log('加入公开房间:', room.name)
+    console.log('加入公开房间:', room.config.name)
     // 这里可以添加加入房间的逻辑
     const response = await checkRoomExists(room.id)
 
@@ -208,7 +211,7 @@ const joinRoom = async (room: RoomInfo) => {
 const confirmPin = () => {
   if (!selectedRoom.value) return
   if (pinInput.value === selectedRoom.value.pinCode) {
-    console.log('加入私密房间:', selectedRoom.value.name)
+    console.log('加入私密房间:', selectedRoom.value.config.name)
     closePinDialog()
     // 这里可以添加加入房间的逻辑
   } else {

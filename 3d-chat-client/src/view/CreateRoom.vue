@@ -109,6 +109,19 @@
                 </template>
               </ThemeRadioGroup>
             </div>
+            
+            <!-- 密码输入框 - 仅在私有房间时显示 -->
+            <div v-if="roomConfig.isPrivate" class="form-group">
+              <label class="form-label">{{ $t('createRoom.room.password') }}</label>
+              <ThemeInput
+                v-model="roomConfig.password"
+                type="password"
+                :placeholder="$t('createRoom.room.passwordPlaceholder')"
+                size="large"
+                clearable
+                :maxlength="20"
+              />
+            </div>
           </div>
           
           <!-- 其他设置 -->
@@ -295,11 +308,16 @@ const roomConfig = reactive({
   isPrivate: false,
   enableVoice: true,
   enableText: true,
+  password:''
 })
 
 // 检查是否可以创建房间
 const canCreate = computed(() => {
-  return roomConfig.name.trim().length > 0 && selectedMap.value
+  const hasName = roomConfig.name.trim().length > 0
+  const hasMap = selectedMap.value
+  const hasPasswordIfPrivate = !roomConfig.isPrivate || roomConfig.password.trim().length > 0
+  
+  return hasName && hasMap && hasPasswordIfPrivate
 })
 
 // 显示添加地图提示
@@ -310,12 +328,15 @@ const showAddMapDialog = () => {
 // 创建房间
 const createRoom = async () => {
   if (!canCreate.value) {
-    showWarning(t('createRoom.validation.incomplete'))
+    if (roomConfig.isPrivate && !roomConfig.password.trim()) {
+      showWarning(t('createRoom.validation.passwordRequired'))
+    } else {
+      showWarning(t('createRoom.validation.incomplete'))
+    }
     return
   }
 
   try {
-    // TODO: 调用API创建房间
     console.log('Creating room with config:', {
       ...roomConfig,
       map: selectedMap.value

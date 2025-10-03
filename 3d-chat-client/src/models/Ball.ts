@@ -70,7 +70,7 @@ export class Ball {
         const mouse = new THREE.Vector2(mouseX, mouseY);
         raycaster.setFromCamera(mouse, camera);
 
-        this.sphere.position.copy(camera.position).addScaledVector(raycaster.ray.direction, 3);
+        this.sphere.position.copy(camera.position).addScaledVector(raycaster.ray.direction, 10);
 
         const velocity = new THREE.Vector3()
             .set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5)

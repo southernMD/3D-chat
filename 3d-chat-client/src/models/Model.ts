@@ -669,8 +669,8 @@ export abstract class Model extends StaticModel {
   /**
    * 创建跟随相机 - 创建一个跟随模型的相机
    */
-  public createLookCamera(scene: THREE.Scene): THREE.PerspectiveCamera {
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 5, 1000);
+  public createLookCamera(scene: THREE.Scene,capsuleRadiu?:number): THREE.PerspectiveCamera {
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight,  capsuleRadiu ?? 5, 1000);
     const cameraHelper = new THREE.CameraHelper(camera);
 
     // 设置相机位置
@@ -709,7 +709,8 @@ export abstract class Model extends StaticModel {
     // 修复角度设置 - 不设置minAzimuthAngle以允许360度旋转
     // controls.minAzimuthAngle = -Infinity; // 允许无限制水平旋转
     // controls.maxAzimuthAngle = Infinity;
-    controls.maxPolarAngle = Math.PI * 3 / 4; // 限制垂直角度
+    controls.maxPolarAngle = Math.PI * 5 / 7; // 限制垂直角度
+    controls.minPolarAngle = Math.PI * 3 / 7; // 限制垂直角度
     controls.enableZoom = false; // 禁止缩放
     controls.enablePan = false; // 禁止平移
     controls.maxDistance = 2;

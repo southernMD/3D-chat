@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { SchoolRoom } from './shcoolRoom';
 import { Server } from 'socket.io';
 import { equipmentManager } from './equipmentManager';
+import { logger } from './logger';
 
 // 参与者类型定义
 export interface Peer {
@@ -31,9 +32,11 @@ export interface RoomConfig {
   description: string;
   maxUsers: string;
   isPrivate: boolean;
+  password?:string
   enableVoice: boolean;
   enableText: boolean;
   map: RoomType;
+  hostId:string
 }
 
 // 用户装备接口 (基于实际的Equipment实体)
@@ -47,7 +50,6 @@ export interface UserEquipment {
 // 房间类型定义
 export interface Room {
   id: string;
-  name: string;
   createdAt: Date;
   peers: Map<string, Peer>;
   config?: RoomConfig;
@@ -74,14 +76,16 @@ export class RoomManager {
 
 
   // 创建房间
-  createRoom(name: string, config: RoomConfig, modelHash: string, userName: string): Room {
+  createRoom(name: string, config: RoomConfig, modelHash: string, userName: string,peerId:string): Room {
     const roomId = uuidv4();
     const room: Room = {
       id: roomId,
-      name: name || `Room ${roomId.substring(0, 8)}`,
       createdAt: new Date(),
       peers: new Map(),
-      config,
+      config:{
+        ...config,
+        hostId:peerId
+      },
       modelHash: new Map([[userName, modelHash]]),
       userEquipments: new Map(), // 初始化用户装备列表
     };
@@ -95,7 +99,7 @@ export class RoomManager {
     }
 
     this.rooms.set(roomId, room);
-    console.log(`Room created: ${room.name} (${roomId})${modelHash ? ` with model ${modelHash}` : ''}`);
+    console.log(`Room created: ${room.config?.name} (${roomId})${modelHash ? ` with model ${modelHash}` : ''}`);
 
 
     return room;
@@ -106,7 +110,7 @@ export class RoomManager {
     const room = this.rooms.get(name);
     if(!room) return null;
     room.modelHash?.set(userName,modelHash);
-    console.log(`Room join: ${room.name} ${userName}`);
+    console.log(`Room join: ${room.config?.name} ${userName}`);
     return room;
   }
 
@@ -249,7 +253,7 @@ export class RoomManager {
   }
 
   // 从房间移除参与者
-  removePeer(roomId: string, peerId: string): boolean {
+  removePeer(roomId: string, peerId: string,newHost?:string): boolean {
     const room = this.rooms.get(roomId);
     if (!room) {
       return false;
@@ -268,6 +272,8 @@ export class RoomManager {
       if (room.peers.size === 0) {
         this.deleteRoom(roomId);
         console.log(`Room ${roomId} deleted because it's empty`);
+      }else if(newHost){
+        room.config!.hostId = newHost
       }
 
       return true;
@@ -466,7 +472,6 @@ export class RoomManager {
 
     return {
       id: room.id,
-      name: room.name,
       createdAt: room.createdAt,
       numPeers: room.peers.size,
       peers: Array.from(room.peers.values()).map(peer => ({
@@ -481,10 +486,23 @@ export class RoomManager {
   getAllRoomsSummary() {
     return Array.from(this.rooms.values()).map(room => ({
       id: room.id,
-      name: room.name,
+      name: room.config?.name,
       createdAt: room.createdAt,
       numPeers: room.peers.size,
     }));
+  }
+
+  //更新房间配置
+  updateRoomConfig(roomId:string,roomConfig:RoomConfig){
+    try {
+      const oldRoom =this.rooms.get(roomId)
+      oldRoom!.config = { ...oldRoom?.config,...roomConfig }
+      this.rooms.set(roomId,oldRoom!)
+      return true
+    } catch (error:any) {
+      logger.error(error.message)
+      return false
+    }
   }
 }
 

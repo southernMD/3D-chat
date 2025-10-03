@@ -124,7 +124,7 @@ export class Egg {
         raycaster.setFromCamera(mouse, camera);
 
         // 设置发射位置
-        this.mesh.position.copy(camera.position).addScaledVector(raycaster.ray.direction, 3);
+        this.mesh.position.copy(camera.position).addScaledVector(raycaster.ray.direction, 10);
 
         // 设置发射速度
         const velocity = new THREE.Vector3()
@@ -299,7 +299,7 @@ export class Egg {
         if(attackUser){
             eventBus.emit('send-popup-message',{
                 peerId:attackUser,
-                message:'你被鸡蛋击中了'
+                message:'你被鸡蛋击中了',
             })
         }
     }

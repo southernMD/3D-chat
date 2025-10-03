@@ -10,7 +10,7 @@
         <span class="button-icon">📋</span>
         复制房间码
       </button>
-      <button class="ui-button settings-btn" @click.stop="handleSettings">
+      <button class="ui-button settings-btn" @click.stop="handleSettings" v-if="webrtcStore.roomConfig?.hostId === webrtcStore.getYouPeer().id">
         <span class="button-icon">⚙️</span>
         设置
       </button>
@@ -38,7 +38,7 @@
         >
           <div class="user-avatar">{{ user.name.charAt(0) }}</div>
           <div class="user-info">
-            <span class="user-name">{{ user.name }}</span>
+            <span class="user-name">{{ user.name }}{{webrtcStore.roomConfig?.hostId === user.id ||  user.id === 'self' && webrtcStore.roomConfig?.hostId === webrtcStore.getYouPeer().id?' (房主)':''}}</span>
             <div class="user-status">
               <!-- 麦克风按钮 -->
               <span
@@ -141,6 +141,94 @@
       </div>
 
     </div>
+
+    <!-- 设置面板 -->
+    <div v-if="showSettingsPanel" class="settings-overlay" @click="closeSettingsPanel">
+      <div class="settings-panel" 
+          @click.stop
+          @keydown.stop
+          @keyup.stop
+          @keypress.stop>
+        <div class="settings-header">
+          <h3>房间设置</h3>
+          <button class="close-btn" @click="closeSettingsPanel">×</button>
+        </div>
+        
+        <div class="settings-content">
+          <div class="setting-item">
+            <label>房间名称</label>
+            <input type="text" v-model="settingsForm.name" placeholder="输入房间名称">
+          </div>
+          
+          <div class="setting-item">
+            <label>房间描述</label>
+            <input type="text" v-model="settingsForm.description" placeholder="输入房间描述">
+          </div>
+          
+          <div class="setting-item">
+            <label>启用文本聊天</label>
+            <input type="checkbox" v-model="settingsForm.enableText">
+          </div>
+          
+          <div class="setting-item">
+            <label>启用语音聊天</label>
+            <input type="checkbox" v-model="settingsForm.enableVoice">
+          </div>
+          
+          <div class="setting-item">
+            <label>房主</label>
+            <select v-model="settingsForm.hostId">
+              <option 
+                v-for="user in availableHosts" 
+                :key="user.id" 
+                :value="user.id"
+              >
+                {{ user.name }}
+              </option>
+            </select>
+          </div>
+          
+          <div class="setting-item">
+            <label>最大房间人数</label>
+            <select v-model="settingsForm.maxUsers">
+              <option value="2">2人</option>
+              <option value="4">4人</option>
+              <option value="6">6人</option>
+            </select>
+          </div>
+          
+          <div class="setting-item">
+            <label>私有房间</label>
+            <input type="checkbox" v-model="settingsForm.isPrivate">
+          </div>
+          
+          <div v-if="settingsForm.isPrivate" class="setting-item">
+            <label>房间密码</label>
+            <div class="password-input-wrapper">
+              <input 
+                :type="showPassword ? 'text' : 'password'" 
+                v-model="settingsForm.password" 
+                placeholder="输入房间密码"
+                class="password-input"
+              >
+              <button 
+                type="button" 
+                class="password-toggle-btn" 
+                @click="togglePasswordVisibility"
+                :title="showPassword ? '隐藏密码' : '显示密码'"
+              >
+                {{ showPassword ? '👁️' : '👁️‍🗨️' }}
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="settings-footer">
+          <button class="cancel-btn" @click="closeSettingsPanel">取消</button>
+          <button class="save-btn" @click="saveSettings">保存</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -149,6 +237,7 @@ import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
 import { audioElementManager } from '@/utils/audioElementManager'
 import { useWebRTCStore } from '@/stores/webrtc'
 import { eventBus, type ChangeMicoStatus } from '@/utils/eventBus'
+import { showError, showSuccess } from '@/utils/message'
 
 const webrtcStore = useWebRTCStore()
 // Props定义
@@ -245,6 +334,29 @@ const onlineUsers = computed<User[]>(() => {
 // 房间码计算属性
 const roomCode = computed(() => {
   return props.roomInfo?.roomId || null
+})
+
+// 可选择的房主列表（包含自己和所有peers）
+const availableHosts = computed(() => {
+  const hosts = []
+  
+  // 添加自己
+  hosts.push({
+    id: webrtcStore.getYouPeer().id,
+    name: '我'
+  })
+  
+  // 添加其他用户
+  if (props.peers) {
+    props.peers.forEach(peer => {
+      hosts.push({
+        id: peer.id,
+        name: peer.name
+      })
+    })
+  }
+  
+  return hosts
 })
 
 const chatMessagesRef = ref()
@@ -377,11 +489,67 @@ const handleExit = () => {
 }
 
 const handleSettings = () => {
-  console.log('打开设置')
+  console.log('打开设置',webrtcStore.roomConfig)
+  if (!settingsForm.value.hostId) {
+    settingsForm.value.hostId = webrtcStore.roomConfig.hostId
+  }
+  showSettingsPanel.value = true
 }
+
+const closeSettingsPanel = () => {
+  showSettingsPanel.value = false
+}
+
+const saveSettings = () => {
+  // 验证最大房间人数不能小于当前房间人数
+  const currentUserCount = onlineUsers.value.length
+  if (Number(settingsForm.value.maxUsers) < currentUserCount) {
+    alert(`最大房间人数不能小于当前房间人数（${currentUserCount}人）`)
+    return
+  }
+  
+  // 验证私有房间必须有密码
+  if (settingsForm.value.isPrivate && !settingsForm.value.password.trim()) {
+    alert('私有房间必须设置密码')
+    return
+  }
+  
+  // 保存设置到webrtcStore
+  webrtcStore.updateRoomConfig({
+    ...webrtcStore.roomConfig,
+    ...settingsForm.value
+  },({success,message}:any)=>{
+    if(success){
+      showSuccess(message)
+    }else{
+      showError(message)
+    }
+  })
+  closeSettingsPanel()
+  console.log('设置已保存:', settingsForm.value)
+}
+
+// 设置面板状态
+const showSettingsPanel = ref(false)
+const showPassword = ref(false)
+const settingsForm = ref({
+  name: '',
+  description: '',
+  enableText: true,
+  enableVoice: true,
+  hostId: '',
+  maxUsers: '2',
+  isPrivate: false,
+  password: ''
+})
 
 const handleHelp = () => {
   console.log('打开帮助')
+}
+
+// 切换密码可见性
+const togglePasswordVisibility = () => {
+  showPassword.value = !showPassword.value
 }
 
 const handleCopyRoomCode = async () => {
@@ -516,6 +684,22 @@ const handleVolumeUpdate = ({ peerId, volume }: { peerId: string, volume: number
 onMounted(()=>{
   eventBus.on('change-mico-status',changeMicoStatus)
   eventBus.on('volume-level-update', handleVolumeUpdate)
+  
+  // 初始化设置表单
+  nextTick(()=>{
+  if (webrtcStore.roomConfig) {
+    settingsForm.value = {
+      name: webrtcStore.roomConfig.name || '',
+      description: webrtcStore.roomConfig.description || '',
+      enableText: webrtcStore.roomConfig.enableText ?? true,
+      enableVoice: webrtcStore.roomConfig.enableVoice ?? true,
+      hostId: webrtcStore.roomConfig.hostId || webrtcStore.getYouPeer().id,
+      maxUsers: webrtcStore.roomConfig.maxUsers,
+      isPrivate: webrtcStore.roomConfig.isPrivate || false,
+      password: webrtcStore.roomConfig.password || ''
+    }
+  }
+  })
 })
 
 onUnmounted(()=>{
@@ -1007,6 +1191,190 @@ onUnmounted(()=>{
 
 
 
+/* 设置面板样式 */
+.settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  pointer-events: auto;
+}
+
+.settings-panel {
+  background: rgba(0, 0, 0, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  padding: 0;
+  width: 400px;
+  max-width: 90vw;
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+.settings-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.settings-header h3 {
+  color: white;
+  margin: 0;
+  font-size: 18px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.3s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.settings-content {
+  padding: 20px;
+}
+
+.setting-item {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.setting-item label {
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.setting-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: #4CAF50;
+  cursor: pointer;
+}
+
+.setting-item input[type="text"],
+.setting-item input[type="password"],
+.setting-item select {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  color: white;
+  padding: 8px 12px;
+  font-size: 14px;
+  width: 150px;
+}
+
+/* 密码输入框包装器 */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 150px;
+}
+
+.password-input {
+  flex: 1;
+  padding-right: 35px;
+  width: 100%;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.password-toggle-btn:hover {
+  color: #00ffff;
+  background: rgba(0, 255, 255, 0.1);
+}
+
+.setting-item input[type="text"]::placeholder,
+.setting-item input[type="password"]::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.setting-item select option {
+  background: #333;
+  color: white;
+}
+
+.settings-footer {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.cancel-btn,
+.save-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cancel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.save-btn {
+  background: #4CAF50;
+  color: white;
+}
+
+.save-btn:hover {
+  background: #45a049;
+  transform: translateY(-1px);
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .online-users {
@@ -1035,6 +1403,11 @@ onUnmounted(()=>{
   .item-icon {
     width: 32px;
     height: 32px;
+  }
+  
+  .settings-panel {
+    width: 90vw;
+    margin: 20px;
   }
 }
 </style>

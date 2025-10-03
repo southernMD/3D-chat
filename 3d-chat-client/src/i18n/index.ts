@@ -147,7 +147,9 @@ const zh = {
       public: '公开房间',
       publicDescription: '任何人都可以搜索和加入',
       private: '私密房间',
-      privateDescription: '仅限邀请用户加入'
+      privateDescription: '仅限邀请用户加入',
+      password: '密码',
+      passwordPlaceholder: '请输入密码'
     },
     other: {
       title: '功能设置',
@@ -266,7 +268,8 @@ const zh = {
     searchPlaceholder: '搜索房间...',
     filters: {
       all: '全部',
-      public: '公开'
+      public: '公开',
+      private:'私密'
     },
     status: {
       active: '活跃',
@@ -453,7 +456,9 @@ const en = {
       public: 'Public Room',
       publicDescription: 'Anyone can search and join',
       private: 'Private Room',
-      privateDescription: 'Invite-only access'
+      privateDescription: 'Invite-only access',
+      password: 'Password',
+      passwordPlaceholder: 'Enter password'
     },
     other: {
       title: 'Feature Settings',
@@ -572,7 +577,8 @@ const en = {
     searchPlaceholder: 'Search rooms...',
     filters: {
       all: 'All',
-      public: 'Public'
+      public: 'Public',
+      private:'Private'
     },
     status: {
       active: 'Active',
