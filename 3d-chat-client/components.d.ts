@@ -27,6 +27,7 @@ declare module 'vue' {
     ModelUploadPanel: typeof import('./src/components/ModelUploadPanel.vue')['default']
     ModeSelection: typeof import('./src/components/ModeSelection.vue')['default']
     ParticleBackground: typeof import('./src/components/ParticleBackground.vue')['default']
+    PinDialog: typeof import('./src/components/PinDialog.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     ThemeInput: typeof import('./src/components/ThemeInput.vue')['default']

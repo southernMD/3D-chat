@@ -36,6 +36,23 @@ export interface RoomListResponse {
   total: number
 }
 
+// 检查房间是否存在密码
+export interface RoomPasswordExists {
+  exists: boolean
+}
+
+// 验证房间密码是否正确
+export interface RoomPasswordVerify {
+  isRight: boolean
+}
+
+// 房间人数状态
+export interface RoomCapacityStatus {
+  full: boolean
+  onlineNumber: number
+  maxUsers: number
+}
+
 /**
  * 创建房间
  */
@@ -99,6 +116,60 @@ export const checkRoomExists = async (roomId:string):Promise<ApiResponse<RoomChe
       error: error.message || '检查失败',
       data: undefined,
       message: error.message || '检查失败',
+    }
+  }
+}
+
+/**
+ * 检查房间是否设置了密码
+ */
+export const checkRoomHasPassword = async (roomId: string): Promise<ApiResponse<RoomPasswordExists>> => {
+  try {
+    const response = await get<ApiResponse<RoomPasswordExists>>(`/rooms/${roomId}/password`)
+    return response
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || '检测房间密码失败',
+      data: undefined,
+      message: error.message || '检测房间密码失败',
+    }
+  }
+}
+
+/**
+ * 检查房间人数是否已满
+ */
+export const checkRoomIsFull = async (roomId: string): Promise<ApiResponse<RoomCapacityStatus>> => {
+  try {
+    const response = await get<ApiResponse<RoomCapacityStatus>>(`/rooms/${roomId}/full`)
+    return response
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || '检测房间人数是否已满失败',
+      data: undefined,
+      message: error.message || '检测房间人数是否已满失败',
+    }
+  }
+}
+
+/**
+ * 校验房间密码是否正确
+ */
+export const verifyRoomPassword = async (
+  roomId: string,
+  password: string
+): Promise<ApiResponse<RoomPasswordVerify>> => {
+  try {
+    const response = await post<ApiResponse<RoomPasswordVerify>>(`/rooms/${roomId}/password/verify`, { password })
+    return response
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || '验证房间密码失败',
+      data: undefined,
+      message: error.message || '验证房间密码失败',
     }
   }
 }

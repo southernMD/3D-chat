@@ -135,12 +135,23 @@
       </div>
     </div>
   </div>
+
+  <!-- 密码输入弹窗（加入私密房间时） -->
+  <PinDialog
+    v-model="showPinDialog"
+    :title="'输入密码'"
+    :message="passwordDialogMessage"
+    placeholder="请输入房间密码"
+    :maxlength="20"
+    :error="pinError"
+    @confirm="handlePinConfirm"
+    @cancel="closePinDialog"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import FileUploader from '@/components/FileUploader.vue'
 import {
   getModelList,
@@ -152,7 +163,8 @@ import {
 import { showError, showSuccess } from '@/utils/message'
 import { useAuthStore } from '@/stores/auth'
 import { useWebRTCStore, type RoomConfig } from '@/stores/webrtc'
-import { checkRoomExists } from '@/api/roomApi'
+import { checkRoomExists, checkRoomHasPassword, verifyRoomPassword } from '@/api/roomApi'
+import PinDialog from '@/components/PinDialog.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -160,6 +172,11 @@ const webrtcStore = useWebRTCStore()
 
 // 检查是否有ping码（从URL参数获取）
 const pingCode = ref<string | null>(null)
+
+// 私密房间密码弹窗状态
+const showPinDialog = ref(false)
+const passwordDialogMessage = computed(() => `该房间已设置密码，请输入密码以继续`)
+const pendingSelectedForJoin = ref<any>(null)
 
 // 搜索查询
 const searchQuery = ref('')
@@ -416,11 +433,45 @@ const joinRoomByPingCode = async (selected: any) => {
 
   try {
     //检查对应房间是否需要密码
-    
-    // 初始化WebRTC管理器
-    console.log('1. 初始化WebRTC管理器...')
-    webrtcStore.initializeWebRTCManager()
-    console.log('WebRTC管理器初始化完成')
+    const { data } = await checkRoomHasPassword(pingCode.value!)
+    if(data?.exists){
+      pendingSelectedForJoin.value = selected
+      showPinDialog.value = true
+      return
+    }
+    await continueJoin(selected)
+  } catch (error) {
+    console.error('=== 加入房间流程出错 ===', error)
+    showError('加入房间失败，请重试')
+  }
+}
+
+// 处理密码确认
+const handlePinConfirm = async (value: string) => {
+  if (!pingCode.value) return
+  const verify = await verifyRoomPassword(pingCode.value, value.trim())
+  if (!verify.success || !verify.data?.isRight) {
+    showError('密码错误，请重新输入')
+    return
+  }
+  showSuccess('密码验证通过')
+  showPinDialog.value = false
+  const selected = pendingSelectedForJoin.value
+  pendingSelectedForJoin.value = null
+  await continueJoin(selected)
+}
+
+const closePinDialog = () => {
+  showPinDialog.value = false
+  pendingSelectedForJoin.value = null
+}
+
+// 验证通过后继续加入
+const continueJoin = async (selected: any) => {
+  // 初始化WebRTC管理器
+  console.log('1. 初始化WebRTC管理器...')
+  webrtcStore.initializeWebRTCManager()
+  console.log('WebRTC管理器初始化完成')
 
     // 连接到服务器
     console.log('2. 连接到服务器...')
@@ -471,15 +522,7 @@ const joinRoomByPingCode = async (selected: any) => {
           joinedByPingCode: true
         }
       })
-    } else {
-      console.error('加入房间失败')
-      showError('加入房间失败，请检查ping码是否正确')
-    }
-
-  } catch (error) {
-    console.error('=== 加入房间流程出错 ===', error)
-    showError('加入房间失败，请重试')
-  }
+    } 
 }
 </script>
 

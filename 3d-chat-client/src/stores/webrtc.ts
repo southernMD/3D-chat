@@ -5,6 +5,7 @@ import { showError, showSuccess, showInfo } from '@/utils/message'
 import { useAuthStore } from '@/stores/auth'
 import type { EggPosintions } from '@/types/types'
 import { eventBus, type UserPopupMessageData } from '@/utils/eventBus'
+import { checkRoomIsFull } from '@/api/roomApi'
 
 // 消息接口
 export interface ChatMessage {
@@ -248,6 +249,11 @@ export const useWebRTCStore = defineStore('webrtc', () => {
     try {
       console.log('正在通过房间UUID加入房间...')
 
+      const { data } = await checkRoomIsFull(roomUUID)
+      if(data?.full){
+        showError('房间已满')
+        return false
+      }
       // 保存当前配置
       currentModelHash.value = modelHash
       currentModelInfo.value = modelInfo

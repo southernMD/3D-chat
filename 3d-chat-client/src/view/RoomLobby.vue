@@ -90,44 +90,7 @@
       </div>
     </div>
     
-    <!-- PIN码输入对话框 -->
-    <div v-if="showPinDialog" class="pin-dialog-overlay" @click.self="closePinDialog">
-      <div class="pin-dialog">
-        <div class="pin-dialog-header">
-          <h3>输入PIN码</h3>
-          <button class="close-btn" @click="closePinDialog">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
-            </svg>
-          </button>
-        </div>
-        
-        <div class="pin-dialog-content">
-          <p>请输入房间 "{{ selectedRoom?.name }}" 的PIN码：</p>
-          
-          <div class="pin-input-group">
-            <input
-              v-model="pinInput"
-              type="password"
-              class="pin-input"
-              placeholder="请输入PIN码"
-              maxlength="10"
-              @keyup.enter="confirmPin"
-              autofocus
-            />
-          </div>
-          
-          <div v-if="pinError" class="pin-error">
-            {{ pinError }}
-          </div>
-          
-          <div class="pin-dialog-buttons">
-            <button class="pin-btn cancel-btn" @click="closePinDialog">取消</button>
-            <button class="pin-btn confirm-btn" @click="confirmPin" :disabled="!pinInput.trim()">确认</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    
     </div> <!-- content-wrapper 结束 -->
   </div>
 </template>
@@ -143,10 +106,7 @@ const router = useRouter()
 // 响应式数据
 const searchQuery = ref('')
 const activeFilter = ref('all')
-const showPinDialog = ref(false)
 const selectedRoom = ref<RoomInfo | null>(null)
-const pinInput = ref('')
-const pinError = ref('')
 
 // 筛选选项
 const filters = [
@@ -185,48 +145,20 @@ const setFilter = (filter: string) => {
 
 // 加入房间
 const joinRoom = async (room: RoomInfo) => {
-  if (room.config?.isPrivate) {
-    selectedRoom.value = room
-    showPinDialog.value = true
-    pinInput.value = ''
-    pinError.value = ''
-  } else {
-    console.log('加入公开房间:', room.config.name)
-    // 这里可以添加加入房间的逻辑
-    const response = await checkRoomExists(room.id)
-
-    if (!response.success) {
-      throw new Error(response.message)
+  console.log('加入房间:', room.config.name)
+  const response = await checkRoomExists(room.id)
+  if (!response.success) {
+    throw new Error(response.message)
+  }
+  router.push({
+    path: '/model-selection',
+    query: {
+      pingCode: room.id
     }
-    router.push({
-      path: '/model-selection',
-      query: {
-        pingCode: room.id
-      }
-    })
-  }
+  })
 }
 
-// 确认PIN码
-const confirmPin = () => {
-  if (!selectedRoom.value) return
-  if (pinInput.value === selectedRoom.value.pinCode) {
-    console.log('加入私密房间:', selectedRoom.value.config.name)
-    closePinDialog()
-    // 这里可以添加加入房间的逻辑
-  } else {
-    pinError.value = 'PIN码错误，请重新输入'
-    pinInput.value = ''
-  }
-}
-
-// 关闭PIN码对话框
-const closePinDialog = () => {
-  showPinDialog.value = false
-  selectedRoom.value = null
-  pinInput.value = ''
-  pinError.value = ''
-}
+// 组件版PIN逻辑已移除
 
 // 返回上一页
 const goBack = () => {
@@ -558,193 +490,7 @@ onMounted(async () => {
 }
 
 /* PIN码对话框样式 */
-.pin-dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(5px);
-}
-
-.pin-dialog {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0a0a0a 100%);
-  border: 2px solid rgba(255, 0, 255, 0.3);
-  border-radius: 20px;
-  padding: 0;
-  min-width: 400px;
-  max-width: 90vw;
-  box-shadow: 0 20px 60px rgba(255, 0, 255, 0.3);
-  backdrop-filter: blur(10px);
-  animation: pinDialogShow 0.3s ease;
-}
-
-@keyframes pinDialogShow {
-  from {
-    opacity: 0;
-    transform: scale(0.8) translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.pin-dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 25px 30px 20px;
-  border-bottom: 1px solid rgba(255, 0, 255, 0.2);
-  
-  h3 {
-    color: #ff00ff;
-    font-size: 1.4rem;
-    margin: 0;
-    font-weight: 600;
-  }
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  padding: 5px;
-  border-radius: 50%;
-  transition: all 0.3s ease;
-  
-  svg {
-    width: 20px;
-    height: 20px;
-  }
-  
-  &:hover {
-    color: #ff00ff;
-    background: rgba(255, 0, 255, 0.1);
-  }
-}
-
-.pin-dialog-content {
-  padding: 25px 30px 30px;
-  
-  p {
-    color: rgba(255, 255, 255, 0.9);
-    margin: 0 0 20px 0;
-    font-size: 1rem;
-    line-height: 1.5;
-  }
-}
-
-.pin-input-group {
-  margin-bottom: 15px;
-}
-
-.pin-input {
-  width: 100%;
-  padding: 15px 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 0, 255, 0.3);
-  border-radius: 12px;
-  color: #ffffff;
-  font-size: 1.1rem;
-  text-align: center;
-  letter-spacing: 2px;
-  transition: all 0.3s ease;
-  
-  &::placeholder {
-    color: rgba(255, 255, 255, 0.5);
-    letter-spacing: normal;
-  }
-  
-  &:focus {
-    outline: none;
-    border-color: #ff00ff;
-    box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
-    background: rgba(255, 255, 255, 0.15);
-  }
-}
-
-.pin-error {
-  color: #ff4444;
-  font-size: 0.9rem;
-  margin-bottom: 15px;
-  text-align: center;
-  padding: 8px;
-  background: rgba(255, 68, 68, 0.1);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 68, 68, 0.3);
-}
-
-.pin-dialog-buttons {
-  display: flex;
-  gap: 15px;
-  justify-content: flex-end;
-}
-
-.pin-btn {
-  padding: 12px 25px;
-  border: none;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  
-  &.cancel-btn {
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    
-    &:hover {
-      background: rgba(255, 255, 255, 0.2);
-      color: #ffffff;
-    }
-  }
-  
-  &.confirm-btn {
-    background: linear-gradient(45deg, #ff00ff, #ff6bff);
-    color: #ffffff;
-    
-    &:hover:not(:disabled) {
-      background: linear-gradient(45deg, #ff6bff, #ff00ff);
-      transform: translateY(-2px);
-      box-shadow: 0 10px 25px rgba(255, 0, 255, 0.4);
-    }
-    
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  }
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .pin-dialog {
-    min-width: 320px;
-    margin: 20px;
-  }
-  
-  .pin-dialog-header,
-  .pin-dialog-content {
-    padding-left: 20px;
-    padding-right: 20px;
-  }
-  
-  .pin-dialog-buttons {
-    flex-direction: column;
-    
-    .pin-btn {
-      width: 100%;
-    }
-  }
-}
+/* 迁移到 PinDialog 组件内 */
 
 /* 原有样式继续... */
 @media (max-width: 768px) {

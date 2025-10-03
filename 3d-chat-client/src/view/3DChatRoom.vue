@@ -988,7 +988,6 @@ function handleKeyDown(event: KeyboardEvent) {
       console.log('🎛️ GUI显示状态已切换');
     }
   }
-  console.log(event.key);
   // FPS显示切换快捷键 - 按F2键切换FPS显示
   if (event.key === 'F2') {
     if (fpsMonitor) {

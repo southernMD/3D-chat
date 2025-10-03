@@ -247,4 +247,46 @@ router.delete<{ roomId: string }>('/rooms/:roomId', (req: Request<{ roomId: stri
   }
 });
 
+// 检查房间人数是否已满
+router.get<{ roomId: string }>(
+  '/rooms/:roomId/full',
+  (req: Request<{ roomId: string }>, res: Response) => {
+    try {
+      const { roomId } = req.params;
+      const room = roomManager.getRoom(roomId);
+
+      if (!room) {
+        res.status(404).json({
+          success: false,
+          error: '房间不存在',
+          data: undefined,
+          message: '房间不存在',
+        });
+        return;
+      }
+
+      const onlineNumber = room.peers.size;
+      const maxUsers = Number(room.config?.maxUsers ?? 0);
+      const full = maxUsers > 0 ? onlineNumber >= maxUsers : false;
+
+      res.json({
+        success: true,
+        data: {
+          full,
+          onlineNumber,
+          maxUsers,
+        },
+      });
+    } catch (error: any) {
+      logger.error((error as any).toString());
+      res.status(500).json({
+        success: false,
+        error: error.message || '检测房间人数是否已满失败',
+        data: undefined,
+        message: error.message || '检测房间人数是否已满失败',
+      });
+    }
+  }
+);
+
 export default router; 

@@ -491,7 +491,7 @@ const handleExit = () => {
 const handleSettings = () => {
   console.log('打开设置',webrtcStore.roomConfig)
   if (!settingsForm.value.hostId) {
-    settingsForm.value.hostId = webrtcStore.roomConfig.hostId
+    settingsForm.value.hostId = webrtcStore.roomConfig!.hostId
   }
   showSettingsPanel.value = true
 }
@@ -700,6 +700,11 @@ onMounted(()=>{
     }
   }
   })
+})
+
+watch(()=>webrtcStore.roomConfig?.hostId,()=>{
+  console.log('房间主ID更新');
+  if(webrtcStore.roomConfig?.hostId)settingsForm.value.hostId = webrtcStore.roomConfig?.hostId 
 })
 
 onUnmounted(()=>{
