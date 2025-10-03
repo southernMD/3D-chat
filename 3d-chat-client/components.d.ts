@@ -22,6 +22,7 @@ declare module 'vue' {
     ElSelect: typeof import('element-plus/es')['ElSelect']
     FileUploader: typeof import('./src/components/FileUploader.vue')['default']
     GameUI: typeof import('./src/components/GameUI.vue')['default']
+    HelpModal: typeof import('./src/components/HelpModal.vue')['default']
     LoadingProgress: typeof import('./src/components/LoadingProgress.vue')['default']
     ModelInfoForm: typeof import('./src/components/ModelInfoForm.vue')['default']
     ModelUploadPanel: typeof import('./src/components/ModelUploadPanel.vue')['default']

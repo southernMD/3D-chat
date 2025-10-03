@@ -34,6 +34,11 @@
       </span>
     </div>
 
+    <!-- 帮助弹窗 -->
+     <teleport to="body">
+      <HelpModal v-if="showHelp" @close="showHelp = false" />
+     </teleport>
+
     <!-- 右上角在线用户列表 -->
     <div class="online-users">
       <div class="users-header">
@@ -547,6 +552,7 @@ const saveSettings = () => {
 // 设置面板状态
 const showSettingsPanel = ref(false)
 const showPassword = ref(false)
+const showHelp = ref(false)
 const settingsForm = ref({
   name: '',
   description: '',
@@ -560,6 +566,7 @@ const settingsForm = ref({
 
 const handleHelp = () => {
   console.log('打开帮助')
+  showHelp.value = true
 }
 
 // 切换密码可见性

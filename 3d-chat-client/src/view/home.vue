@@ -443,11 +443,10 @@ const initButtonAnimations = () => {
       </div>
 
       <!-- mid-item 包含竖向滚动区域 -->
+      <!--
       <div class="mid-item">
-        <!-- 竖向滚动容器 -->
         <div class="v-scroll">
           <div class="content">
-            <!-- 第一个面板 -->
             <div class="horizontal-panel panel-1">
               <div class="panel-content">
                 <h2 class="panel-title">{{ $t('horizontal.panel1.title') }}</h2>
@@ -469,7 +468,6 @@ const initButtonAnimations = () => {
               </div>
             </div>
 
-            <!-- 第二个面板 -->
             <div class="horizontal-panel panel-2">
               <div class="panel-content">
                 <h2 class="panel-title">{{ $t('horizontal.panel2.title') }}</h2>
@@ -485,7 +483,6 @@ const initButtonAnimations = () => {
               </div>
             </div>
 
-            <!-- 第三个面板 -->
             <div class="horizontal-panel panel-3">
               <div class="panel-content">
                 <h2 class="panel-title">{{ $t('horizontal.panel3.title') }}</h2>
@@ -507,7 +504,6 @@ const initButtonAnimations = () => {
               </div>
             </div>
 
-            <!-- 第四个面板 -->
             <div class="horizontal-panel panel-4">
               <div class="panel-content">
                 <h2 class="panel-title">{{ $t('horizontal.panel4.title') }}</h2>
@@ -521,10 +517,11 @@ const initButtonAnimations = () => {
           </div>
         </div>
       </div>
+      -->
 
+      <!--
       <div class="footer-item">
         <footer class="main-footer">
-          <!-- 背景动画元素 -->
           <div class="footer-bg-elements">
             <div class="floating-orb orb-1"></div>
             <div class="floating-orb orb-2"></div>
@@ -532,9 +529,7 @@ const initButtonAnimations = () => {
             <div class="grid-overlay"></div>
           </div>
 
-          <!-- 主要内容 -->
           <div class="footer-content">
-            <!-- 顶部区域 -->
             <div class="footer-top">
               <div class="footer-brand">
                 <div class="brand-logo">
@@ -613,13 +608,11 @@ const initButtonAnimations = () => {
               </div>
             </div>
 
-            <!-- 分割线 -->
             <div class="footer-divider">
               <div class="divider-line"></div>
               <div class="divider-glow"></div>
             </div>
 
-            <!-- 底部区域 -->
             <div class="footer-bottom">
               <div class="footer-bottom-left">
                 <p class="copyright">
@@ -646,6 +639,7 @@ const initButtonAnimations = () => {
           </div>
         </footer>
       </div>
+      -->
     </div>
   </div>
 </template>
@@ -683,6 +677,7 @@ const initButtonAnimations = () => {
 }
 
 // mid-item 容器
+/*
 .mid-item {
   position: relative;
   width: 100vw;
@@ -691,7 +686,9 @@ const initButtonAnimations = () => {
   flex-shrink: 0;
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
 }
+*/
 
+/*
 .footer-item {
   position: relative;
   width: 100vw;
@@ -699,8 +696,10 @@ const initButtonAnimations = () => {
   min-height: 100vh;
   overflow: hidden;
 }
+*/
 
 // 主要 Footer 样式
+/*
 .main-footer {
   position: relative;
   width: 100%;
@@ -709,7 +708,6 @@ const initButtonAnimations = () => {
   color: #ffffff;
   overflow: hidden;
 
-  // 添加整体发光效果
   &::before {
     content: '';
     position: absolute;
@@ -727,11 +725,14 @@ const initButtonAnimations = () => {
     animation: footerGlow 3s ease-in-out infinite;
   }
 }
+*/
 
+/*
 @keyframes footerGlow {
   0%, 100% { opacity: 0.3; transform: scaleX(0.8); }
   50% { opacity: 1; transform: scaleX(1.2); }
 }
+*/
 
 // 背景动画元素
 .footer-bg-elements {
@@ -1518,35 +1519,40 @@ const initButtonAnimations = () => {
 }
 
 // 竖向滚动区域样式 - 按照你的要求实现
+/*
 .v-scroll {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100vh; /* 宽度为100vh */
-  height: 100vw; /* 高度为100vw */
+  width: 100vh;
+  height: 100vw;
   scroll-behavior: smooth;
   transform-origin:left top ;
   transform: translateY(100vh) rotate(-90deg);
   overflow: hidden scroll;
 }
+*/
 
 .v-scroll::-webkit-scrollbar {
   display: none;
 }
 
+/*
 .content {
   display: flex;
-  width: 100vw; /* 4个面板的总宽度 */
-  height: 100vh; /* 内容高度 */
-  transform: rotate(90deg); /* content顺时针旋转90度 */
+  width: 100vw;
+  height: 100vh;
+  transform: rotate(90deg);
   position: absolute;
   left: 100vh;
   transform-origin: left top;
   transform: rotate(90deg);
 }
+*/
 
 /* horizontal-container 现在由 content 替代 */
 
+/*
 .horizontal-panel {
   width: 100vw;
   height: 100vh;
@@ -1556,14 +1562,18 @@ const initButtonAnimations = () => {
   position: relative;
   flex-shrink: 0;
 }
+*/
 
+/*
 .panel-content {
   max-width: 800px;
   padding: 2rem;
   text-align: center;
   color: #ffffff;
 }
+*/
 
+/*
 .panel-title {
   font-size: clamp(2rem, 4vw, 4rem);
   font-weight: 700;
@@ -1581,39 +1591,53 @@ const initButtonAnimations = () => {
   background-clip: text;
   animation: colorCycle 4s linear infinite;
 }
+*/
 
+/*
 .panel-description {
   font-size: 1.2rem;
   line-height: 1.6;
   margin-bottom: 2rem;
   opacity: 0.9;
 }
+*/
 
 // 面板特定样式
+/*
 .panel-1 {
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
 }
+*/
 
+/*
 .panel-2 {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
+*/
 
+/*
 .panel-3 {
   background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
 }
+*/
 
+/*
 .panel-4 {
   background: linear-gradient(135deg, #0f3460 0%, #0a0a0a 100%);
 }
+*/
 
 // 功能特性网格
+/*
 .panel-features {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1.5rem;
   margin-top: 2rem;
 }
+*/
 
+/*
 .feature-item {
   text-align: center;
   padding: 1.5rem;
@@ -1627,20 +1651,26 @@ const initButtonAnimations = () => {
     transform: translateY(-5px);
   }
 }
+*/
 
+/*
 .feature-icon {
   font-size: 2rem;
   margin-bottom: 1rem;
 }
+*/
 
 // 技术栈网格
+/*
 .tech-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
   margin-top: 2rem;
 }
+*/
 
+/*
 .tech-item {
   padding: 1rem;
   background: rgba(0, 255, 255, 0.1);
@@ -1656,19 +1686,25 @@ const initButtonAnimations = () => {
     transform: scale(1.05);
   }
 }
+*/
 
 // 演示展示
+/*
 .demo-showcase {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   margin-top: 2rem;
 }
+*/
 
+/*
 .demo-item {
   text-align: center;
 }
+*/
 
+/*
 .demo-preview {
   width: 100%;
   height: 120px;
@@ -1677,15 +1713,19 @@ const initButtonAnimations = () => {
   margin-bottom: 1rem;
   border: 1px solid rgba(0, 255, 255, 0.3);
 }
+*/
 
 // CTA按钮
+/*
 .cta-buttons {
   display: flex;
   gap: 1rem;
   justify-content: center;
   margin-top: 2rem;
 }
+*/
 
+/*
 .cta-primary,
 .cta-secondary {
   padding: 1rem 2rem;
@@ -1695,7 +1735,9 @@ const initButtonAnimations = () => {
   cursor: pointer;
   transition: all 0.3s ease;
 }
+*/
 
+/*
 .cta-primary {
   background: linear-gradient(45deg, #00ffff, #ff00ff);
   color: #000;
@@ -1705,7 +1747,9 @@ const initButtonAnimations = () => {
     box-shadow: 0 10px 20px rgba(0, 255, 255, 0.3);
   }
 }
+*/
 
+/*
 .cta-secondary {
   background: transparent;
   color: #00ffff;
@@ -1716,6 +1760,7 @@ const initButtonAnimations = () => {
     transform: translateY(-2px);
   }
 }
+*/
 
 // 动画关键帧
 @keyframes gradientShift {

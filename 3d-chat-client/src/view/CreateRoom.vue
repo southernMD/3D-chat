@@ -180,14 +180,12 @@
             <h3 class="info-title">{{ $t('createRoom.info.featureTitle') }}</h3>
             <div class="info-content">
               <div class="info-item">
-                <span class="info-icon">🎤</span>
                 <div class="info-text">
                   <h4>{{ $t('createRoom.info.featureFeature1.title') }}</h4>
                   <p>{{ $t('createRoom.info.featureFeature1.description') }}</p>
                 </div>
               </div>
               <div class="info-item">
-                <span class="info-icon">�</span>
                 <div class="info-text">
                   <h4>{{ $t('createRoom.info.featureFeature2.title') }}</h4>
                   <p>{{ $t('createRoom.info.featureFeature2.description') }}</p>
