@@ -134,7 +134,7 @@ export const useWebRTCStore = defineStore('webrtc', () => {
         console.log('成员列表更新:', peersList)
       },
       (content: string, isSent: boolean, senderName?: string) => {
-        addMessage(content, isSent, senderName)
+        if(roomConfig.value?.enableText)addMessage(content, isSent, senderName)
       },
       (eggPositions: EggPosintions) => {
         addMessage(`啊哈哈鸡蛋来了,生成${eggPositions.totalEggs}个鸡蛋`, false, "系统")

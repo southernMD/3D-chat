@@ -18,6 +18,20 @@
         <span class="button-icon">❓</span>
         帮助
       </button>
+      <span
+        class="feature-badge"
+        :class="{ on: webrtcStore.roomConfig?.enableVoice, off: !webrtcStore.roomConfig?.enableVoice }"
+        title="语音聊天是否开启"
+      >
+        语音: {{ webrtcStore.roomConfig?.enableVoice ? '开' : '关' }}
+      </span>
+      <span
+        class="feature-badge"
+        :class="{ on: webrtcStore.roomConfig?.enableText, off: !webrtcStore.roomConfig?.enableText }"
+        title="文本聊天是否开启"
+      >
+        文本: {{ webrtcStore.roomConfig?.enableText ? '开' : '关' }}
+      </span>
     </div>
 
     <!-- 右上角在线用户列表 -->
@@ -402,6 +416,7 @@ const currentMessage = ref('')
 // 全局键盘监听
 const handleGlobalKeydown = (event: KeyboardEvent) => {
   // 按回车键显示聊天输入框（只有在输入框未显示时）
+  if(!webrtcStore.roomConfig?.enableText)return
   if (event.key === 'Enter' && !showChatInput.value) {
     event.preventDefault()
     showChatInputBox()
@@ -584,6 +599,7 @@ const handleCopyRoomCode = async () => {
 
 // 麦克风控制（只有自己可以操作）
 const toggleMicrophone = (userId: string) => {
+  if(!webrtcStore.roomConfig?.enableVoice)return
   if (userId === 'self') {
     emit('toggleMicrophone', userId)
   }
@@ -783,6 +799,31 @@ onUnmounted(()=>{
 
 .button-icon {
   font-size: 16px;
+}
+
+/* 功能开启状态徽章 */
+.feature-badge {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.feature-badge.on {
+  border-color: rgba(76, 175, 80, 0.7);
+  background: rgba(76, 175, 80, 0.25);
+}
+
+.feature-badge.off {
+  border-color: rgba(255, 107, 107, 0.7);
+  background: rgba(255, 107, 107, 0.25);
 }
 
 /* 右上角在线用户列表 */
