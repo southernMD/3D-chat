@@ -3,7 +3,7 @@
 import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as THREE from 'three'
-import { GUIManager } from '@/models/managers/GUIManager';
+// import { GUIManager } from '@/models/managers/GUIManager';
 // 导入管理器类
 import { MMDModelManager } from '@/models/managers/MMDModelManager';
 import { StaticMMDModelManager } from '@/models/managers/StaticMMDModelManager';
@@ -36,7 +36,7 @@ let mmdModelManager: MMDModelManager          // 主机用户模型管理器（�
 let staticModelManager: StaticMMDModelManager // 其他用户静态模型管理器（无物理）
 let sceneManager: SceneManager
 let objectManager: ObjectManager
-let guiManager: GUIManager
+// let guiManager: GUIManager
 let fpsMonitor: FPSMonitor
 
 // watch 停止函数
@@ -44,7 +44,6 @@ let stopWatchers: (() => void)[] = [];
 
 // WebRTC store和认证store
 const webrtcStore = useWebRTCStore()
-const authStore = useAuthStore()
 const router = useRouter()
 
 // UI状态
@@ -202,7 +201,8 @@ onMounted(async () => {
     mmdModelManager = new MMDModelManager(scene, renderer, bvhPhysics);
     await mmdModelManager.loadModel(history.state.modelHash,webrtcStore.getYouPeer().id);
     updateLoadingStep(3, 'completed')
-    hadRenderCamera = sceneManager.getCamera()
+    // hadRenderCamera = sceneManager.getCamera()
+    hadRenderCamera = mmdModelManager.getLookCamera()!
 
     // 初始化主机用户昵称标签管理器
     const container = dom.value;
@@ -230,20 +230,20 @@ onMounted(async () => {
     fpsMonitor = new FPSMonitor(60)
 
     // 初始化GUI管理器
-    guiManager = new GUIManager(
-      mmdModelManager,
-      objectManager,
-      sceneManager,
-      bvhPhysics,
-      renderer,
-      fpsMonitor,
-      false, // 默认为第三人称视角（场景相机）
-      staticModelManager
-    );
+    // guiManager = new GUIManager(
+    //   mmdModelManager,
+    //   objectManager,
+    //   sceneManager,
+    //   bvhPhysics,
+    //   renderer,
+    //   fpsMonitor,
+    //   false, // 默认为第三人称视角（场景相机）
+    //   staticModelManager
+    // );
 
     nextTick(() => {
       bvhPhysics.createSeparateColliders(objectManager.getAllObjects());
-      guiManager.syncTrackFromObject();
+      // guiManager.syncTrackFromObject();
     });
 
     // 监听墙体重新创建事件，重新生成BVH碰撞体
@@ -422,7 +422,7 @@ onMounted(async () => {
         // 发射鸡蛋
         if (mmdModelManager && mmdModelManager.isModelLoaded()) {
           const model = mmdModelManager.getModel();
-          const currentCamera = guiManager.getHadRenderCamera() || hadRenderCamera;
+          const currentCamera = hadRenderCamera;
           if (model && currentCamera) {
             const result = model.shootEgg(currentCamera, scene, mouseX, mouseY);
             if (result) {
@@ -764,9 +764,9 @@ onUnmounted(() => {
   // ==================== 7. 清理GUI管理器 ====================
   console.log('🗑️ 清理GUI管理器...');
 
-  if (guiManager) {
-    guiManager.cleanup();
-  }
+  // if (guiManager) {
+  //   guiManager.cleanup();
+  // }
 
   // ==================== 8. 清理FPS监控器 ====================
   console.log('🗑️ 清理FPS监控器...');
@@ -930,7 +930,7 @@ function animate(timestamp?: number) {
       model.updateMovement(scene);
 
       // 更新发射的鸡蛋物理（传递相机进行视野优化）
-      const currentCamera = guiManager.getHadRenderCamera() || hadRenderCamera;
+      const currentCamera = hadRenderCamera;
       model.updateProjectileEggs(1 / 60, currentCamera);
 
       // 只在需要调试时才更新辅助器（包围盒、胶囊体等）
@@ -952,7 +952,7 @@ function animate(timestamp?: number) {
     // 使用当前选择的渲染相机
     sceneManager.update();
     // 从GUIManager获取当前渲染相机，如果没有则使用默认相机
-    const currentCamera = guiManager.getHadRenderCamera() || hadRenderCamera;
+    const currentCamera = hadRenderCamera;
 
     // 🔧 检查相机是否发生变化，如果变化则更新 StaticMMDModelManager 的相机引用
     if (staticModelManager && currentCamera) {
@@ -982,12 +982,12 @@ function handleKeyDown(event: KeyboardEvent) {
   }
 
   // GUI切换快捷键 - 按G键切换GUI显示
-  if (event.key === 'g' || event.key === 'G') {
-    if (guiManager) {
-      guiManager.toggle();
-      console.log('🎛️ GUI显示状态已切换');
-    }
-  }
+  // if (event.key === 'g' || event.key === 'G') {
+  //   if (guiManager) {
+  //     guiManager.toggle();
+  //     console.log('🎛️ GUI显示状态已切换');
+  //   }
+  // }
   // FPS显示切换快捷键 - 按F2键切换FPS显示
   if (event.key === 'F2') {
     if (fpsMonitor) {
