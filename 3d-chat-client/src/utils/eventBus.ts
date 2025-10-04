@@ -99,7 +99,10 @@ export interface UserJoinedData {
 
 export interface UserLeftData {
   peerId: string
-  newHost:string
+  newHost?:string
+  isDick:boolean
+  leavingPeerName?:string
+  dickOpId?:string
 }
 
 export interface RoomUsersSyncData {
