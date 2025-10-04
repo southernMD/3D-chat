@@ -61,6 +61,7 @@ export interface Room {
 // 房间管理类
 export class RoomManager {
   private rooms: Map<string, Room> = new Map();
+  public roomsDick:Map<string,string[]> = new Map()
   private io: Server | null = null;
 
   // 新增：暴露 rooms 的只读访问
@@ -181,6 +182,7 @@ export class RoomManager {
       }
 
       this.rooms.delete(roomId);
+      this.roomsDick.delete(roomId)
       console.log(`Room deleted: ${roomId}`);
       return true;
     }

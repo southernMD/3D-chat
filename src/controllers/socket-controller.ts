@@ -24,7 +24,7 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
     try {
       const authService = new AuthService();
       const verifyResult = await authService.verifyToken(data.token);
-      console.log("socket 用户认证",verifyResult.data);
+      console.log("socket 用户认证", verifyResult.data);
       if (verifyResult.success && verifyResult.data) {
         socket.userId = verifyResult.data.userId;
         socket.userEmail = verifyResult.data.email;
@@ -61,7 +61,7 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
   }) => {
     try {
       const { roomId: providedRoomId, userName, roomConfig, modelHash } = data;
-      let room:Room | null;
+      let room: Room | null;
       let roomId = providedRoomId;
 
       // 生成唯一的参与者ID
@@ -70,7 +70,7 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
       // 如果没有提供roomId，创建新房间
       if (!roomId) {
         const roomName = roomConfig?.name || `${userName}'s Room`;
-        room = roomManager.createRoom(roomName, roomConfig, modelHash,userName,peerId);
+        room = roomManager.createRoom(roomName, roomConfig, modelHash, userName, peerId);
         roomId = room.id;
       } else {
         // 尝试加入现有房间
@@ -101,14 +101,14 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
       //加入房间是不传roomConfig的所以roomConfig是null
       const endRoomCongig = roomManager.getRoom(roomId)?.config
 
-      console.log(endRoomCongig,"endRoomCongig");
-      
+      console.log(endRoomCongig, "endRoomCongig");
+
 
       // 通知客户端已加入房间
       socket.emit('joined', {
         roomId,
         peerId,
-        roomConfig:endRoomCongig,
+        roomConfig: endRoomCongig,
         modelHash,
         peers: roomManager.getPeers(roomId)
           .filter(p => p.id !== peerId)
@@ -143,37 +143,50 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
   });
 
   // 离开房间
-  socket.on('leave', ({ roomId, peerId }: { roomId: string, peerId: string }) => {
+  socket.on('leave', ({ roomId, peerId, isDick,dickOpId }: { roomId: string, peerId: string,isDick:boolean,dickOpId:string }) => {
     try {
-      let newHost;
-      const room = roomManager.getRoom(roomId);
-      
-      if(room && peerId === roomManager.getRoom(roomId)?.config?.hostId){
-        const vls = room.peers.values();
+      if (isDick) {
+        console.log(dickOpId);
+        console.log(roomManager.getRoom(roomId)?.config?.hostId);
         
-        for (const peer of vls) {
-          if (peer.id !== peerId) {   
-            newHost = peer.id;
-            break; 
+        if(dickOpId !== roomManager.getRoom(roomId)?.config?.hostId)return
+        io.to(roomId).emit('peerLeave', { peerId,isDick,dickOpId })
+        const success = roomManager.removePeer(roomId, peerId);
+        if(success){ 
+          io.sockets.sockets.get(peerId)?.disconnect(true)
+          roomManager.roomsDick.set(roomId,[...(roomManager.roomsDick.get(roomId) ?? []),peerId])
+        }
+      } else {
+        let newHost;
+        const room = roomManager.getRoom(roomId);
+
+        if (room && peerId === roomManager.getRoom(roomId)?.config?.hostId) {
+          const vls = room.peers.values();
+
+          for (const peer of vls) {
+            if (peer.id !== peerId) {
+              newHost = peer.id;
+              break;
+            }
           }
         }
-      }
-      // 通知房间内其他客户端有成员离开（在移除之前通知）
-      socket.to(roomId).emit('peerLeave', { peerId,newHost });
+        // 通知房间内其他客户端有成员离开（在移除之前通知）
+        socket.to(roomId).emit('peerLeave', { peerId, newHost,isDick });
 
-      // 从房间移除参与者（这可能会删除房间如果是最后一个成员）
-      const success = roomManager.removePeer(roomId, peerId,newHost);
+        // 从房间移除参与者（这可能会删除房间如果是最后一个成员）
+        const success = roomManager.removePeer(roomId, peerId, newHost);
 
-      if (success) {
-        // 离开socket.io房间
-        socket.leave(roomId);
+        if (success) {
+          // 离开socket.io房间
+          socket.leave(roomId);
 
-        console.log(`Peer ${peerId} left room ${roomId}`);
+          console.log(`Peer ${peerId} left room ${roomId}`);
 
-        // 检查房间是否还存在（可能已被删除）
-        const roomAfter = roomManager.getRoom(roomId);
-        if (!roomAfter) {
-          console.log(`Room ${roomId} was deleted because it became empty`);
+          // 检查房间是否还存在（可能已被删除）
+          const roomAfter = roomManager.getRoom(roomId);
+          if (!roomAfter) {
+            console.log(`Room ${roomId} was deleted because it became empty`);
+          }
         }
       }
     } catch (error) {
@@ -186,20 +199,20 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
     try {
       // 处理不同的调用方式
       const cb = typeof dataOrCallback === 'function' ? dataOrCallback : callback;
-      
+
       if (typeof cb !== 'function') {
         console.error('No callback provided for getRouterRtpCapabilities');
         return;
       }
-      
+
       const rtpCapabilities = mediasoupHandler.getRtpCapabilities();
       cb({ rtpCapabilities });
     } catch (error) {
       console.error('Error in getRouterRtpCapabilities:', error);
-      
+
       // 处理不同的调用方式
       const cb = typeof dataOrCallback === 'function' ? dataOrCallback : callback;
-      
+
       if (typeof cb === 'function') {
         cb({ error: 'Internal server error' });
       }
@@ -218,19 +231,19 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
         cb = callback;
         params = data || {};
       }
-      
+
       if (typeof cb !== 'function') {
         console.error('No callback provided for createWebRtcTransport');
         return;
       }
-      
+
       const { roomId, peerId, consuming } = params;
-      
+
       if (!roomId || !peerId) {
         cb({ error: 'Missing required parameters: roomId, peerId' });
         return;
       }
-      
+
       const transport = await mediasoupHandler.createWebRtcTransport(roomId, peerId, consuming);
 
       // 将transport ID添加到peer
@@ -239,10 +252,10 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
       cb(transport);
     } catch (error) {
       console.error('Error in createWebRtcTransport:', error);
-      
+
       // 兼容不同调用方式
       const cb = typeof data === 'function' ? data : callback;
-      
+
       if (typeof cb === 'function') {
         cb({ error: 'Failed to create WebRTC transport' });
       }
@@ -261,19 +274,19 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
         cb = callback;
         params = data || {};
       }
-      
+
       if (typeof cb !== 'function') {
         console.error('No callback provided for connectWebRtcTransport');
         return;
       }
-      
+
       const { roomId, peerId, transportId, dtlsParameters, isConsumer } = params;
-      
+
       if (!roomId || !peerId || !transportId || !dtlsParameters) {
         cb({ error: 'Missing required parameters' });
         return;
       }
-      
+
       const result = await mediasoupHandler.connectWebRtcTransport(
         roomId,
         peerId,
@@ -284,10 +297,10 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
       cb(result);
     } catch (error) {
       console.error('Error in connectWebRtcTransport:', error);
-      
+
       // 兼容不同调用方式
       const cb = typeof data === 'function' ? data : callback;
-      
+
       if (typeof cb === 'function') {
         cb({ error: 'Failed to connect transport' });
       }
@@ -319,7 +332,7 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
   // 创建Consumer（接收媒体流）
   socket.on('consume', async ({ roomId, consumerPeerId, producerId, rtpCapabilities }, callback) => {
     try {
-      
+
       // 保存消费者的RTP能力
       roomManager.setPeerRtpCapabilities(roomId, consumerPeerId, rtpCapabilities);
 
@@ -379,19 +392,19 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
         cb = callback;
         params = data || {};
       }
-      
+
       if (typeof cb !== 'function') {
         console.error('No callback provided for getProducers');
         return;
       }
-      
+
       const { roomId, peerId } = params;
-      
+
       if (!roomId || !peerId) {
         cb({ error: 'Missing required parameters: roomId, peerId' });
         return;
       }
-      
+
       const peers = roomManager.getPeers(roomId).filter(p => p.id !== peerId);
 
       const producers = [];
@@ -424,10 +437,10 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
       cb({ producers });
     } catch (error) {
       console.error('Error in getProducers:', error);
-      
+
       // 兼容不同调用方式
       const cb = typeof data === 'function' ? data : callback;
-      
+
       if (typeof cb === 'function') {
         cb({ error: 'Failed to get producers' });
       }
@@ -469,24 +482,24 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
         cb = callback;
         params = data || {};
       }
-      
+
       if (typeof cb !== 'function') {
         console.error('No callback provided for produceData');
         return;
       }
-      
+
       const { roomId, peerId, label, protocol, appData, sctpStreamParameters } = params;
-      
+
       if (!roomId || !peerId) {
         cb({ error: 'Missing required parameters: roomId, peerId' });
         return;
       }
 
       console.log('Producing data with params:', { roomId, peerId, label, protocol, sctpStreamParameters });
-      
-      const result = await mediasoupHandler.createDataProducer(roomId, peerId, label || 'chat', protocol || 'simple-chat', appData || {},sctpStreamParameters);
-      
-      
+
+      const result = await mediasoupHandler.createDataProducer(roomId, peerId, label || 'chat', protocol || 'simple-chat', appData || {}, sctpStreamParameters);
+
+
       // 保存 dataProducer ID 到 peer
       roomManager.addPeerDataProducer(roomId, peerId, result.id);
 
@@ -501,10 +514,10 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
       cb(result);
     } catch (error) {
       console.error('Error in produceData:', error);
-      
+
       // 兼容不同调用方式
       const cb = typeof data === 'function' ? data : callback;
-      
+
       if (typeof cb === 'function') {
         cb({ error: 'Failed to create data producer' });
       }
@@ -523,51 +536,51 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
         cb = callback;
         params = data || {};
       }
-      
+
       if (typeof cb !== 'function') {
         console.error('No callback provided for consumeData');
         return;
       }
-      
+
       const { roomId, consumerPeerId, dataProducerId } = params;
-      
+
       if (!roomId || !consumerPeerId || !dataProducerId) {
         cb({ error: 'Missing required parameters' });
         return;
       }
-      
+
       const result = await mediasoupHandler.createDataConsumer(roomId, consumerPeerId, dataProducerId);
-      
+
       // 保存 dataConsumer ID 到 peer
       roomManager.addPeerDataConsumer(roomId, consumerPeerId, result.id);
-      
+
       cb(result);
     } catch (error) {
       console.error('Error in consumeData:', error);
-      
+
       // 兼容不同调用方式
       const cb = typeof data === 'function' ? data : callback;
-      
+
       if (typeof cb === 'function') {
         cb({ error: 'Failed to create data consumer' });
       }
     }
   });
-  
+
   // 关闭 DataProducer
   socket.on('closeDataProducer', async ({ roomId, peerId, dataProducerId }, callback) => {
     try {
       await mediasoupHandler.closeDataProducer(dataProducerId);
-      
+
       // 从 peer 移除 dataProducer
       roomManager.removePeerDataProducer(roomId, peerId, dataProducerId);
-      
+
       // 通知房间内其他客户端 dataProducer 已关闭
       socket.to(roomId).emit('dataProducerClosed', {
         dataProducerId,
         producerPeerId: peerId,
       });
-      
+
       callback({ closed: true });
     } catch (error) {
       console.error('Error in closeDataProducer:', error);
@@ -734,27 +747,28 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
     try {
       // 找到断开连接的peer
       const peerInfo = roomManager.getPeerBySocketId(socket.id);
-
       if (peerInfo) {
         const { roomId, peer } = peerInfo;
+        //如果已经被踢了就不用再操作了
+        if(roomManager.roomsDick.get(roomId)?.includes (peer.id)) return
 
         let newHost;
         const room = roomManager.getRoom(roomId);
-        if(room && peer.id === roomManager.getRoom(roomId)?.config?.hostId){
+        if (room && peer.id === roomManager.getRoom(roomId)?.config?.hostId) {
           const vls = room.peers.values();
-          
+
           for (const peer of vls) {
-            if (peer.id !== peer.id) {   
+            if (peer.id !== peer.id) {
               newHost = peer.id;
-              break; 
+              break;
             }
           }
         }
         // 通知房间内其他客户端peer离开（在移除之前通知）
-        socket.to(roomId).emit('peerLeave', { peerId: peer.id,newHost });
+        socket.to(roomId).emit('peerLeave', { peerId: peer.id, newHost,isDick:false });
 
         // 从房间移除peer（这可能会删除房间如果是最后一个成员）
-        const removed = roomManager.removePeer(roomId, peer.id,newHost);
+        const removed = roomManager.removePeer(roomId, peer.id, newHost);
 
         if (removed) {
           console.log(`Peer ${peer.name} (${peer.id}) disconnected from room ${roomId}`);
@@ -778,18 +792,18 @@ export const handleConnection = (socket: AuthenticatedSocket, io: Server): void 
     socket.to(roomId).emit("change-mico-status", { peerId, status: false });
   });
 
-  socket.on('updateRoomConfig',({roomId,peerId,config:roomConfig},callback)=>{
+  socket.on('updateRoomConfig', ({ roomId, peerId, config: roomConfig }, callback) => {
     const oldRoom = roomManager.getRoom(roomId)
-    if(!oldRoom || oldRoom.config?.hostId !== peerId)callback({success:false,message:'你不是房主'})
-    if((oldRoom?.peers.size ?? 0) > (+(roomConfig as RoomConfig).maxUsers))callback({success:false,message:'超过最大允许人数'})
-  
-    const success = roomManager.updateRoomConfig(roomId,roomConfig)
-    if(success){
-      callback({success:true,message:"更新信息成功"})
-      io.to(roomId).emit('roomConfig',roomConfig)
-    }else{
-      callback({success:false,message:"更新信息失败"})
+    if (!oldRoom || oldRoom.config?.hostId !== peerId) callback({ success: false, message: '你不是房主' })
+    if ((oldRoom?.peers.size ?? 0) > (+(roomConfig as RoomConfig).maxUsers)) callback({ success: false, message: '超过最大允许人数' })
+
+    const success = roomManager.updateRoomConfig(roomId, roomConfig)
+    if (success) {
+      callback({ success: true, message: "更新信息成功" })
+      io.to(roomId).emit('roomConfig', roomConfig)
+    } else {
+      callback({ success: false, message: "更新信息失败" })
     }
-    
+
   })
 }; 
