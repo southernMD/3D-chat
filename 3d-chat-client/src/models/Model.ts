@@ -627,7 +627,7 @@ export abstract class Model extends StaticModel {
       }
 
       // 触发角色碰撞事件
-      this.onPlayerCollision(collisionInfo);
+      // this.onPlayerCollision(collisionInfo);
     }
 
   }
@@ -636,18 +636,18 @@ export abstract class Model extends StaticModel {
   /**
    * 角色碰撞事件处理
    */
-  private onPlayerCollision(collisionInfo: Array<{ objectId: string; object: any; deltaVector: THREE.Vector3 }>): void {
-    // 这里可以添加角色碰撞的特殊逻辑
-    // 比如：触发机关、收集物品、受到伤害等
+  // private onPlayerCollision(collisionInfo: Array<{ objectId: string; object: any; deltaVector: THREE.Vector3 }>): void {
+  //   // 这里可以添加角色碰撞的特殊逻辑
+  //   // 比如：触发机关、收集物品、受到伤害等
 
-    collisionInfo.forEach(info => {
-      // console.log(`🚶 角色碰撞事件:`, {
-      //   objectId: info.objectId,
-      //   objectName: info.object?.constructor.name || 'Unknown',
-      //   deltaVector: info.deltaVector
-      // });
-    });
-  }
+  //   // collisionInfo.forEach(info => {
+  //   //   // console.log(`🚶 角色碰撞事件:`, {
+  //   //   //   objectId: info.objectId,
+  //   //   //   objectName: info.object?.constructor.name || 'Unknown',
+  //   //   //   deltaVector: info.deltaVector
+  //   //   // });
+  //   // });
+  // }
 
   /**
    * 获取BVH物理系统状态
@@ -669,7 +669,7 @@ export abstract class Model extends StaticModel {
   /**
    * 创建跟随相机 - 创建一个跟随模型的相机
    */
-  public createLookCamera(scene: THREE.Scene,capsuleRadiu?:number): THREE.PerspectiveCamera {
+  public createLookCamera(capsuleRadiu?:number): THREE.PerspectiveCamera {
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight,  capsuleRadiu ?? 5, 1000);
     // const cameraHelper = new THREE.CameraHelper(camera);
 
@@ -917,7 +917,7 @@ export abstract class Model extends StaticModel {
    * 清理所有发射的鸡蛋
    * @param scene 场景对象
    */
-  public clearAllEggs(scene: THREE.Scene): void {
+  public clearAllEggs(): void {
     this.eggs.forEach(egg => {
       egg.removeEgg();
     });
@@ -929,9 +929,9 @@ export abstract class Model extends StaticModel {
    * 清理鸡蛋资源
    * @param scene 场景对象
    */
-  public disposeEggShooter(scene: THREE.Scene): void {
+  public disposeEggShooter(): void {
     // 清理所有鸡蛋
-    this.clearAllEggs(scene);
+    this.clearAllEggs();
     console.log('🗑️ 鸡蛋资源已清理');
   }
 

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import TopBar from '@/components/TopBar.vue'
-import ParticleBackground from '@/components/ParticleBackground.vue'
 import { useAuthStore } from '@/stores/auth'
 const authStore = useAuthStore()
 authStore.initAuth()

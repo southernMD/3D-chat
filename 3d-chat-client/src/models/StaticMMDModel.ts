@@ -5,7 +5,6 @@ import { AnimationClip } from 'three/src/animation/AnimationClip.js';
 import { AnimationAction } from 'three/src/animation/AnimationAction.js';
 
 import type { KeyframeTrack } from 'three';
-import { Model } from './Model';
 import { StaticModel } from './StaticModel';
 
 // MMDModel类 - 继承自Model基类，特化为MMD模型

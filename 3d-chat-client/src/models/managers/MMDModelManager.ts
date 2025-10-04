@@ -5,7 +5,6 @@ import { GLTFModel } from '../GLTFModel';
 import { BVHPhysics } from '@/physics/BVHPhysics';
 import { getModelFilePathByHash } from '@/api/modelApi';
 import { NameTagManager } from '@/utils/NameTagManager';
-import { StaticMMDModel } from '../StaticMMDModel';
 
 /**
  * MMDModelManager类 - 专门管理MMD模型的类
@@ -144,7 +143,7 @@ export class MMDModelManager {
       this.bvhPhysics.updateUserCapsule(peerId,position,capsuleInfo!)
             
       // 创建跟随相机
-      this.lookCamera = this.mmdModel!.createLookCamera(this.scene,capsuleInfo?.radius);
+      this.lookCamera = this.mmdModel!.createLookCamera(capsuleInfo?.radius);
       
       // 创建相机控制器
       this.cameraControls = this.mmdModel!.createCameraControls(

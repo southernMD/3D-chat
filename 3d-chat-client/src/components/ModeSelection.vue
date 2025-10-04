@@ -1,5 +1,5 @@
 <template>
-  <div class="mode-selection-overlay" v-if="visible" @click.stop>
+  <div class="mode-selection-overlay" @click.stop>
     <div class="mode-container">
       <div class="mode-options">
         <!-- 创建房间 -->
@@ -40,18 +40,11 @@
 </template>
 
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-const { t } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
-
-// Props
-const props = defineProps<{
-  visible: boolean
-}>()
 
 // Emits
 const emit = defineEmits<{

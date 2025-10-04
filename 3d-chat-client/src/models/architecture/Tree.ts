@@ -21,7 +21,7 @@ export class Tree extends BaseModel {
     async load(): Promise<void> {
         const loader = new GLTFLoader();
         const loadModel = (): Promise<GLTF> => {
-            return new Promise((resolve, reject) => {
+            return new Promise((resolve) => {
                 loader.load(
                     '/model/tree/tree.glb',
                     (gltf) => {
@@ -98,32 +98,32 @@ export class Tree extends BaseModel {
     /**
      * 设置物理碰撞（简单盒模型）
      */
-    private setupPhysics(): void {
-        if (!this.treeObject) return;
+    // private setupPhysics(): void {
+    //     if (!this.treeObject) return;
 
-        // 创建简单的盒模型碰撞体
-        const boxGeometry = new THREE.BoxGeometry(8, 12, 8); // 宽8，高12，深8
-        const boxMaterial = new THREE.MeshBasicMaterial({
-            color: 0x00ff00,
-            transparent: true,
-            opacity: 0.3,
-            wireframe: true
-        });
+    //     // 创建简单的盒模型碰撞体
+    //     const boxGeometry = new THREE.BoxGeometry(8, 12, 8); // 宽8，高12，深8
+    //     const boxMaterial = new THREE.MeshBasicMaterial({
+    //         color: 0x00ff00,
+    //         transparent: true,
+    //         opacity: 0.3,
+    //         wireframe: true
+    //     });
 
-        const collisionBox = new THREE.Mesh(boxGeometry, boxMaterial);
-        collisionBox.position.copy(this.treeObject.position);
-        collisionBox.position.y += 6; // 调整到树的中心高度
-        collisionBox.name = `tree-collision-${this.name}`;
-        collisionBox.visible = false; // 默认隐藏碰撞盒
+    //     const collisionBox = new THREE.Mesh(boxGeometry, boxMaterial);
+    //     collisionBox.position.copy(this.treeObject.position);
+    //     collisionBox.position.y += 6; // 调整到树的中心高度
+    //     collisionBox.name = `tree-collision-${this.name}`;
+    //     collisionBox.visible = false; // 默认隐藏碰撞盒
 
-        // 添加到场景（用于调试）
-        this.scene.add(collisionBox);
+    //     // 添加到场景（用于调试）
+    //     this.scene.add(collisionBox);
 
-        // 存储碰撞盒引用
-        this.treeObject.userData.collisionBox = collisionBox;
+    //     // 存储碰撞盒引用
+    //     this.treeObject.userData.collisionBox = collisionBox;
 
-        console.log(`✅ 树 ${this.name} 的物理碰撞盒设置完成`);
-    }
+    //     console.log(`✅ 树 ${this.name} 的物理碰撞盒设置完成`);
+    // }
 
     /**
      * 获取碰撞盒（用于BVH物理系统）
@@ -206,16 +206,6 @@ export class Tree extends BaseModel {
             Tree.deepDisposeObject3D(gltf.scene);
         }
 
-        // 清理动画
-        if (gltf.animations) {
-            gltf.animations.forEach(animation => {
-                if (animation.tracks) {
-                    animation.tracks.forEach(track => {
-                        // 动画轨道清理
-                    });
-                }
-            });
-        }
     }
 
     /**

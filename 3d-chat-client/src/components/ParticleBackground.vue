@@ -6,7 +6,6 @@
 
 <script setup lang="ts">
 import { onMounted, ref, onUnmounted } from 'vue'
-import { gsap } from 'gsap'
 
 const particleContainer = ref<HTMLElement>()
 const canvas = ref<HTMLCanvasElement>()

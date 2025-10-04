@@ -22,7 +22,7 @@ import { eventBus, type UserLeftData } from '@/utils/eventBus';
 // BVH物理系统已集成到模型中，不再需要CANNON
 
 let scene: THREE.Scene
-const dom = ref()
+const dom = ref<HTMLElement>()
 let width = innerWidth
 let height = innerHeight
 let hadRenderCamera: THREE.PerspectiveCamera
@@ -167,25 +167,19 @@ onMounted(async () => {
     updateLoadingStep(0, 'loading', '正在创建WebGL渲染器...')
 
     // 初始化场景管理器
-    sceneManager = new SceneManager();
-    sceneManager.createCamera(width, height)
+    sceneManager = new SceneManager(width, height,dom.value!);
     scene = sceneManager.getScene();
+    renderer = sceneManager.getRenderer()
     updateLoadingStep(0, 'completed')
 
     // 步骤2: 创建场景
     updateLoadingStep(1, 'loading', '正在初始化3D场景和相机...')
 
-    // 创建相机和渲染器
-    renderer = sceneManager.createRenderer(dom.value, width, height);
-
-    // 初始化灯光
-    sceneManager.initializeLights();
-
+    // 实例化bvh物理
     bvhPhysics = new BVHPhysics(scene);
 
-
     // 创建场景控制器
-    sceneManager.createSceneControls();
+    // sceneManager.createSceneControls();
     updateLoadingStep(1, 'completed')
 
     updateLoadingStep(2, 'loading', '正在生成地面、墙体等场景元素...')
@@ -547,7 +541,7 @@ onMounted(async () => {
       }
 
       //同步其他客户端的鸡蛋发射
-      webrtcStore.setEggShootCallback((userName, position, velocity) => {
+      webrtcStore.setEggShootCallback((position, velocity) => {
         const model = mmdModelManager.getModel();
         if (model) {
 
@@ -728,7 +722,7 @@ onUnmounted(() => {
     const model = mmdModelManager.getModel();
     if (model) {
       // 清理鸡蛋发射器
-      model.disposeEggShooter(scene);
+      model.disposeEggShooter();
 
       // 从场景中移除模型
       if (model.mesh && scene) {

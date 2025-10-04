@@ -1,5 +1,5 @@
 //引入路由对象
-import { createRouter, createWebHistory, createWebHashHistory, createMemoryHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -57,7 +57,7 @@ const routes: Array<RouteRecordRaw> = [
         name: 'model-selection',
         component: () => import('@/view/ModelSelection.vue'),
         meta: { requiresAuth: true },
-        beforeEnter: (to, from, next) => {
+        beforeEnter: ({}, from, next) => {
             // 只允许从创建房间页面跳转过来
             if (from.name === 'create-room' || 
                 from.name === 'mode-selection' && from.query.pingCode?.length !== 0 ||
@@ -75,7 +75,7 @@ const routes: Array<RouteRecordRaw> = [
         name: 'chat-room',
         component: () => import('@/view/ChatRoom.vue'),
         meta: { requiresAuth: true },
-        beforeEnter: (to, from, next) => {
+        beforeEnter: ({}, from, next) => {
             // 只允许从模型选择页面跳转过来
             if (from.name === 'model-selection') {
                 next()
@@ -90,7 +90,7 @@ const routes: Array<RouteRecordRaw> = [
         name: '3d-chat-room',
         component: () => import('@/view/3DChatRoom.vue'),
         meta: { requiresAuth: true },
-        beforeEnter: (to, from, next) => {
+        beforeEnter: ({}, from, next) => {
             // 只允许从模型选择页面跳转过来
             if (from.name === 'model-selection' || (from.name === 'mode-selection' && from.query.pingCode?.length !== 0)) {
                 next()
@@ -118,7 +118,7 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, {}, next) => {
     const authStore = useAuthStore()
 
     // 初始化认证状态（仅在首次访问时）

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { WebRTCManager, type ConnectionStatus, type RoomInfo, type Peer, type RoomConfig, type ModelStateData } from '@/utils/webrtc'
-import { showError, showSuccess, showInfo } from '@/utils/message'
+import { showError, showSuccess } from '@/utils/message'
 import { useAuthStore } from '@/stores/auth'
 import type { EggPosintions } from '@/types/types'
 import { eventBus, type UserPopupMessageData } from '@/utils/eventBus'
@@ -118,7 +118,7 @@ export const useWebRTCStore = defineStore('webrtc', () => {
 
     // 使用简单的回调函数，避免响应式引用
     webrtcManager = new WebRTCManager(
-      (message: string) => {
+      () => {
         // console.log(`[WebRTC] ${message}`)
       },
       (status: ConnectionStatus, details?: string) => {
@@ -456,7 +456,7 @@ export const useWebRTCStore = defineStore('webrtc', () => {
   }
 
   // 🥚 设置鸡蛋发射回调
-  const setEggShootCallback = (callback: (userName: string, position: { x: number; y: number; z: number }, velocity: { x: number; y: number; z: number }) => void): void => {
+  const setEggShootCallback = (callback: (position: { x: number; y: number; z: number }, velocity: { x: number; y: number; z: number }) => void): void => {
     if (!webrtcManager) {
       console.error('WebRTC管理器未初始化')
       return

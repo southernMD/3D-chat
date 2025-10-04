@@ -18,7 +18,7 @@ export interface FileChunk {
  * @returns 一个 Promise，解析为包含块的起始和结束位置、索引、哈希值和 blob 的 FileChunk 对象。
  */
 export const createChunk = async (file: File, chunkIndex: number, CHUNK_SIZE = 1024 * 1024 * 5) => {
-    return new Promise<FileChunk>((resolve, reject) => {
+    return new Promise<FileChunk>((resolve) => {
         const start = chunkIndex * CHUNK_SIZE
         const end = start + CHUNK_SIZE
         const spark = new SparkMD5.ArrayBuffer()

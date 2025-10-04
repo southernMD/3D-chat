@@ -265,10 +265,6 @@ const hasUploadableFiles = computed(() =>
     uploadFiles.value.some(file => file.status === 'pending' || file.status === 'error')
 )
 
-const hasCompletedFiles = computed(() =>
-    uploadFiles.value.some(file => file.status === 'completed')
-)
-
 const canUpload = computed(() => {
     return hasUploadableFiles.value
 })

@@ -50,7 +50,7 @@ export class Ground extends BaseModel {
     const groundMaterial = new THREE.MeshLambertMaterial({
       color: 0x336633,
       transparent: true,
-      opacity: 0.8
+      opacity: 1
     });
 
     // 创建地面网格

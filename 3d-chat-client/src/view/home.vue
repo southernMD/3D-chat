@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { gsap } from 'gsap'
 import { TextPlugin } from 'gsap/TextPlugin'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { MorphSVGPlugin } from 'gsap/MorphSVGPlugin'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
@@ -11,7 +10,7 @@ import { useRouter } from 'vue-router'
 gsap.registerPlugin(TextPlugin, ScrollTrigger)
 
 // i18n 和 router
-const { t, locale } = useI18n()
+const { locale } = useI18n()
 const router = useRouter()
 
 // 响应式引用
@@ -20,10 +19,11 @@ const mainTitle = ref<HTMLElement>()
 const subtitle = ref<HTMLElement>()
 const enterButton = ref<HTMLElement>()
 const backgroundElements = ref<HTMLElement[]>([])
-const floatingElements = ref<HTMLElement[]>([])
 const homeContainer = ref<HTMLElement>()
 const descriptionRef = ref<HTMLElement>()
 const decorativeElements = ref<HTMLElement>()
+const buttonGlow = ref<HTMLElement>()
+
 
 // 移除模式选择状态，不再需要
 // const showModeSelection = ref(false)
@@ -34,7 +34,6 @@ const totalSections = 2
 let isScrolling = false // 防止滚动过快
 
 // 计算属性：根据语言判断是否为中文
-const isChinese = computed(() => locale.value === 'zh')
 
 // 滚动到指定区域
 const scrollToSection = (sectionIndex: number) => {
@@ -160,7 +159,7 @@ const initHeroAnimations = () => {
   const masterTl = gsap.timeline({ delay: 0.5 })
 
   // 标题容器动画 - 使用整数像素值
-  masterTl.to(mainTitle.value, {
+  masterTl.to(mainTitle.value!, {
     opacity: 1,
     y: 0,
     scale: 1,
@@ -193,7 +192,7 @@ const initHeroAnimations = () => {
   }
 
   // 副标题动画 - 防止模糊
-  masterTl.to(subtitle.value, {
+  masterTl.to(subtitle.value!, {
     opacity: 1,
     y: 0,
     scale: 1,
@@ -232,7 +231,7 @@ const startLoopAnimations = () => {
 // 背景动画元素
 const initBackgroundAnimations = () => {
   // 创建浮动的几何图形
-  backgroundElements.value.forEach((element, index) => {
+  backgroundElements.value.forEach((element) => {
     gsap.set(element, {
       opacity: 0.1 + Math.random() * 0.3,
       scale: 0.5 + Math.random() * 0.5,
@@ -263,10 +262,6 @@ const initBackgroundAnimations = () => {
   })
 }
 
-// 移除滚动触发动画，避免奇怪的translate
-const initScrollAnimations = () => {
-  // 不再使用滚动视差效果
-}
 
 // 鼠标移动处理函数
 const handleMouseMove = (e: MouseEvent) => {
@@ -276,7 +271,7 @@ const handleMouseMove = (e: MouseEvent) => {
   const xPercent = (clientX / innerWidth - 0.5) * 2
   const yPercent = (clientY / innerHeight - 0.5) * 2
 
-  gsap.to(mainTitle.value, {
+  gsap.to(mainTitle.value!, {
     x: Math.round(xPercent * 5),
     y: Math.round(yPercent * 3),
     duration: 0.8,
@@ -284,7 +279,7 @@ const handleMouseMove = (e: MouseEvent) => {
     force3D: true
   })
 
-  gsap.to(subtitle.value, {
+  gsap.to(subtitle.value!, {
     x: Math.round(xPercent * 3),
     y: Math.round(yPercent * 2),
     duration: 1,
@@ -336,13 +331,13 @@ const initButtonAnimations = () => {
 
   // 悬停效果
   enterButton.value.addEventListener('mouseenter', () => {
-    gsap.to(enterButton.value, {
+    gsap.to(enterButton.value!, {
       scale: 1.05,
       duration: 0.3,
       ease: "power2.out"
     })
 
-    gsap.to(enterButton.value?.querySelector('.button-glow'), {
+    gsap.to(buttonGlow.value!, {
       opacity: 1,
       scale: 1.2,
       duration: 0.3,
@@ -351,13 +346,13 @@ const initButtonAnimations = () => {
   })
 
   enterButton.value.addEventListener('mouseleave', () => {
-    gsap.to(enterButton.value, {
+    gsap.to(enterButton.value!, {
       scale: 1,
       duration: 0.3,
       ease: "power2.out"
     })
 
-    gsap.to(enterButton.value?.querySelector('.button-glow'), {
+    gsap.to(buttonGlow.value!, {
       opacity: 0.5,
       scale: 1,
       duration: 0.3,
@@ -367,7 +362,7 @@ const initButtonAnimations = () => {
 
   // 点击效果
   enterButton.value.addEventListener('mousedown', () => {
-    gsap.to(enterButton.value, {
+    gsap.to(enterButton.value!, {
       scale: 0.95,
       duration: 0.1,
       ease: "power2.out"
@@ -375,7 +370,7 @@ const initButtonAnimations = () => {
   })
 
   enterButton.value.addEventListener('mouseup', () => {
-    gsap.to(enterButton.value, {
+    gsap.to(enterButton.value!, {
       scale: 1.05,
       duration: 0.1,
       ease: "power2.out"
@@ -421,7 +416,7 @@ const initButtonAnimations = () => {
             <div class="cta-section">
               <button ref="enterButton" class="enter-button" @click="enterChat">
                 <span class="button-text">{{ $t('home.enterButton') }}</span>
-                <div class="button-glow"></div>
+                <div class="button-glow" ref="ButtonGlow"></div>
                 <div class="button-particles"></div>
               </button>
               <p ref="descriptionRef" class="description">{{ $t('home.description') }}</p>

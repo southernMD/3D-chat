@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onMounted } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 // 步骤状态类型
 type StepStatus = 'pending' | 'loading' | 'completed' | 'error'

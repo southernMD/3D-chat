@@ -59,6 +59,7 @@ const createRequestConfig = (config: RequestConfig = {}): RequestInit => {
   if (!skipAuth) {
     const token = getAuthToken()
     if (token) {
+      //@ts-ignore
       requestHeaders.Authorization = `Bearer ${token}`
     }
   }
@@ -174,6 +175,7 @@ export const upload = <T = any>(
     body: formData,
     headers: {
       // 不设置Content-Type，让浏览器自动设置multipart/form-data边界
+      //@ts-ignore
       ...(config?.headers || {}),
     },
   })

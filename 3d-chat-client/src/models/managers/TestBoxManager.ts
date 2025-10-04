@@ -1,5 +1,5 @@
+//@ts-nocheck
 import * as THREE from 'three';
-import * as CANNON from 'cannon-es';
 
 /**
  * TestBoxManager类 - 专门管理测试方块的类
@@ -39,7 +39,7 @@ export class TestBoxManager {
    * @param color 斜坡颜色
    * @returns 创建的斜坡网格
    */
-  createRamp(position: THREE.Vector3, size: THREE.Vector3, angle: number, color: THREE.ColorRepresentation): THREE.Mesh {
+  createRamp(position: THREE.Vector3, size: THREE.Vector3, angle: number, color: THREE.ColorRepresentation){
     // 创建斜坡几何体
     const rampGeometry = new THREE.BoxGeometry(size.x, size.y, size.z);
     const rampMaterial = new THREE.MeshStandardMaterial({ color });

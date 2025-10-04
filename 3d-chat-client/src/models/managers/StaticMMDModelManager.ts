@@ -4,7 +4,6 @@ import { StaticGLTFModel } from '../StaticGLTFModel';
 import { getModelFilePathByHash } from '@/api/modelApi';
 import { NameTagManager } from '@/utils/NameTagManager';
 import { eventBus } from '@/utils/eventBus';
-import type { StaticModel } from '../StaticModel';
 
 /**
  * StaticMMDModelManager类 - 管理其他用户的静态模型

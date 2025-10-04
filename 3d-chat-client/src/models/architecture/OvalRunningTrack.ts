@@ -1,6 +1,4 @@
 import * as THREE from 'three';
-import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { StaticGeometryGenerator } from 'three-mesh-bvh';
 import { BaseModel} from './BaseModel';
 import { OnePullUpBar } from '../outdoorGym/OnePullUpBar';
 import { OutdoorGym } from '../outdoorGym/OutdoorGym';
@@ -40,7 +38,6 @@ export class OvalRunningTrack extends BaseModel {
 
   // 健身器材管理
   private gymEquipments: (OnePullUpBar | OutdoorGym)[] = [];
-  private usedPositions: THREE.Vector3[] = []; // 记录已使用的位置
 
   constructor(scene: THREE.Scene, initialTransform: InitialTransform);
   constructor(
@@ -173,22 +170,22 @@ export class OvalRunningTrack extends BaseModel {
    * 设置所有健身器材包围盒的显示状态
    * @param visible 是否显示包围盒
    */
-  setGymEquipmentBoundingBoxVisible(visible: boolean): void {
-    this.gymEquipments.forEach(equipment => {
-      equipment.setBoundingBoxVisible(visible);
-    });
-    console.log(`所有健身器材包围盒显示: ${visible ? '开启' : '关闭'}`);
-  }
+  // setGymEquipmentBoundingBoxVisible(visible: boolean): void {
+  //   this.gymEquipments.forEach(equipment => {
+  //     equipment.setBoundingBoxVisible(visible);
+  //   });
+  //   console.log(`所有健身器材包围盒显示: ${visible ? '开启' : '关闭'}`);
+  // }
 
   /**
    * 更新所有健身器材的包围盒
    */
-  updateGymEquipmentBoundingBoxes(): void {
-    this.gymEquipments.forEach(equipment => {
-      equipment.updateBoundingBox();
-    });
-    console.log('所有健身器材包围盒已更新');
-  }
+  // updateGymEquipmentBoundingBoxes(): void {
+  //   this.gymEquipments.forEach(equipment => {
+  //     // equipment.updateBoundingBox();
+  //   });
+  //   console.log('所有健身器材包围盒已更新');
+  // }
 
   /**
    * 清除所有健身器材
@@ -236,34 +233,34 @@ export class OvalRunningTrack extends BaseModel {
   /**
    * 显示健身器材物理体调试信息
    */
-  debugGymEquipmentPhysics(): void {
-    console.log('=== 健身器材物理体调试信息 ===');
+  // debugGymEquipmentPhysics(): void {
+  //   console.log('=== 健身器材物理体调试信息 ===');
 
-    this.gymEquipments.forEach((equipment, index) => {
-      const type = equipment instanceof OnePullUpBar ? '单杠' : '健身器材组合';
-      const physicsBody = (equipment as any).physicsBody;
+  //   this.gymEquipments.forEach((equipment, index) => {
+  //     const type = equipment instanceof OnePullUpBar ? '单杠' : '健身器材组合';
+  //     const physicsBody = (equipment as any).physicsBody;
 
-      console.log(`器材${index + 1}: ${type}`);
+  //     console.log(`器材${index + 1}: ${type}`);
 
-      if (physicsBody) {
-        console.log(`  物理体位置: (${physicsBody.position.x.toFixed(2)}, ${physicsBody.position.y.toFixed(2)}, ${physicsBody.position.z.toFixed(2)})`);
-        console.log(`  物理体质量: ${physicsBody.mass}`);
-        console.log(`  物理体形状数量: ${physicsBody.shapes.length}`);
+  //     if (physicsBody) {
+  //       console.log(`  物理体位置: (${physicsBody.position.x.toFixed(2)}, ${physicsBody.position.y.toFixed(2)}, ${physicsBody.position.z.toFixed(2)})`);
+  //       console.log(`  物理体质量: ${physicsBody.mass}`);
+  //       console.log(`  物理体形状数量: ${physicsBody.shapes.length}`);
 
-        if (physicsBody.shapes.length > 0) {
-          const shape = physicsBody.shapes[0];
-          if (shape instanceof CANNON.Box) {
-            console.log(`  物理体尺寸: ${(shape.halfExtents.x * 2).toFixed(2)} x ${(shape.halfExtents.y * 2).toFixed(2)} x ${(shape.halfExtents.z * 2).toFixed(2)}`);
-          }
-        }
-      } else {
-        console.log(`  ❌ 物理体未创建`);
-      }
+  //       if (physicsBody.shapes.length > 0) {
+  //         const shape = physicsBody.shapes[0];
+  //         if (shape instanceof CANNON.Box) {
+  //           console.log(`  物理体尺寸: ${(shape.halfExtents.x * 2).toFixed(2)} x ${(shape.halfExtents.y * 2).toFixed(2)} x ${(shape.halfExtents.z * 2).toFixed(2)}`);
+  //         }
+  //       }
+  //     } else {
+  //       console.log(`  ❌ 物理体未创建`);
+  //     }
 
-      const modelPos = equipment.getPosition();
-      console.log(`  模型位置: (${modelPos.x.toFixed(2)}, ${modelPos.y.toFixed(2)}, ${modelPos.z.toFixed(2)})`);
-    });
-  }
+  //     const modelPos = equipment.getPosition();
+  //     console.log(`  模型位置: (${modelPos.x.toFixed(2)}, ${modelPos.y.toFixed(2)}, ${modelPos.z.toFixed(2)})`);
+  //   });
+  // }
 
 
 
@@ -346,52 +343,52 @@ export class OvalRunningTrack extends BaseModel {
   /**
    * 创建中心点标记（标记跑道内部草坪中心）
    */
-  private createCenterPointMarker(): void {
-    // 跑道内部草坪中心就是相对于跑道坐标系的 (0, 0, 0)
-    // 因为草坪是在跑道坐标系中心创建的
+  // private createCenterPointMarker(): void {
+  //   // 跑道内部草坪中心就是相对于跑道坐标系的 (0, 0, 0)
+  //   // 因为草坪是在跑道坐标系中心创建的
 
-    // 创建一个红色球体标记草坪中心点
-    const markerGeometry = new THREE.SphereGeometry(1, 16, 16);
-    const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+  //   // 创建一个红色球体标记草坪中心点
+  //   const markerGeometry = new THREE.SphereGeometry(1, 16, 16);
+  //   const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
-    const centerMarker = new THREE.Mesh(markerGeometry, markerMaterial);
-    // 标记位置在跑道坐标系的中心上方1米
-    centerMarker.position.set(0, 1, 0);
-    centerMarker.name = 'TrackCenterMarker';
-    this.modelGroup.add(centerMarker);
+  //   const centerMarker = new THREE.Mesh(markerGeometry, markerMaterial);
+  //   // 标记位置在跑道坐标系的中心上方1米
+  //   centerMarker.position.set(0, 1, 0);
+  //   centerMarker.name = 'TrackCenterMarker';
+  //   this.modelGroup.add(centerMarker);
 
-    console.log('草坪中心点标记创建完成: (0, 1, 0) - 相对于跑道坐标系');
-  }
+  //   console.log('草坪中心点标记创建完成: (0, 1, 0) - 相对于跑道坐标系');
+  // }
 
   /**
    * 创建坐标轴辅助线（以跑道内部草坪中心为原点）
    */
-  private createCoordinateAxes(): void {
-    const axisLength = 20;
-    const axisHeight = 0.5;
+  // private createCoordinateAxes(): void {
+  //   const axisLength = 20;
+  //   const axisHeight = 0.5;
 
-    // X轴（红色）- 相对于跑道坐标系
-    const xAxisGeometry = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(-axisLength, axisHeight, 0),
-      new THREE.Vector3(axisLength, axisHeight, 0)
-    ]);
-    const xAxisMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
-    const xAxis = new THREE.Line(xAxisGeometry, xAxisMaterial);
-    xAxis.name = 'XAxis';
-    this.modelGroup.add(xAxis);
+  //   // X轴（红色）- 相对于跑道坐标系
+  //   const xAxisGeometry = new THREE.BufferGeometry().setFromPoints([
+  //     new THREE.Vector3(-axisLength, axisHeight, 0),
+  //     new THREE.Vector3(axisLength, axisHeight, 0)
+  //   ]);
+  //   const xAxisMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+  //   const xAxis = new THREE.Line(xAxisGeometry, xAxisMaterial);
+  //   xAxis.name = 'XAxis';
+  //   this.modelGroup.add(xAxis);
 
-    // Z轴（蓝色）- 相对于跑道坐标系
-    const zAxisGeometry = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(0, axisHeight, -axisLength),
-      new THREE.Vector3(0, axisHeight, axisLength)
-    ]);
-    const zAxisMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff });
-    const zAxis = new THREE.Line(zAxisGeometry, zAxisMaterial);
-    zAxis.name = 'ZAxis';
-    this.modelGroup.add(zAxis);
+  //   // Z轴（蓝色）- 相对于跑道坐标系
+  //   const zAxisGeometry = new THREE.BufferGeometry().setFromPoints([
+  //     new THREE.Vector3(0, axisHeight, -axisLength),
+  //     new THREE.Vector3(0, axisHeight, axisLength)
+  //   ]);
+  //   const zAxisMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff });
+  //   const zAxis = new THREE.Line(zAxisGeometry, zAxisMaterial);
+  //   zAxis.name = 'ZAxis';
+  //   this.modelGroup.add(zAxis);
 
-    console.log('坐标轴辅助线创建完成，原点: (0, 0) - 相对于跑道坐标系');
-  }
+  //   console.log('坐标轴辅助线创建完成，原点: (0, 0) - 相对于跑道坐标系');
+  // }
 
 
 

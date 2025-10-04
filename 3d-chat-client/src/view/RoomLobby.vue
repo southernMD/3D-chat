@@ -98,7 +98,6 @@
 <script setup lang="ts">
 import { checkRoomExists, getRoomList, type RoomInfo } from '@/api/roomApi'
 import { ref, computed, onMounted } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -106,7 +105,6 @@ const router = useRouter()
 // 响应式数据
 const searchQuery = ref('')
 const activeFilter = ref('all')
-const selectedRoom = ref<RoomInfo | null>(null)
 
 // 筛选选项
 const filters = [

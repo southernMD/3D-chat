@@ -71,7 +71,7 @@ watch(() => props.modelValue, (newValue) => {
 
 // 监听内部值变化
 watch(selectedValue, (newValue) => {
-  emit('update:modelValue', newValue)
+  emit('update:modelValue', newValue!)
 })
 
 // 处理变化事件

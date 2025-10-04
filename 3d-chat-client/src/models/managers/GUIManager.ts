@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { MMDModelManager } from './MMDModelManager';
 import { ObjectManager } from './ObjectManager';
@@ -155,7 +156,7 @@ export class GUIManager {
                 } else if (objectId.includes('nondoors')) {
                   (collider.material as any).color.setHex(0x00ff00); // 绿色非门
                 }
-                collider.material.needsUpdate = true;
+                // collider.material.needsUpdate = true;
               }
 
               if (collider.visible) visibleCount++;
@@ -268,20 +269,20 @@ export class GUIManager {
       },
       toggleHelpers: () => {
         // 使用MMDModelManager切换辅助线
-        this.mmdModelManager?.toggleHelpers();
-        this.staticMMDModelManager?.toggleHelpers()
+        // this.mmdModelManager?.toggleHelpers();
+        // this.staticMMDModelManager?.toggleHelpers()
       },
       toggleCapsuleVisibility: () => {
         if (this.mmdModelManager && this.mmdModelManager.isModelLoaded()) {
           const model = this.mmdModelManager.getModel();
           if (model) {
-            model.toggleCapsuleVisibility();
+            // model.toggleCapsuleVisibility();
           }
         }
         if(this.staticMMDModelManager){
           const models = this.staticMMDModelManager.getModels()
           models.forEach((model) => {
-            model.toggleCapsuleVisibility();
+            // model.toggleCapsuleVisibility();
           });
         }
       },

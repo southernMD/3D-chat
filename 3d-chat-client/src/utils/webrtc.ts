@@ -176,7 +176,7 @@ type MessageCallback = (content: string, isSent: boolean, senderName?: string) =
 type EggPositionsCallback = (positions: EggPosintions) => void | undefined
 type ModelStateCallback = (userName: string, modelState: ModelStateData['state']) => void
 type DoorStateCallback = (doorName: string, doorNearName: string | undefined, visible: boolean, isOpen: boolean) => void
-type EggShootCallback = (userName: string, position: { x: number; y: number; z: number }, velocity: { x: number; y: number; z: number }) => void
+type EggShootCallback = (position: { x: number; y: number; z: number }, velocity: { x: number; y: number; z: number }) => void
 type PopupMessageCallback = (message:string) => void
 export class WebRTCManager {
   // 自己的音量检测器
@@ -603,7 +603,7 @@ export class WebRTCManager {
     })
 
     // 监听新的数据生产者事件
-    this.state.socket.on('newDataProducer', async ({ dataProducerId, producerPeerId, label, protocol }) => {
+    this.state.socket.on('newDataProducer', async ({ dataProducerId, producerPeerId, label }) => {
       this.log(`新的数据生产者: ${producerPeerId} (${label})`)
 
       // 检查是否已经有这个数据生产者的消费者
@@ -1420,7 +1420,7 @@ export class WebRTCManager {
             const senderName = this.peerNames.get(producerPeerId) || producerPeerId
             this.log(`收到鸡蛋发射数据，来自 ${senderName}`)
             if (this.eggShootCallback) {
-              this.eggShootCallback(senderName, data.position, data.velocity)
+              this.eggShootCallback(data.position, data.velocity)
             }
           } else if(data.type === 'popup') {
             if(data.toPeerId === this.state.peerId) {

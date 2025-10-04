@@ -1,5 +1,5 @@
-import { defineComponent, ref, onMounted, onUnmounted, computed, PropType, CSSProperties, createApp, toRef } from 'vue'
-
+import { defineComponent, ref, onMounted, onUnmounted, createApp } from 'vue'
+import type {PropType, CSSProperties} from 'vue'
 // 组件接口定义
 interface KeyBoardMessageProps {
   targetKey: string // 目标按键

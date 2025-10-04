@@ -1,6 +1,4 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { GridHelper } from 'three/src/helpers/GridHelper.js';
 import { EXRLoader } from 'three/examples/jsm/Addons.js';
 
 /**
@@ -11,18 +9,21 @@ export class SceneManager {
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
   private renderer: THREE.WebGLRenderer;
-  private gridHelper: GridHelper;
-  private axesHelper: THREE.AxesHelper;
-  private controls: OrbitControls;
+  // private gridHelper: GridHelper;
+  // private axesHelper: THREE.AxesHelper;
+  // private controls: OrbitControls;
   
   // 灯光
-  private mainLight: THREE.DirectionalLight;
-  private ambientLight: THREE.AmbientLight;
-  private pointLight: THREE.PointLight;
+  private mainLight?: THREE.DirectionalLight;
+  private ambientLight?: THREE.AmbientLight;
 
-  constructor() {
+  constructor(width:number, height:number,dom:HTMLElement) {
     this.scene = new THREE.Scene();
+    this.camera = this.createCamera(width, height)
+    this.renderer = this.createRenderer(dom, width, height);
+
     this.initializeScene();
+    this.initializeLights()
   }
 
   /**
@@ -34,9 +35,9 @@ export class SceneManager {
     // this.scene.add(this.gridHelper);
 
     // 创建坐标轴辅助器
-    this.axesHelper = new THREE.AxesHelper(150);
-    this.scene.add(this.axesHelper);
-    // this.createSkyBox();
+    // this.axesHelper = new THREE.AxesHelper(150);
+    // this.scene.add(this.axesHelper);
+    this.createSkyBox();
   }
 
   /**
@@ -44,14 +45,14 @@ export class SceneManager {
    */
   createCamera(width: number, height: number): THREE.PerspectiveCamera {
     // 创建一个透视投影对象
-    this.camera = new THREE.PerspectiveCamera(50, width / height, 1, 8000);
+    const camera = new THREE.PerspectiveCamera(50, width / height, 1, 8000);
     // 设置相机的位置
-    this.camera.position.set(100, 50, 100);
+    camera.position.set(100, 50, 100);
     // 相机的视线 观察目标点的坐标
-    this.camera.lookAt(0, 0, 0);
-    this.camera.updateProjectionMatrix();
+    camera.lookAt(0, 0, 0);
+    camera.updateProjectionMatrix();
 
-    return this.camera;
+    return camera;
   }
 
   /**
@@ -59,36 +60,36 @@ export class SceneManager {
    */
   createRenderer(domElement: HTMLElement, width: number, height: number): THREE.WebGLRenderer {
     // 添加渲染器
-    this.renderer = new THREE.WebGLRenderer({
+    const renderer = new THREE.WebGLRenderer({
       antialias: false, // 关闭抗锯齿以提高性能
       powerPreference: 'high-performance', // 优先使用高性能GPU
     });
     // 设置屏幕像素比 - 降低像素比可以提高性能
-    this.renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio));
-    this.renderer.setClearColor(0x888888);
-    this.renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio));
+    renderer.setClearColor(0x888888);
+    renderer.setSize(width, height);
     
     // 性能优化设置
-    this.renderer.shadowMap.enabled = false; // 关闭阴影可以提高性能
-    this.renderer.localClippingEnabled = true;
+    renderer.shadowMap.enabled = false; // 关闭阴影可以提高性能
+    renderer.localClippingEnabled = true;
     
-    domElement.appendChild(this.renderer.domElement);
-    this.renderer.render(this.scene, this.camera);
+    domElement.appendChild(renderer.domElement);
+    renderer.render(this.scene, this.camera);
     
-    return this.renderer;
+    return renderer;
   }
 
   /**
    * 创建场景控制器
    */
-  createSceneControls(): OrbitControls {
-    if (!this.camera || !this.renderer) {
-      throw new Error('Camera and renderer must be created before controls');
-    }
+  // createSceneControls(): OrbitControls {
+  //   if (!this.camera || !this.renderer) {
+  //     throw new Error('Camera and renderer must be created before controls');
+  //   }
     
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    return this.controls;
-  }
+  //   this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+  //   return this.controls;
+  // }
 
   /**
    * 创建天空图
@@ -97,12 +98,12 @@ export class SceneManager {
     const loader = new EXRLoader();
     loader.load('/model/background.exr', (texture) => {
       const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
-      const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+      // const envMap = pmremGenerator.fromEquirectangular(texture).texture;
       
       // 通过调整曝光来控制整体亮度
       this.renderer.toneMappingExposure = 0.1; // 降低曝光
       
-      this.scene.environment = envMap;
+      // this.scene.environment = envMap;
       this.scene.background = texture;
       
       pmremGenerator.dispose();
@@ -187,9 +188,9 @@ export class SceneManager {
     }
 
     // 更新控制器
-    if (this.controls) {
-      this.controls.update();
-    }
+    // if (this.controls) {
+    //   this.controls.update();
+    // }
 
     // 注意：相机辅助器和模型辅助器现在由各自的模型管理
   }
@@ -242,28 +243,28 @@ export class SceneManager {
   /**
    * 获取控制器
    */
-  getControls(): OrbitControls {
-    return this.controls;
-  }
+  // getControls(): OrbitControls {
+  //   return this.controls;
+  // }
 
   /**
    * 清理资源
    */
   cleanup(): void {
     // 移除网格辅助器
-    if (this.gridHelper) {
-      this.scene.remove(this.gridHelper);
-    }
+    // if (this.gridHelper) {
+    //   this.scene.remove(this.gridHelper);
+    // }
     
-    // 移除坐标轴辅助器
-    if (this.axesHelper) {
-      this.scene.remove(this.axesHelper);
-    }
+    // // 移除坐标轴辅助器
+    // if (this.axesHelper) {
+    //   this.scene.remove(this.axesHelper);
+    // }
     
     // 释放控制器
-    if (this.controls) {
-      this.controls.dispose();
-    }
+    // if (this.controls) {
+    //   this.controls.dispose();
+    // }
     
     // 释放渲染器
     if (this.renderer) {

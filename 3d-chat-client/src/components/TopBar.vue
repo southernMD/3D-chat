@@ -83,7 +83,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 
-const { locale, t } = useI18n()
+const { locale } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()

@@ -1,9 +1,5 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { Capsule } from 'three/examples/jsm/math/Capsule.js';
-import { Model } from './Model';
-import { BVHPhysics } from '@/physics/BVHPhysics';
 import { StaticModel } from './StaticModel';
 
 // 定义GLTF类型
@@ -250,14 +246,14 @@ export class StaticGLTFModel extends StaticModel {
 
     // 3. 清理动画剪辑
     if (this.animations) {
-      this.animations.forEach(clip => {
-        // 清理动画轨道
-        if (clip.tracks) {
-          clip.tracks.forEach(track => {
-            // 动画轨道本身不需要特殊清理，但确保引用被清除
-          });
-        }
-      });
+      // this.animations.forEach(clip => {
+      //   // 清理动画轨道
+      //   if (clip.tracks) {
+      //     // clip.tracks.forEach(track => {
+      //     //   // 动画轨道本身不需要特殊清理，但确保引用被清除
+      //     // });
+      //   }
+      // });
       this.animations = [];
       console.log('✅ GLTF动画剪辑已清理');
     }

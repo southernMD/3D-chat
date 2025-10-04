@@ -15,12 +15,12 @@ export class NameTagManager {
   private currentUserId: string = 'player'; // 当前用户的模型ID
 
   // 配置选项
-  private options = {
-    minScale: 0.4,        // 最小缩放比例
-    maxScale: 1.2,        // 最大缩放比例
-    alwaysVisible: true,  // 始终可见
-    fadeWithDistance: false // 不随距离淡化
-  };
+  // private options = {
+  //   minScale: 0.4,        // 最小缩放比例
+  //   maxScale: 1.2,        // 最大缩放比例
+  //   alwaysVisible: true,  // 始终可见
+  //   fadeWithDistance: false // 不随距离淡化
+  // };
 
   constructor(camera: THREE.Camera, renderer: THREE.WebGLRenderer, container: HTMLElement) {
     this.camera = camera;

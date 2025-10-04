@@ -156,10 +156,9 @@ import { ref, reactive, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElNotification } from 'element-plus'
-import { SuccessFilled } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
-import { showSuccess, showError, showWarning } from '@/utils/message'
+import { showError, showWarning } from '@/utils/message'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -191,7 +190,7 @@ const registerForm = reactive({
 })
 
 // 确认密码验证
-const validateConfirmPassword = (rule: any, value: string, callback: any) => {
+const validateConfirmPassword = ({}: any, value: string, callback: any) => {
   if (value !== registerForm.password) {
     callback(new Error(t('auth.validation.passwordMismatch')))
   } else {
@@ -226,7 +225,7 @@ const registerRules: FormRules = {
   ],
   agreement: [
     {
-      validator: (rule: any, value: boolean, callback: any) => {
+      validator: ({}: any, value: boolean, callback: any) => {
         if (!value) {
           callback(new Error(t('auth.validation.agreementRequired')))
         } else {

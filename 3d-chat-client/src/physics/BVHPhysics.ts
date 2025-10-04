@@ -310,7 +310,7 @@ export class BVHPhysics {
     regions.forEach((regionMeshes, regionKey) => {
       if (regionMeshes.length > config.maxMeshesPerRegion) {
         // 进一步细分大区域
-        const subRegions = this.subdivideRegion(regionKey, regionMeshes, config.maxMeshesPerRegion);
+        const subRegions = this.subdivideRegion(regionKey, regionMeshes);
         subRegions.forEach((subMeshes, subKey) => {
           finalRegions.set(subKey, subMeshes);
         });
@@ -328,7 +328,6 @@ export class BVHPhysics {
   private subdivideRegion(
     regionKey: string,
     meshes: Array<{ mesh: THREE.Mesh; position: THREE.Vector3; bounds: THREE.Box3 }>,
-    maxMeshesPerRegion: number
   ): Map<string, Array<{ mesh: THREE.Mesh; position: THREE.Vector3; bounds: THREE.Box3 }>> {
 
     const subRegions = new Map<string, Array<{ mesh: THREE.Mesh; position: THREE.Vector3; bounds: THREE.Box3 }>>();
@@ -340,7 +339,7 @@ export class BVHPhysics {
     // 按位置进一步细分为4个子区域
     const center = regionBounds.getCenter(new THREE.Vector3());
 
-    meshes.forEach((item, index) => {
+    meshes.forEach((item) => {
       const pos = item.position;
       let subKey = regionKey;
 

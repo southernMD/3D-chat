@@ -5,6 +5,8 @@ import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import vueJsx from '@vitejs/plugin-vue-jsx';
+//@ts-ignore
+import { terser } from 'rollup-plugin-terser';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -16,6 +18,12 @@ export default defineConfig({
     }),
     Components({
       resolvers: [ElementPlusResolver()],
+    }),
+    terser({
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      }
     }),
   ],
   resolve: {

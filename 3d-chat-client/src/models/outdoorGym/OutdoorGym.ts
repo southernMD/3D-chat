@@ -58,42 +58,42 @@ export class OutdoorGym extends BaseModel {
   /**
    * 创建包围盒辅助显示
    */
-  private createBoundingBoxHelper(): void {
-    if (!this.modelObject) {
-      console.log('跳过户外健身器材组合包围盒创建：缺少模型对象');
-      return;
-    }
+  // private createBoundingBoxHelper(): void {
+  //   if (!this.modelObject) {
+  //     console.log('跳过户外健身器材组合包围盒创建：缺少模型对象');
+  //     return;
+  //   }
 
-    // 创建包围盒辅助线
-    this.boundingBoxHelper = new THREE.BoxHelper(this.modelObject, 0xff0000); // 红色包围盒
-    this.boundingBoxHelper.name = 'OutdoorGymBoundingBox';
+  //   // 创建包围盒辅助线
+  //   this.boundingBoxHelper = new THREE.BoxHelper(this.modelObject, 0xff0000); // 红色包围盒
+  //   this.boundingBoxHelper.name = 'OutdoorGymBoundingBox';
 
-    // 添加到模型组
-    this.modelGroup.add(this.boundingBoxHelper);
+  //   // 添加到模型组
+  //   this.modelGroup.add(this.boundingBoxHelper);
 
-    console.log('户外健身器材组合包围盒辅助显示创建完成');
-  }
+  //   console.log('户外健身器材组合包围盒辅助显示创建完成');
+  // }
 
   /**
    * 设置包围盒显示状态
    * @param visible 是否显示包围盒
    */
-  setBoundingBoxVisible(visible: boolean): void {
-    if (this.boundingBoxHelper) {
-      this.boundingBoxHelper.visible = visible;
-      console.log(`户外健身器材组合包围盒显示: ${visible ? '开启' : '关闭'}`);
-    }
-  }
+  // setBoundingBoxVisible(visible: boolean): void {
+  //   if (this.boundingBoxHelper) {
+  //     this.boundingBoxHelper.visible = visible;
+  //     console.log(`户外健身器材组合包围盒显示: ${visible ? '开启' : '关闭'}`);
+  //   }
+  // }
 
   /**
    * 更新包围盒（当模型变换后调用）
    */
-  updateBoundingBox(): void {
-    if (this.boundingBoxHelper && this.modelObject) {
-      this.boundingBoxHelper.setFromObject(this.modelObject);
-      console.log('户外健身器材组合包围盒已更新');
-    }
-  }
+  // updateBoundingBox(): void {
+  //   if (this.boundingBoxHelper && this.modelObject) {
+  //     this.boundingBoxHelper.setFromObject(this.modelObject);
+  //     console.log('户外健身器材组合包围盒已更新');
+  //   }
+  // }
 
   /**
    * 加载GLTF模型

@@ -57,7 +57,6 @@
 </template>
 
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { onMounted, onUnmounted } from 'vue'
@@ -65,7 +64,6 @@ import { gsap } from 'gsap'
 import { checkRoomExists } from '@/api/roomApi'
 // import { showError, showSuccess } from '@/utils/message'
 
-const { t } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
 

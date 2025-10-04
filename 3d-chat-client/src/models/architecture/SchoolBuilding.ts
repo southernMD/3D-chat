@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { BaseModel } from "./BaseModel";
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { MeshBVH, MeshBVHHelper, StaticGeometryGenerator } from 'three-mesh-bvh';
 import type { InitialTransform } from "./BaseModel";
 interface GLTF {
   scene: THREE.Group;
@@ -18,13 +17,6 @@ interface GLTF {
   };
 }
 
-// 门组接口定义
-interface DoorGroupData {
-    name: string;
-    mesh: THREE.Object3D | null;
-    isOpen: boolean;
-    type: string;
-}
 
 export class SchoolBuilding extends BaseModel {
     public buildingObject: THREE.Object3D | null = null;

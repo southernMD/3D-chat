@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { Capsule } from 'three/examples/jsm/math/Capsule.js';
 
 /**
  * StaticModel 基类 - 处理静态模型相关功能
@@ -10,7 +9,7 @@ export abstract class StaticModel {
     // 键盘控制相关
   public isWalking: boolean = false;
   abstract mesh: THREE.Object3D;
-  protected mixer: THREE.AnimationMixer;
+  protected mixer?: THREE.AnimationMixer;
   protected modelSize: {
     width: number;
     height: number;

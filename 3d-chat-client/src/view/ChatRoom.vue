@@ -114,7 +114,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+//@ts-nocheck
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { showError, showSuccess, showInfo } from '@/utils/message'
 import { useWebRTCStore } from '@/stores/webrtc'

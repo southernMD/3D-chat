@@ -66,7 +66,6 @@
                   class="model-preview-image"
                   @error="handleImageError"
                 />
-                <span v-else class="model-icon">{{ model.icon }}</span>
               </div>
             </div>
             <div class="model-info">
@@ -143,7 +142,6 @@
     :message="passwordDialogMessage"
     placeholder="请输入房间密码"
     :maxlength="20"
-    :error="pinError"
     @confirm="handlePinConfirm"
     @cancel="closePinDialog"
   />
