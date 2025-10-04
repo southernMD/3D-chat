@@ -208,13 +208,13 @@ export class MMDModelManager {
   /**
    * 切换辅助线显示
    */
-  toggleHelpers(): void {
-    if (this.mmdModel && 'toggleHelpers' in this.mmdModel) {
-      (this.mmdModel as any).toggleHelpers();
-    } else {
-      console.log('模型不支持辅助线切换');
-    }
-  }
+  // toggleHelpers(): void {
+  //   if (this.mmdModel && 'toggleHelpers' in this.mmdModel) {
+  //     (this.mmdModel as any).toggleHelpers();
+  //   } else {
+  //     console.log('模型不支持辅助线切换');
+  //   }
+  // }
 
   /**
    * 强制播放走路动画

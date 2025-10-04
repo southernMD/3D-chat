@@ -43,44 +43,44 @@ export class GLTFModel extends Model {
   /**
    * 切换辅助线可见性
    */
-  toggleHelpers(): void {
-    if (this.helpersVisible) {
-      const { boxHelper, capsuleVisual } = this.helpersVisible;
+  // toggleHelpers(): void {
+  //   if (this.helpersVisible) {
+  //     const { boxHelper, capsuleVisual } = this.helpersVisible;
 
-      // 获取当前状态（以胶囊体为准）
-      const currentVisibility = capsuleVisual ? capsuleVisual.visible : true;
-      const newVisibility = !currentVisibility;
+  //     // 获取当前状态（以胶囊体为准）
+  //     const currentVisibility = capsuleVisual ? capsuleVisual.visible : true;
+  //     const newVisibility = !currentVisibility;
 
-      // 切换包围盒辅助线可见性
-      if (boxHelper) {
-        boxHelper.visible = newVisibility;
-      }
+  //     // 切换包围盒辅助线可见性
+  //     if (boxHelper) {
+  //       boxHelper.visible = newVisibility;
+  //     }
 
-      // 切换胶囊体可见性
-      if (capsuleVisual) {
-        capsuleVisual.visible = newVisibility;
-      }
+  //     // 切换胶囊体可见性
+  //     if (capsuleVisual) {
+  //       capsuleVisual.visible = newVisibility;
+  //     }
 
-      console.log(`人物辅助线显示状态: ${newVisibility ? '显示' : '隐藏'}`);
-    }
-  }
+  //     console.log(`人物辅助线显示状态: ${newVisibility ? '显示' : '隐藏'}`);
+  //   }
+  // }
 
   /**
    * 设置辅助视觉效果
    */
-  setupHelpers(scene: THREE.Scene, capsuleVisual: THREE.Mesh): void {
-    // 创建包围盒辅助线
-    const boxHelper = new THREE.BoxHelper(this.mesh, 0xffff00);
+  // setupHelpers(scene: THREE.Scene, capsuleVisual: THREE.Mesh): void {
+  //   // 创建包围盒辅助线
+  //   const boxHelper = new THREE.BoxHelper(this.mesh, 0xffff00);
 
-    // 添加到场景
-    scene.add(boxHelper);
+  //   // 添加到场景
+  //   scene.add(boxHelper);
 
-    // 保存引用以便控制可见性
-    this.helpersVisible = {
-      boxHelper,
-      capsuleVisual
-    };
-  }
+  //   // 保存引用以便控制可见性
+  //   this.helpersVisible = {
+  //     boxHelper,
+  //     capsuleVisual
+  //   };
+  // }
 
   // 加载GLTF模型
   async load(scene: THREE.Scene, modelPath: string): Promise<void> {
@@ -117,20 +117,20 @@ export class GLTFModel extends Model {
       this.setupAnimations();
       
       // 创建静态胶囊体几何
-      const { capsuleInfo, capsuleVisual } = this.createCapsuleGeometry();
+      this.createCapsuleGeometry();
 
       // 添加胶囊体可视化到场景
-      scene.add(capsuleVisual);
+      // scene.add(capsuleVisual);
 
       // 创建物理胶囊体
-      const playerCapsule = this.createPhysicsCapsule();
+      this.createPhysicsCapsule();
 
       // 设置辅助器
-      this.setupHelpers(scene, capsuleVisual);
+      // this.setupHelpers(scene, capsuleVisual);
 
       // 更新胶囊体位置
       this.updatePhysicsCapsulePosition();
-      this.updateCapsuleVisualPosition();
+      // this.updateCapsuleVisualPosition();
       
       // 开始播放站立动画
       this.stopWalk();

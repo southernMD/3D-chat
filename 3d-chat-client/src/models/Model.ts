@@ -31,10 +31,10 @@ export abstract class Model extends StaticModel {
   protected playerCapsule?: Capsule;
 
   // 相机辅助器
-  private cameraHelpers?: {
-    lookCameraHelper?: THREE.CameraHelper;
-    targetCameraHelper?: THREE.CameraHelper;
-  };
+  // private cameraHelpers?: {
+  //   lookCameraHelper?: THREE.CameraHelper;
+  //   targetCameraHelper?: THREE.CameraHelper;
+  // };
 
   // 相机控制器变化处理函数
   private cameraControlsChangeHandler?: (event: any) => void;
@@ -215,7 +215,7 @@ export abstract class Model extends StaticModel {
     this.updatePhysicsCapsulePosition();
 
     // 更新静态胶囊体可视化位置
-    this.updateCapsuleVisualPosition();
+    // this.updateCapsuleVisualPosition();
 
     //更新静态胶囊体
     this.bvhPhysics.updateUserCapsule(
@@ -273,7 +273,7 @@ export abstract class Model extends StaticModel {
     this.playerVelocity.set(0, 0, 0);
     this.mesh.position.set(0, 5, 0); // 重置到安全位置
     this.updatePhysicsCapsulePosition();
-    this.updateCapsuleVisualPosition();
+    // this.updateCapsuleVisualPosition();
     console.log('🔄 角色位置已重置');
   }
 
@@ -308,7 +308,7 @@ export abstract class Model extends StaticModel {
           this.mesh.position.y += 1.0;
           // 立即更新胶囊体位置，避免碰撞检测问题
           this.updatePhysicsCapsulePosition();
-          this.updateCapsuleVisualPosition();
+          // this.updateCapsuleVisualPosition();
           // 然后设置一个适当的向上速度
           this.playerVelocity.y = 40.0;
           this.playerIsOnGround = false;
@@ -671,7 +671,7 @@ export abstract class Model extends StaticModel {
    */
   public createLookCamera(scene: THREE.Scene,capsuleRadiu?:number): THREE.PerspectiveCamera {
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight,  capsuleRadiu ?? 5, 1000);
-    const cameraHelper = new THREE.CameraHelper(camera);
+    // const cameraHelper = new THREE.CameraHelper(camera);
 
     // 设置相机位置
     if (this.mesh) {
@@ -686,13 +686,13 @@ export abstract class Model extends StaticModel {
     }
 
     // 添加相机辅助线到场景
-    scene.add(cameraHelper);
+    // scene.add(cameraHelper);
 
     // 将相机辅助线存储到私有属性
-    if (!this.cameraHelpers) {
-      this.cameraHelpers = {};
-    }
-    this.cameraHelpers.lookCameraHelper = cameraHelper;
+    // if (!this.cameraHelpers) {
+    //   this.cameraHelpers = {};
+    // }
+    // this.cameraHelpers.lookCameraHelper = cameraHelper;
 
     return camera;
   }
@@ -821,9 +821,9 @@ export abstract class Model extends StaticModel {
   /**
    * 更新相机辅助器
    */
-  public updateCameraHelpers(): void {
-    this.cameraHelpers?.lookCameraHelper?.update();
-  }
+  // public updateCameraHelpers(): void {
+  //   this.cameraHelpers?.lookCameraHelper?.update();
+  // }
 
   // updateModelHelpers 和 toggleCapsuleVisibility 方法已移至 StaticModel 基类
 

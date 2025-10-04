@@ -15,11 +15,8 @@ import GameUI from '@/components/GameUI.vue';
 import LoadingProgress from '@/components/LoadingProgress.vue';
 // 导入WebRTC store和相关工具
 import { useWebRTCStore } from '@/stores/webrtc';
-import { useAuthStore } from '@/stores/auth';
-import { showError, showSuccess, showInfo, showMessage } from '@/utils/message';
+import { showError, showSuccess, showInfo } from '@/utils/message';
 import { eventBus, type UserLeftData } from '@/utils/eventBus';
-import { Egg } from '@/models/Egg';
-import { Tree } from '@/models/architecture/Tree';
 
 
 // BVH物理系统已集成到模型中，不再需要CANNON
@@ -629,10 +626,10 @@ onUnmounted(() => {
       }
 
       // 清理相机辅助器
-      if (child instanceof THREE.CameraHelper) {
-        if (child.geometry) child.geometry.dispose();
-        if (child.material) deepDisposeMaterial(child.material);
-      }
+      // if (child instanceof THREE.CameraHelper) {
+      //   if (child.geometry) child.geometry.dispose();
+      //   if (child.material) deepDisposeMaterial(child.material);
+      // }
     });
 
     // 清空子对象
@@ -944,8 +941,8 @@ function animate(timestamp?: number) {
 
       // 只在需要调试时才更新辅助器（包围盒、胶囊体等）
       // 注释掉这些行可以提高性能
-      model.updateModelHelpers();
-      model.updateCameraHelpers();
+      // model.updateModelHelpers();
+      // model.updateCameraHelpers();
     }
   }
 

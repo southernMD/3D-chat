@@ -253,7 +253,7 @@ export class StaticMMDModelManager {
       this.recordPredictionError(userId, predictedPosition, targetState.position, currentTime);
       
       // 🔧 同步更新胶囊体和包围盒位置
-      this.updateModelHelpers(model);
+      // this.updateModelHelpers(model);
       
       // 🚌 发送胶囊体位置更新事件到BVHPhysics
       this.sendCapsuleUpdateEvent(userId, model);
@@ -276,7 +276,7 @@ export class StaticMMDModelManager {
     );
 
     // 🔧 同步更新胶囊体和包围盒位置
-    this.updateModelHelpers(model);
+    // this.updateModelHelpers(model);
 
     // 🚌 发送胶囊体位置更新事件到BVHPhysics
     this.sendCapsuleUpdateEvent(userId, model);
@@ -480,21 +480,21 @@ export class StaticMMDModelManager {
   /**
    * 更新模型的辅助器（胶囊体和包围盒）
    */
-  private updateModelHelpers(model: StaticMMDModel | StaticGLTFModel): void {
-    try {
-      // 更新胶囊体可视化位置
-      if (typeof model.updateCapsuleVisualPosition === 'function') {
-        model.updateCapsuleVisualPosition();
-      }
+  // private updateModelHelpers(model: StaticMMDModel | StaticGLTFModel): void {
+  //   try {
+  //     // 更新胶囊体可视化位置
+  //     if (typeof model.updateCapsuleVisualPosition === 'function') {
+  //       model.updateCapsuleVisualPosition();
+  //     }
 
-      // 更新模型辅助器（包围盒等）
-      if (typeof model.updateModelHelpers === 'function') {
-        model.updateModelHelpers();
-      }
-    } catch (error) {
-      console.error('❌ 更新模型辅助器失败:', error);
-    }
-  }
+  //     // 更新模型辅助器（包围盒等）
+  //     if (typeof model.updateModelHelpers === 'function') {
+  //       model.updateModelHelpers();
+  //     }
+  //   } catch (error) {
+  //     console.error('❌ 更新模型辅助器失败:', error);
+  //   }
+  // }
 
   /**
    * 更新动画状态
@@ -611,11 +611,11 @@ export class StaticMMDModelManager {
     return this.models
   }
 
-  toggleHelpers(): void {
-    this.models.forEach((model)=>{
-      model?.toggleHelpers()
-    })
-  }
+  // toggleHelpers(): void {
+  //   this.models.forEach((model)=>{
+  //     model?.toggleHelpers()
+  //   })
+  // }
 
   /**
    * 清理所有模型

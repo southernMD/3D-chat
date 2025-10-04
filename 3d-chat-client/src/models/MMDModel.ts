@@ -34,50 +34,50 @@ export class MMDModel extends Model {
   /**
    * 切换辅助线可见性
    */
-  toggleHelpers(): void {
-    if (this.helpersVisible) {
-      const { boxHelper } = this.helpersVisible;
+  // toggleHelpers(): void {
+  //   if (this.helpersVisible) {
+  //     const { boxHelper } = this.helpersVisible;
 
-      // 获取当前状态（以包围盒为准）
-      const currentVisibility = boxHelper ? boxHelper.visible : false;
-      const newVisibility = !currentVisibility;
+  //     // 获取当前状态（以包围盒为准）
+  //     const currentVisibility = boxHelper ? boxHelper.visible : false;
+  //     const newVisibility = !currentVisibility;
 
-      // 切换包围盒辅助线可见性
-      if (boxHelper) {
-        boxHelper.visible = newVisibility;
-        console.log(`包围盒辅助线: ${newVisibility ? '显示' : '隐藏'}`);
-      }
+  //     // 切换包围盒辅助线可见性
+  //     if (boxHelper) {
+  //       boxHelper.visible = newVisibility;
+  //       console.log(`包围盒辅助线: ${newVisibility ? '显示' : '隐藏'}`);
+  //     }
 
-      console.log(`人物辅助线显示状态: ${newVisibility ? '显示' : '隐藏'}`);
-    } else {
-      console.log('❌ 辅助器未初始化');
-    }
-  }
+  //     console.log(`人物辅助线显示状态: ${newVisibility ? '显示' : '隐藏'}`);
+  //   } else {
+  //     console.log('❌ 辅助器未初始化');
+  //   }
+  // }
 
   /**
    * 设置辅助视觉效果
    */
-  setupHelpers(scene: THREE.Scene, capsuleVisual: THREE.Mesh): void {
-    // 创建包围盒辅助线
-    const boxHelper = new THREE.BoxHelper(this.mesh, 0xffff00);
-    boxHelper.visible = true; // 默认显示
+  // setupHelpers(scene: THREE.Scene, capsuleVisual: THREE.Mesh): void {
+  //   // 创建包围盒辅助线
+  //   const boxHelper = new THREE.BoxHelper(this.mesh, 0xffff00);
+  //   boxHelper.visible = true; // 默认显示
 
-    // 添加到场景
-    scene.add(boxHelper);
+  //   // 添加到场景
+  //   scene.add(boxHelper);
 
-    // 保存引用以便控制可见性
-    this.helpersVisible = {
-      boxHelper,
-      capsuleVisual
-    };
+  //   // 保存引用以便控制可见性
+  //   this.helpersVisible = {
+  //     boxHelper,
+  //     capsuleVisual
+  //   };
 
-    console.log('✅ 辅助器已创建:', {
-      boxHelper: !!boxHelper,
-      capsuleVisual: !!capsuleVisual,
-      boxHelperVisible: boxHelper.visible,
-      capsuleVisualVisible: capsuleVisual.visible
-    });
-  }
+  //   console.log('✅ 辅助器已创建:', {
+  //     boxHelper: !!boxHelper,
+  //     capsuleVisual: !!capsuleVisual,
+  //     boxHelperVisible: boxHelper.visible,
+  //     capsuleVisualVisible: capsuleVisual.visible
+  //   });
+  // }
 
   // 加载模型
   async load(scene: THREE.Scene, modelPath: string, walkAnimPath: string, standAnimPath: string): Promise<void> {
@@ -122,28 +122,28 @@ export class MMDModel extends Model {
       this.setModelDimensions()
 
       // 创建静态胶囊体几何
-      const { capsuleInfo, capsuleVisual } = this.createCapsuleGeometry();
+      this.createCapsuleGeometry();
 
       // 添加胶囊体可视化到场景
-      scene.add(capsuleVisual);
-      console.log('✅ 胶囊体可视化已添加到场景:', {
-        name: capsuleVisual.name,
-        visible: capsuleVisual.visible,
-        position: capsuleVisual.position,
-        parent: capsuleVisual.parent?.type || 'Scene',
-        geometry: capsuleVisual.geometry.type,
-        material: Array.isArray(capsuleVisual.material) ? 'Array' : (capsuleVisual.material as THREE.Material).type
-      });
+      // scene.add(capsuleVisual);
+      // console.log('✅ 胶囊体可视化已添加到场景:', {
+      //   name: capsuleVisual.name,
+      //   visible: capsuleVisual.visible,
+      //   position: capsuleVisual.position,
+      //   parent: capsuleVisual.parent?.type || 'Scene',
+      //   geometry: capsuleVisual.geometry.type,
+      //   material: Array.isArray(capsuleVisual.material) ? 'Array' : (capsuleVisual.material as THREE.Material).type
+      // });
 
       // 创建物理胶囊体
-      const playerCapsule = this.createPhysicsCapsule();
+       this.createPhysicsCapsule();
 
       // 设置辅助器
-      this.setupHelpers(scene, capsuleVisual);
+      // this.setupHelpers(scene, capsuleVisual);
 
       // 更新胶囊体位置
       this.updatePhysicsCapsulePosition();
-      this.updateCapsuleVisualPosition();
+      // this.updateCapsuleVisualPosition();
       
       // 创建动画混合器
       this.mixer = new THREE.AnimationMixer(this.mesh);
