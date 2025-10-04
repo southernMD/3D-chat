@@ -99,6 +99,16 @@
                   :style="{ width: user.volume + '%' }"
                 ></div>
               </div>
+              
+              <!-- 踢人按钮 - 只有房主可以踢人，不能踢自己 -->
+              <span
+                v-if="webrtcStore.roomConfig?.hostId === webrtcStore.getYouPeer().id && !user.isSelf"
+                class="kick-button"
+                @click.stop="kickUser(user.id)"
+                title="踢出用户"
+              >
+                ❌
+              </span>
             </div>
           </div>
         </div>
@@ -290,6 +300,7 @@ const emit = defineEmits<{
   exitRoom: []
   copyRoomCode: [success: boolean, roomCode?: string]
   slotSelection: [slotIndex: number]
+  kickUser: [userPeerId: string]
 }>()
 
 // 接口定义
@@ -615,6 +626,23 @@ const toggleMicrophone = (userId: string) => {
 // 声音控制（所有人都可以操作）
 const toggleSound = (userId: string) => {
   emit('toggleSound', userId)
+}
+
+// 踢人功能（只有房主可以操作）
+const kickUser = (userId: string) => {
+  // 再次确认权限：只有房主可以踢人，不能踢自己
+  if (webrtcStore.roomConfig?.hostId !== webrtcStore.getYouPeer().id) {
+    console.warn('⚠️ 只有房主可以踢人')
+    return
+  }
+  
+  if (userId === 'self' || userId === webrtcStore.getYouPeer().id) {
+    console.warn('⚠️ 不能踢出自己')
+    return
+  }
+  
+  // 确认踢人操作
+  emit('kickUser', userId)
 }
 
 const sendMessage = () => {
@@ -1015,6 +1043,31 @@ onUnmounted(()=>{
   height: 100%;
   background: linear-gradient(90deg, #4CAF50, #8BC34A, #CDDC39);
   transition: width 0.3s ease;
+}
+
+/* 踢人按钮样式 */
+.kick-button {
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+  padding: 4px;
+  border-radius: 4px;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  color: #ff6b6b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+}
+
+.kick-button:hover {
+  background: rgba(255, 107, 107, 0.3);
+  border-color: rgba(255, 107, 107, 0.6);
+  transform: scale(1.1);
+  color: #ff4444;
 }
 
 /* 左下角聊天区域 */

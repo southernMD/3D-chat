@@ -297,14 +297,23 @@ onMounted(async () => {
       };
 
       // 监听用户离开事件
-      const handleUserLeft = ({ peerId , newHost}:UserLeftData) => {
+      const handleUserLeft = ({ peerId , newHost,leavingPeerName,isDick,dickOpId}:UserLeftData) => {
         console.log(`👋 EventBus用户离开: ${peerId}`);
 
         try {
-          // 移除用户的静态模型
-          staticModelManager.removeModel(peerId);
+          if(isDick){
+            if(dickOpId === webrtcStore.getYouPeer().id) showSuccess(`成功将${leavingPeerName}踢出房间`)
+            else if(peerId === webrtcStore.getYouPeer().id && dickOpId){
+              showInfo(`你被踢出房间`)
+              router.push('/lobby')
+            }
+            else showInfo(`${leavingPeerName}被踢出房间`)
+          }
+          else showInfo(`${leavingPeerName}离开房间`);
+
+          if(peerId !== webrtcStore.getYouPeer().id) staticModelManager.removeModel(peerId);
           console.log(`✅ 用户 ${peerId} 的静态模型已移除`);
-          showInfo('有成员离开房间');
+
           if(newHost){
             webrtcStore.roomConfig!.hostId = newHost
           }
@@ -1074,7 +1083,7 @@ const handleToggleSound = async (userId: string) => {
 
 const handleExitRoom = () => {
   try {
-    webrtcStore.leaveRoom()
+    webrtcStore.leaveRoom(false)
     showInfo('已离开房间')
     // 跳转到房间大厅
     router.push('/lobby')
@@ -1096,6 +1105,10 @@ const handleCopyRoomCode = (success: boolean, roomCode?: string) => {
   }
 }
 
+const handleKickUser = (userId: string) => {
+  webrtcStore.leaveRoom(true,userId)
+}
+
 
 </script>
 
@@ -1109,7 +1122,7 @@ const handleCopyRoomCode = (success: boolean, roomCode?: string) => {
       :messages="messages" :microphone-enabled="microphoneEnabled" :user-equipment="userEquipment"
       :selected-slot="selectedSlot" @send-message="handleSendMessage" @toggle-microphone="handleToggleMicrophone"
       @toggle-sound="handleToggleSound" @exit-room="handleExitRoom" @copy-room-code="handleCopyRoomCode" 
-      @slot-selection="handleSlotSelection" />
+      @slot-selection="handleSlotSelection" @kick-user="handleKickUser" />
   </div>
 </template>
 

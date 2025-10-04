@@ -551,7 +551,7 @@ export class WebRTCManager {
     })
 
     // 监听成员离开事件
-    this.state.socket.on('peerLeave', ({ peerId,newHost }) => {
+    this.state.socket.on('peerLeave', ({ peerId,newHost,isDick,dickOpId }) => {
       this.log(`成员离开: ${peerId}新房主${newHost}`)
 
       // 从消费者列表中移除该成员的数据消费者
@@ -577,20 +577,28 @@ export class WebRTCManager {
 
       // 从成员列表中移除该成员
       const leavingPeer = this.peers.find(peer => peer.id === peerId)
-      const leavingPeerName = leavingPeer?.name || this.peerNames.get(peerId) || '未知用户'
+      const leavingPeerName = 
+                              leavingPeer?.name || 
+                              this.peerNames.get(peerId) || 
+                              (peerId === this.state.peerId ? '你' : undefined) ||
+                              '未知用户'
 
       this.peers = this.peers.filter(peer => peer.id !== peerId)
       this.peerNames.delete(peerId)
 
       // 发送系统通知消息
-      this.addMessageCallback(`${leavingPeerName} 离开了房间`, false, '系统')
+      if(isDick) {
+        if(peerId === this.state.peerId) this.addMessageCallback(`你被踢出了房间`, false, '系统')
+        else this.addMessageCallback(`${leavingPeerName} 被踢出了房间`, false, '系统')
+      }
+      else this.addMessageCallback(`${leavingPeerName} 离开了房间`, false, '系统')
 
       // 更新UI
       this.updatePeersListCallback([...this.peers])
 
       // 🆕 通过 eventBus 通知页面有用户离开
       eventBus.emit('user-left', {
-        peerId,newHost
+        peerId,newHost,isDick,leavingPeerName,dickOpId
       })
     })
 
@@ -1080,7 +1088,7 @@ export class WebRTCManager {
   /**
    * 离开房间
    */
-  public leaveRoom(): void {
+  public leaveRoom(isDick:boolean,userId?:string,dickOpId?:string): void {
     if (!this.state.socket || !this.state.roomId || !this.state.peerId) {
       return
     }
@@ -1088,10 +1096,11 @@ export class WebRTCManager {
     this.log('正在离开房间...')
     this.state.socket.emit('leave', { 
       roomId: this.state.roomId, 
-      peerId: this.state.peerId 
+      peerId: userId ?? this.state.peerId,
+      isDick,dickOpId
     })
     
-    this.cleanupResources()
+    if(!isDick)this.cleanupResources()
   }
 
   /**

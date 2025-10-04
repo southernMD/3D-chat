@@ -320,12 +320,14 @@ export const useWebRTCStore = defineStore('webrtc', () => {
   }
 
   // 离开房间
-  const leaveRoom = () => {
+  const leaveRoom = (isDick:boolean,userId?:string) => {
     if (webrtcManager) {
-      webrtcManager.leaveRoom()
+      if(isDick) webrtcManager.leaveRoom(isDick,userId,webrtcManager!.getState().peerId!)
+      else webrtcManager.leaveRoom(isDick,userId)
     }
 
     // 清理状态
+    if(isDick) return
     roomInfo.value = null
     peers.value = []
     currentRoomConfig.value = null
