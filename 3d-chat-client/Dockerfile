@@ -7,19 +7,20 @@ WORKDIR /app
 # 复制package.json和yarn.lock
 COPY package.json yarn.lock ./
 
-RUN npm i yarn -g
-
 # 安装依赖
-RUN yarn install --frozen-lockfile
+RUN npm i
 
 # 复制源代码
 COPY . .
 
 # 构建应用
-RUN yarn build
+RUN npm run build
 
 # 安装nginx
 RUN apk add --no-cache nginx
+
+# 创建nginx目录结构
+RUN mkdir -p /var/www/html /var/log/nginx /var/cache/nginx
 
 # 复制nginx配置
 COPY nginx.conf /etc/nginx/nginx.conf

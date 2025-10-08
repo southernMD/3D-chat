@@ -4,10 +4,13 @@ services:
   frontend:
     build: .
     container_name: 3d-chat-frontend
-    ports:
-      - "3001:80"
+    network_mode: "host"
     env_file:
       - .env
     environment:
       - NODE_ENV=production
+    volumes:
+      # 挂载主机证书到容器
+      - /etc/nginx/ssl/nginx.crt:/etc/nginx/ssl/nginx.crt:ro
+      - /etc/nginx/ssl/nginx.key:/etc/nginx/ssl/nginx.key:ro
     restart: unless-stopped

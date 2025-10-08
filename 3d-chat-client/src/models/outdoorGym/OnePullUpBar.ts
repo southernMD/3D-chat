@@ -25,6 +25,7 @@ interface GLTF {
  * 单杠健身器材类
  */
 export class OnePullUpBar extends BaseModel {
+  private static OnePullUpBarModel:THREE.Object3D | null = null
   private loader: GLTFLoader;
   private modelObject: THREE.Object3D | null = null;
   private boundingBoxHelper: THREE.BoxHelper | null = null;
@@ -112,9 +113,10 @@ export class OnePullUpBar extends BaseModel {
         );
       });
     };
-
-    const gltf = await loadModel();
-    this.modelObject = gltf.scene;
+    if(!OnePullUpBar.OnePullUpBarModel){
+      OnePullUpBar.OnePullUpBarModel = (await loadModel()).scene
+    }
+    this.modelObject = OnePullUpBar.OnePullUpBarModel.clone()
     
     // 设置模型属性
     this.setupModel();

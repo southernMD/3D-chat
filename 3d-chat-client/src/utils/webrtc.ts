@@ -265,8 +265,8 @@ export class WebRTCManager {
     return new Promise(async (resolve, reject) => {
       try {
         // 获取环境变量
-        const host = import.meta.env.VITE_APP_HOST || 'localhost'
-        const port = import.meta.env.VITE_APP_HOST_PORT || '3000'
+        const host = import.meta.env.VITE_WS_HOST || 'localhost'
+        const port = import.meta.env.VITE_WS_PORT || '3000'
         const wsProtocol = import.meta.env.VITE_WS_PROTOCOL
 
         // 检测当前环境是HTTP还是HTTPS
@@ -747,14 +747,20 @@ export class WebRTCManager {
       iceServers:import.meta.env.DEV ? [
         { urls: 'stun:stun.l.google.com:19302' },
         {
-          urls:import.meta.env.VITE_TURN_URL,
+          urls:[
+            import.meta.env.VITE_TURN_URL_UDP,
+            import.meta.env.VITE_TURN_URL_TCP,
+          ],
           username: import.meta.env.VITE_TURN_USERNAME,
           credential: import.meta.env.VITE_TURN_PASSWORD,
         }
       ] :
       [
         {
-          urls:import.meta.env.VITE_TURN_URL,
+          urls:[
+            import.meta.env.VITE_TURN_URL_UDP,
+            import.meta.env.VITE_TURN_URL_TCP,
+          ],
           username: import.meta.env.VITE_TURN_USERNAME,
           credential: import.meta.env.VITE_TURN_PASSWORD,
         }
@@ -909,14 +915,20 @@ export class WebRTCManager {
             iceServers:import.meta.env.DEV ? [
               { urls: 'stun:stun.l.google.com:19302' },
               {
-                urls:import.meta.env.VITE_TURN_URL,
+                urls:[
+                  import.meta.env.VITE_TURN_URL_UDP,
+                  import.meta.env.VITE_TURN_URL_TCP,
+                ],
                 username: import.meta.env.VITE_TURN_USERNAME,
                 credential: import.meta.env.VITE_TURN_PASSWORD,
               }
             ] :
             [
               {
-                urls:import.meta.env.VITE_TURN_URL,
+                urls:[
+                  import.meta.env.VITE_TURN_URL_UDP,
+                  import.meta.env.VITE_TURN_URL_TCP,
+                ],
                 username: import.meta.env.VITE_TURN_USERNAME,
                 credential: import.meta.env.VITE_TURN_PASSWORD,
               }
@@ -1000,7 +1012,6 @@ export class WebRTCManager {
 
         // 标记为已尝试
         attemptedProducerIds.add(producerId)
-
         // 根据生产者类型主动判断并触发相应的消费
         if (type === 'data' || kind === 'data') {
           // 数据生产者
@@ -1387,7 +1398,9 @@ export class WebRTCManager {
           .catch(reject)
         })
       })
-
+      debugger
+      console.log(dataConsumer);
+      
       // 关联数据消费者ID与生产者ID
       this.state.dataConsumers.set(dataProducerId, { dataConsumer, producerPeerId })
 
@@ -1396,7 +1409,8 @@ export class WebRTCManager {
         try {
           const decodedMessage = new TextDecoder().decode(message)
           const data: DataChannelMessage = JSON.parse(decodedMessage)
-
+          console.log("我接收到了数据通道的信息");
+          
           if (data.type === 'chat') {
             // 处理聊天消息
             const senderName = this.peerNames.get(producerPeerId) || producerPeerId
