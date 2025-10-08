@@ -56,8 +56,8 @@ if (config.useHttps) {
   // 如果配置了HTTPS，创建HTTPS服务器
   try {
     const options = {
-      key: fs.readFileSync(config.sslKeyPath || ''),
-      cert: fs.readFileSync(config.sslCertPath || '')
+      key: fs.readFileSync(path.join(__dirname,config.sslKeyPath || '')),
+      cert: fs.readFileSync(path.join(__dirname,config.sslCertPath || ''))
     };
     server = https.createServer(options, app);
     logger.info('成功创建HTTPS服务器');
