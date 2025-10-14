@@ -684,10 +684,10 @@ const uploadAllFiles = async () => {
 
     try {
     // 检查用户是否已登录
-    // if (!authStore.isAuthenticated) {
-    //     showError('请先登录后再上传文件')
-    //     return
-    // }
+    if (!authStore.isAuthenticated) {
+        showError('请先登录后再上传文件')
+        return
+    }
 
     const filesToUpload = uploadFiles.value.filter(
         file => file.status === 'pending' || file.status === 'error'

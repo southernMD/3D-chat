@@ -72,6 +72,7 @@ export const getCurrentUser = async (): Promise<ApiResponse<{ user: User }>> => 
     const response = await get<ApiResponse<{ user: User }>>('/auth/me')
     return response
   } catch (error: any) {
+    localStorage.removeItem('auth_user')
     throw new Error(error.message || '获取用户信息失败')
   }
 }
