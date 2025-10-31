@@ -1,4 +1,3 @@
-import { ElMessage } from 'element-plus'
 import type { MessageOptions } from 'element-plus'
 
 // 默认配置

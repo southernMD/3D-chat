@@ -221,7 +221,7 @@ import ThemeInput from '@/components/ThemeInput.vue'
 import ThemeRadioGroup from '@/components/ThemeRadioGroup.vue'
 import type { SelectOption } from '@/components/ThemeSelect.vue'
 import type { RadioOption } from '@/components/ThemeRadioGroup.vue'
-import { showInfo, showSuccess, showError, showWarning } from '@/utils/message'
+import { showSuccess, showError, showWarning } from '@/utils/message'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -311,9 +311,9 @@ const canCreate = computed(() => {
 })
 
 // 显示添加地图提示
-const showAddMapDialog = () => {
-  showInfo(t('createRoom.map.notSupportedDescription'))
-}
+// const showAddMapDialog = () => {
+//   showInfo(t('createRoom.map.notSupportedDescription'))
+// }
 
 // 创建房间
 const createRoom = async () => {

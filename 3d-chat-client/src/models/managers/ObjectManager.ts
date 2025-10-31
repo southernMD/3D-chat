@@ -29,35 +29,27 @@ export class ObjectManager {
   }
 
   async create(): Promise<void> {
-    if(this.isCreated) return
-
-    // 🔥 创建地面
-    await this.createGround('main-ground', {
-      sizeX: PHYSICS_CONSTANTS.GROUND_SIZE_X,
-      sizeZ: PHYSICS_CONSTANTS.GROUND_SIZE_Z,
-      position: { x: 0, y: 0, z: 0 }
-    });
-
-    await this.createOvalTrack('main-track', {
-      position: { x: 0, y: 5, z: 675 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: 8 // 支持x、z轴独立缩放
-    });
-
-    // 创建学校建筑
-    await this.createSchoolBuilding('school-building', {
-      position: { x: 500, y: 0, z: -500 },
-      rotation: { x: 0, y: 90, z: 0 },
-      scale: 0.75
-    });
-
-    // 创建20棵树
-    await this.createMultipleTrees();
-
-    // 直接创建边界墙体
-    await this.createBoundaryWalls();
-
-    await this.createEgg()
+    if (this.isCreated) return
+    await Promise.all([
+      this.createGround('main-ground', {
+        sizeX: PHYSICS_CONSTANTS.GROUND_SIZE_X,
+        sizeZ: PHYSICS_CONSTANTS.GROUND_SIZE_Z,
+        position: { x: 0, y: 0, z: 0 }
+      }),
+      this.createOvalTrack('main-track', {
+        position: { x: 0, y: 5, z: 675 },
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: 8 // 支持x、z轴独立缩放
+      }),
+      this.createSchoolBuilding('school-building', {
+        position: { x: 500, y: 0, z: -500 },
+        rotation: { x: 0, y: 90, z: 0 },
+        scale: 0.75
+      }),
+      this.createMultipleTrees(),
+      this.createBoundaryWalls(),
+      this.createEgg()
+    ])
     this.isCreated = true;
   }
 
@@ -107,9 +99,9 @@ export class ObjectManager {
     const objectsToRemove: THREE.Object3D[] = [];
     this.scene.traverse((child) => {
       if (child.name.includes('BoundaryWall') ||
-          child.name.includes('ClippingPlane') ||
-          child.name.includes('BoundaryPoint') ||
-          child.name.includes('PhysicsWallVisualization')) {
+        child.name.includes('ClippingPlane') ||
+        child.name.includes('BoundaryPoint') ||
+        child.name.includes('PhysicsWallVisualization')) {
         objectsToRemove.push(child);
       }
     });
@@ -334,43 +326,43 @@ export class ObjectManager {
    */
   async createMultipleTrees(): Promise<void> {
     console.log('🌲 开始创建20棵树...');
-    const tree = new Tree(this.scene,undefined, 'treeGroup');
+    const tree = new Tree(this.scene, undefined, 'treeGroup');
     await tree.create();
     const oneTree = tree.getModelGroup().children[0]
     console.log(oneTree);
     const group = new THREE.Group();
     group.name = 'treeGroup'
 
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(500 * 2,0,500 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(300 * 2,0,500 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(100 * 2,0,500 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(-100 * 2,0,500 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(-300 * 2,0,500 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(-500 * 2,0,500 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(-500 * 2,0,300 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(-500 * 2,0,100 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(-500 * 2,0,-100 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(-500 * 2,0,-300 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(500 * 2, 0, 500 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(300 * 2, 0, 500 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(100 * 2, 0, 500 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(-100 * 2, 0, 500 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(-300 * 2, 0, 500 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(-500 * 2, 0, 500 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(-500 * 2, 0, 300 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(-500 * 2, 0, 100 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(-500 * 2, 0, -100 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(-500 * 2, 0, -300 * 2)));
 
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(-500 * 2,0,-500 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(-300 * 2,0,-500 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(-100 * 2,0,-500 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(100 * 2,0,-500 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(300 * 2,0,-500 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(500 * 2,0,-500 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(500 * 2,0,-300 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(500 * 2,0,-100 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(500 * 2,0,100 * 2)));
-    group.add(this.createOneTree(oneTree, new THREE.Vector3(500 * 2,0,300 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(-500 * 2, 0, -500 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(-300 * 2, 0, -500 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(-100 * 2, 0, -500 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(100 * 2, 0, -500 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(300 * 2, 0, -500 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(500 * 2, 0, -500 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(500 * 2, 0, -300 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(500 * 2, 0, -100 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(500 * 2, 0, 100 * 2)));
+    group.add(this.createOneTree(oneTree, new THREE.Vector3(500 * 2, 0, 300 * 2)));
 
     tree.setModelGroup(group);
     tree.addToScene()
     this.objects.set("tree-group", tree);
   }
 
-  createOneTree(tree:THREE.Object3D<THREE.Object3DEventMap>,position:THREE.Vector3){
+  createOneTree(tree: THREE.Object3D<THREE.Object3DEventMap>, position: THREE.Vector3) {
     const newOne = tree.clone()
-    newOne.position.set(position.x,position.y,position.z)
+    newOne.position.set(position.x, position.y, position.z)
     return newOne
   }
 
@@ -549,10 +541,10 @@ export class ObjectManager {
    * 处理鸡蛋广播事件
    * @returns 创建的鸡蛋信息数组
    */
-  createEggBroadcast = (data: EggBroadcastData): Array<{id: string, model: THREE.Object3D}> => {
+  createEggBroadcast = (data: EggBroadcastData): Array<{ id: string, model: THREE.Object3D }> => {
     console.log('🥚 ObjectManager收到鸡蛋广播:', data)
 
-    const createdEggs: Array<{id: string, model: THREE.Object3D}> = []
+    const createdEggs: Array<{ id: string, model: THREE.Object3D }> = []
 
     // 在3D场景中插入鸡蛋
     data.eggs.forEach(egg => {
@@ -622,7 +614,7 @@ export class ObjectManager {
    */
   clearEgg(eggId: string): boolean {
     try {
-      console.log(this.eggs,eggId);
+      console.log(this.eggs, eggId);
       const eggModel = this.eggs.get(eggId)
       if (eggModel) {
         // 从场景中移除

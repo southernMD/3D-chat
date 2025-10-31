@@ -71,7 +71,6 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ElNotification } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 
@@ -119,13 +118,6 @@ const handleLogin = async () => {
     const success = await authStore.login(loginForm.loginField, loginForm.password, rememberMe.value)
     
     if (success) {
-      ElNotification({
-        title: '登录成功',
-        message: '欢迎回来！',
-        type: 'success'
-      })
-      
-      // 跳转到主页
       router.push('/')
     }
   } catch (error) {

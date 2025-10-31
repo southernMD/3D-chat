@@ -155,7 +155,6 @@
 import { ref, reactive, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ElNotification } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { showError, showWarning } from '@/utils/message'
@@ -316,12 +315,6 @@ const handleRegister = async () => {
     })
 
     if (success) {
-      // 注册成功后跳转到首页
-      ElNotification({
-        title: '注册成功',
-        message: '欢迎加入3D Chat！',
-        type: 'success'
-      })
       router.push('/')
     }
   } catch (error) {

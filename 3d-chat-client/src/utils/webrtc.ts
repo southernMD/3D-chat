@@ -747,20 +747,14 @@ export class WebRTCManager {
       iceServers:import.meta.env.DEV ? [
         { urls: 'stun:stun.l.google.com:19302' },
         {
-          urls:[
-            import.meta.env.VITE_TURN_URL_UDP,
-            import.meta.env.VITE_TURN_URL_TCP,
-          ],
+          urls:import.meta.env.VITE_TURN_URL,
           username: import.meta.env.VITE_TURN_USERNAME,
           credential: import.meta.env.VITE_TURN_PASSWORD,
         }
       ] :
       [
         {
-          urls:[
-            import.meta.env.VITE_TURN_URL_UDP,
-            import.meta.env.VITE_TURN_URL_TCP,
-          ],
+          urls:import.meta.env.VITE_TURN_URL,
           username: import.meta.env.VITE_TURN_USERNAME,
           credential: import.meta.env.VITE_TURN_PASSWORD,
         }
@@ -915,20 +909,14 @@ export class WebRTCManager {
             iceServers:import.meta.env.DEV ? [
               { urls: 'stun:stun.l.google.com:19302' },
               {
-                urls:[
-                  import.meta.env.VITE_TURN_URL_UDP,
-                  import.meta.env.VITE_TURN_URL_TCP,
-                ],
+                urls:import.meta.env.VITE_TURN_URL,
                 username: import.meta.env.VITE_TURN_USERNAME,
                 credential: import.meta.env.VITE_TURN_PASSWORD,
               }
             ] :
             [
               {
-                urls:[
-                  import.meta.env.VITE_TURN_URL_UDP,
-                  import.meta.env.VITE_TURN_URL_TCP,
-                ],
+                urls:import.meta.env.VITE_TURN_URL,
                 username: import.meta.env.VITE_TURN_USERNAME,
                 credential: import.meta.env.VITE_TURN_PASSWORD,
               }
