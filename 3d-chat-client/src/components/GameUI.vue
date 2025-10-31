@@ -1214,6 +1214,7 @@ onUnmounted(()=>{
   left: 50%;
   transform: translateX(-50%);
   pointer-events: auto;
+  user-select: none;
 }
 
 .inventory-slots {
