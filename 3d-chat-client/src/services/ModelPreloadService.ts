@@ -19,10 +19,13 @@ interface PendingRequest {
 
 class ModelPreloadService {
   private static instance: ModelPreloadService;
-  private worker: Worker | null = null;
+  private workers: Worker[] = [];
   private modelStatus = new Map<string, ModelPreloadStatus>();
   private pendingRequests = new Map<string, PendingRequest[]>();
   private isPreloading = false;
+  
+  // Worker 数量（根据 CPU 核心数调整）
+  private readonly WORKER_COUNT = navigator.hardwareConcurrency || 4;
 
   // 需要预加载的模型列表
   private readonly PRELOAD_MODELS = [
@@ -33,10 +36,11 @@ class ModelPreloadService {
     '/model/building/schoolBuild1Draco.glb',
     '/model/outdoorGym/OnePullUpBarDraco.glb',
     '/model/outdoorGym/OutdoorGymDraco.glb',
+    '/background.exr',
   ];
 
   private constructor() {
-    this.initWorker();
+    this.initWorkers();
   }
 
   public static getInstance(): ModelPreloadService {
@@ -47,27 +51,32 @@ class ModelPreloadService {
   }
 
   /**
-   * 初始化 Web Worker
+   * 初始化多个 Web Workers
    */
-  private initWorker() {
+  private initWorkers() {
     try {
-      // 创建 Worker
-      this.worker = new Worker(
-        new URL('../workers/modelPreloadWorker.ts', import.meta.url),
-        { type: 'module' }
-      );
+      console.log(`🚀 初始化 ${this.WORKER_COUNT} 个 Worker 线程...`);
+      
+      for (let i = 0; i < this.WORKER_COUNT; i++) {
+        const worker = new Worker(
+          new URL('../workers/modelPreloadWorker.ts', import.meta.url),
+          { type: 'module' }
+        );
 
-      this.worker.onmessage = (e) => {
-        this.handleWorkerMessage(e.data);
-      };
+        worker.onmessage = (e: MessageEvent) => {
+          this.handleWorkerMessage(e.data);
+        };
 
-      this.worker.onerror = (error) => {
-        console.error('❌ Worker 错误:', error);
-      };
+        worker.onerror = (error: ErrorEvent) => {
+          console.error(`❌ Worker ${i} 错误:`, error);
+        };
 
-      console.log('✅ 模型预加载 Worker 初始化完成');
+        this.workers.push(worker);
+      }
+
+      console.log(`✅ ${this.WORKER_COUNT} 个模型预加载 Worker 初始化完成`);
     } catch (error) {
-      console.error('❌ Worker 初始化失败:', error);
+      console.error('❌ Workers 初始化失败:', error);
     }
   }
 
@@ -159,7 +168,7 @@ class ModelPreloadService {
 
   /**
    * 开始预加载所有模型
-   * 在用户进入网页时调用
+   * 在用户进入网页时调用，使用多个 Worker 并行下载
    */
   public startPreloading() {
     if (this.isPreloading) {
@@ -167,12 +176,12 @@ class ModelPreloadService {
       return;
     }
 
-    if (!this.worker) {
-      console.error('❌ Worker 未初始化');
+    if (this.workers.length === 0) {
+      console.error('❌ Workers 未初始化');
       return;
     }
 
-    console.log('🚀 开始后台预加载模型...');
+    console.log(`🚀 开始后台预加载模型 (${this.workers.length} 个并行线程)...`);
     this.isPreloading = true;
 
     // 初始化所有模型状态
@@ -185,10 +194,28 @@ class ModelPreloadService {
       });
     });
 
-    // 发送预加载请求到 Worker
-    this.worker.postMessage({
-      type: 'start',
-      models: this.PRELOAD_MODELS,
+    // 将模型分配给不同的 Worker 并行下载
+    this.distributeModelsToWorkers();
+  }
+
+  /**
+   * 将模型分配给多个 Worker 并行下载
+   */
+  private distributeModelsToWorkers() {
+    const modelsPerWorker = Math.ceil(this.PRELOAD_MODELS.length / this.workers.length);
+    
+    this.workers.forEach((worker, index) => {
+      const startIdx = index * modelsPerWorker;
+      const endIdx = Math.min(startIdx + modelsPerWorker, this.PRELOAD_MODELS.length);
+      const modelsForThisWorker = this.PRELOAD_MODELS.slice(startIdx, endIdx);
+
+      if (modelsForThisWorker.length > 0) {
+        console.log(`📤 Worker ${index + 1} 负责 ${modelsForThisWorker.length} 个模型`);
+        worker.postMessage({
+          type: 'start',
+          models: modelsForThisWorker,
+        });
+      }
     });
   }
 
@@ -291,10 +318,12 @@ class ModelPreloadService {
     this.modelStatus.clear();
     this.pendingRequests.clear();
 
-    if (this.worker) {
-      this.worker.terminate();
-      this.worker = null;
-    }
+    // 终止所有 Workers
+    this.workers.forEach((worker, index) => {
+      worker.terminate();
+      console.log(`🗑️  Worker ${index + 1} 已终止`);
+    });
+    this.workers = [];
 
     console.log('🗑️  预加载服务已清理');
   }

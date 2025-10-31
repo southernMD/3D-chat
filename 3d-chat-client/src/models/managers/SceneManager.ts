@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { EXRLoader } from 'three/examples/jsm/Addons.js';
+import { modelPreloadService } from '@/services/ModelPreloadService';
 
 /**
  * SceneManager类 - 专门管理场景的类
@@ -94,9 +95,12 @@ export class SceneManager {
   /**
    * 创建天空图
    */
-  createSkyBox(): void {
+  async createSkyBox(): Promise<void> {
+    // 使用预加载的 URL
+    const url = await modelPreloadService.getModelUrl('/background.exr');
+    
     const loader = new EXRLoader();
-    loader.load('/model/background.exr', (texture) => {
+    loader.load(url, (texture) => {
       const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
       // const envMap = pmremGenerator.fromEquirectangular(texture).texture;
       
@@ -108,7 +112,7 @@ export class SceneManager {
       
       pmremGenerator.dispose();
     }, undefined, (error) => {
-        console.error('EXR加载失败:', error);
+      console.error('Error loading EXR:', error);
     });
   }
 

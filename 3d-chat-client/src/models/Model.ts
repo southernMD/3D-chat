@@ -584,6 +584,8 @@ export abstract class Model extends StaticModel {
           // }
         }
       });
+      console.log(totalDeltaVector.y,Math.abs(delta * this.playerVelocity.y * 0.25));
+      
       this.playerIsOnGround = totalDeltaVector.y > Math.abs(delta * this.playerVelocity.y * 0.25);
       if (colliderHasCollision) {
         // 计算该碰撞体的位置调整

@@ -21,7 +21,9 @@ Worker 在后台下载模型文件
 
 ## ✅ 已实现的功能
 
-### 1. Web Worker 后台下载
+### 1. 多线程 Web Worker 并行下载
+- ✅ 根据 CPU 核心数自动创建多个 Worker（默认 4 个）
+- ✅ 模型任务自动分配到不同线程并行下载
 - ✅ 不阻塞主线程
 - ✅ 支持进度跟踪
 - ✅ 自动创建 Blob URL
@@ -29,7 +31,7 @@ Worker 在后台下载模型文件
 ### 2. 智能加载策略
 - ✅ 优先使用预加载的本地链接
 - ✅ 正在下载时自动等待（挂起请求）
-- ✅ 超时降级到原始 URL
+- ✅ 超时降级到原始 URL（60秒）
 
 ### 3. 自动集成
 - ✅ 应用启动时自动开始预加载
@@ -149,6 +151,23 @@ private readonly PRELOAD_MODELS = [
 
 ## ⚙️ 配置选项
 
+### 调整 Worker 数量
+
+在 `src/services/ModelPreloadService.ts` 中：
+
+```typescript
+// 自动根据 CPU 核心数（推荐）
+private readonly WORKER_COUNT = navigator.hardwareConcurrency || 4;
+
+// 或手动指定
+private readonly WORKER_COUNT = 4;  // 固定 4 个线程
+```
+
+建议：
+- 高性能设备：使用 CPU 核心数（默认）
+- 低端设备：固定 2-4 个
+- 移动设备：固定 2 个
+
 ### 调整启动延迟
 
 在 `src/main.ts` 中：
@@ -171,7 +190,7 @@ setTimeout(() => {
 ```typescript
 setTimeout(() => {
   // ...
-}, 30000)  // 修改这个值（毫秒）
+}, 60000)  // 60秒（默认）
 ```
 
 ## 🔍 调试工具
@@ -221,11 +240,17 @@ main.ts 执行
 发送模型列表到 Worker
 ```
 
-### 2. Worker 下载
+### 2. 多个 Worker 并行下载
 ```
-Worker 接收模型列表
+创建 N 个 Worker（N = CPU 核心数）
     ↓
-逐个下载模型文件
+将模型列表平均分配给各个 Worker
+    ├─ Worker 1: 模型 1, 2
+    ├─ Worker 2: 模型 3, 4
+    ├─ Worker 3: 模型 5, 6
+    └─ Worker 4: 模型 7
+    ↓
+各 Worker 并行下载（同时进行）
     ↓
 使用 fetch() 下载
     ↓
