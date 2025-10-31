@@ -1,8 +1,9 @@
 import { BVHPhysics } from '@/physics/BVHPhysics';
 import { eventBus } from '@/utils/eventBus';
 import { filterColliders } from '@/utils/filterColliders';
+import { modelLoaderManager } from '@/loaders/ModelLoaderManager';
+import { loadingProgress } from '@/utils/LoadingProgress';
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 export class Egg {
     mesh: THREE.Object3D | null = null;
@@ -16,7 +17,6 @@ export class Egg {
     private static eggModel: THREE.Object3D | null = null;
     private static brokenEggModel: THREE.Object3D | null = null;
     private static isEggModelsLoaded = false;
-    private static gltfLoader = new GLTFLoader();
 
     private mapEggPositionDistance: Map<string, THREE.Mesh> = new Map();
     
@@ -449,10 +449,17 @@ export class Egg {
         try {
             console.log('🥚 开始预加载鸡蛋模型...');
 
-            // 并行加载两个模型
+            // 使用优化的加载器并行加载两个模型，带进度跟踪
+            loadingProgress.startLoading('鸡蛋模型');
+            loadingProgress.startLoading('破碎鸡蛋模型');
+
             const [eggGltf, brokenEggGltf] = await Promise.all([
-                Egg.gltfLoader.loadAsync('/model/egg/egg.glb'),
-                Egg.gltfLoader.loadAsync('/model/egg/egg_broken.glb')
+                modelLoaderManager.loadModel('/model/egg/eggDraco.glb', (progress) => {
+                    loadingProgress.updateProgress('鸡蛋模型', progress);
+                }),
+                modelLoaderManager.loadModel('/model/egg/egg_brokenDraco.glb', (progress) => {
+                    loadingProgress.updateProgress('破碎鸡蛋模型', progress);
+                })
             ]);
 
             // 保存模型作为静态资源（不添加到场景）
@@ -460,17 +467,23 @@ export class Egg {
             Egg.brokenEggModel = brokenEggGltf.scene;
 
             // 设置模型属性
-            Egg.setupEggModel(Egg.eggModel,0.5);
-            Egg.setupEggModel(Egg.brokenEggModel,0.05);
+            if (Egg.eggModel) Egg.setupEggModel(Egg.eggModel, 0.5);
+            if (Egg.brokenEggModel) Egg.setupEggModel(Egg.brokenEggModel, 0.05);
 
             Egg.isEggModelsLoaded = true;
+            
+            loadingProgress.finishLoading('鸡蛋模型');
+            loadingProgress.finishLoading('破碎鸡蛋模型');
+            
             console.log('✅ 鸡蛋模型预加载完成', {
-                eggChildren: Egg.eggModel.children.length,
-                brokenEggChildren: Egg.brokenEggModel.children.length
+                eggChildren: Egg.eggModel?.children.length || 0,
+                brokenEggChildren: Egg.brokenEggModel?.children.length || 0
             });
         } catch (error) {
             console.error('❌ 鸡蛋模型预加载失败:', error);
             Egg.isEggModelsLoaded = false;
+            loadingProgress.finishLoading('鸡蛋模型');
+            loadingProgress.finishLoading('破碎鸡蛋模型');
         }
     }
 

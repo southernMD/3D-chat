@@ -1,7 +1,8 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { BaseModel} from '../architecture/BaseModel';
 import type { InitialTransform } from "../architecture/BaseModel";
+import { modelLoaderManager } from '@/loaders/ModelLoaderManager';
+import { loadingProgress } from '@/utils/LoadingProgress';
 
 /**
  * GLTF接口定义
@@ -26,14 +27,12 @@ interface GLTF {
  */
 export class OnePullUpBar extends BaseModel {
   private static OnePullUpBarModel:THREE.Object3D | null = null
-  private loader: GLTFLoader;
   private modelObject: THREE.Object3D | null = null;
   private boundingBoxHelper: THREE.BoxHelper | null = null;
 
   constructor(scene: THREE.Scene, initialTransform?: InitialTransform) {
     super(scene, initialTransform || {});
     this.modelGroup.name = 'OnePullUpBar';
-    this.loader = new GLTFLoader();
   }
 
   /**
@@ -101,28 +100,37 @@ export class OnePullUpBar extends BaseModel {
    * 加载GLTF模型
    */
   private async loadModel(): Promise<void> {
-    const loadModel = (): Promise<GLTF> => {
-      return new Promise((resolve, reject) => {
-        this.loader.load(
-          '/model/outdoorGym/OnePullUpBar.glb',
-          (gltf) => resolve(gltf),
+    const modelName = '单杠健身器材';
+    
+    try {
+      if(!OnePullUpBar.OnePullUpBarModel){
+        loadingProgress.startLoading(modelName);
+        const gltf = await modelLoaderManager.loadModel(
+          '/model/outdoorGym/OnePullUpBarDraco.glb',
           (progress) => {
-            console.log('单杠模型加载进度:', (progress.loaded / progress.total * 100) + '%');
-          },
-          (error) => reject(error)
+            loadingProgress.updateProgress(modelName, progress);
+            console.log(`${modelName}加载进度: ${progress.toFixed(1)}%`);
+          }
         );
-      });
-    };
-    if(!OnePullUpBar.OnePullUpBarModel){
-      OnePullUpBar.OnePullUpBarModel = (await loadModel()).scene
+        OnePullUpBar.OnePullUpBarModel = gltf.scene;
+        loadingProgress.finishLoading(modelName);
+      }
+      
+      if (OnePullUpBar.OnePullUpBarModel) {
+        this.modelObject = OnePullUpBar.OnePullUpBarModel.clone();
+      }
+      
+      // 设置模型属性
+      this.setupModel();
+      
+      // 添加到模型组
+      if (this.modelObject) {
+        this.modelGroup.add(this.modelObject);
+      }
+    } catch (error) {
+      loadingProgress.finishLoading(modelName);
+      throw error;
     }
-    this.modelObject = OnePullUpBar.OnePullUpBarModel.clone()
-    
-    // 设置模型属性
-    this.setupModel();
-    
-    // 添加到模型组
-    this.modelGroup.add(this.modelObject);
   }
 
   /**

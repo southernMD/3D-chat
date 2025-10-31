@@ -1,7 +1,8 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { BaseModel } from '../architecture/BaseModel';
 import type { InitialTransform } from '../architecture/BaseModel';
+import { modelLoaderManager } from '@/loaders/ModelLoaderManager';
+import { loadingProgress } from '@/utils/LoadingProgress';
 
 /**
  * GLTF接口定义
@@ -25,14 +26,12 @@ interface GLTF {
  * 户外健身器材组合类
  */
 export class OutdoorGym extends BaseModel {
-  private loader: GLTFLoader;
   private modelObject: THREE.Object3D | null = null;
   private boundingBoxHelper: THREE.BoxHelper | null = null;
 
   constructor(scene: THREE.Scene, initialTransform?: InitialTransform) {
     super(scene, initialTransform || {});
     this.modelGroup.name = 'OutdoorGym';
-    this.loader = new GLTFLoader();
   }
 
   /**
@@ -99,27 +98,33 @@ export class OutdoorGym extends BaseModel {
    * 加载GLTF模型
    */
   private async loadModel(): Promise<void> {
-    const loadModel = (): Promise<GLTF> => {
-      return new Promise((resolve, reject) => {
-        this.loader.load(
-          '/model/outdoorGym/OutdoorGym.glb',
-          (gltf) => resolve(gltf),
-          (progress) => {
-            console.log('户外健身器材组合模型加载进度:', (progress.loaded / progress.total * 100) + '%');
-          },
-          (error) => reject(error)
-        );
-      });
-    };
+    const modelName = '户外健身器材';
+    loadingProgress.startLoading(modelName);
 
-    const gltf = await loadModel();
-    this.modelObject = gltf.scene;
-    
-    // 设置模型属性
-    this.setupModel();
-    
-    // 添加到模型组
-    this.modelGroup.add(this.modelObject);
+    try {
+      const gltf = await modelLoaderManager.loadModel(
+        '/model/outdoorGym/OutdoorGymDraco.glb',
+        (progress) => {
+          loadingProgress.updateProgress(modelName, progress);
+          console.log(`${modelName}加载进度: ${progress.toFixed(1)}%`);
+        }
+      );
+
+      this.modelObject = gltf.scene;
+      
+      // 设置模型属性
+      this.setupModel();
+      
+      // 添加到模型组
+      if (this.modelObject) {
+        this.modelGroup.add(this.modelObject);
+      }
+      
+      loadingProgress.finishLoading(modelName);
+    } catch (error) {
+      loadingProgress.finishLoading(modelName);
+      throw error;
+    }
   }
 
   /**
