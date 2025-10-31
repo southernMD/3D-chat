@@ -1,23 +1,11 @@
 import * as THREE from 'three';
 import { BaseModel } from "./BaseModel";
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { PHYSICS_CONSTANTS, getGroundFullSize } from '../../constants/PhysicsConstants';
 import type { InitialTransform } from "./BaseModel";
+import { modelLoaderManager } from '@/loaders/ModelLoaderManager';
+import { loadingProgress } from '@/utils/LoadingProgress';
+import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-interface GLTF {
-    scene: THREE.Group;
-    scenes: THREE.Group[];
-    animations: THREE.AnimationClip[];
-    cameras: THREE.Camera[];
-    asset: {
-        copyright?: string;
-        generator?: string;
-        version?: string;
-        minVersion?: string;
-        extensions?: any;
-        extras?: any;
-    };
-}
 export class WallAndDoor extends BaseModel {
     // 独立的对象
     private columnObject: THREE.Object3D | null = null;    // 柱子对象
@@ -45,19 +33,26 @@ export class WallAndDoor extends BaseModel {
     }
 
     async load(): Promise<void> {
-        const loader = new GLTFLoader();
-        const loadModel = (): Promise<GLTF> => {
-            return new Promise((resolve, reject) => {
-                loader.load(
-                    '/model/wall/graveyard_fence.glb',
-                    (gltf) => resolve(gltf),
-                    undefined,
-                    (err) => reject(err)
-                );
-            });
-        };
-        if(!WallAndDoor.wallModel){
-            WallAndDoor.wallModel = await loadModel();
+        const modelName = '围墙模型';
+        
+        try {
+            if(!WallAndDoor.wallModel){
+                loadingProgress.startLoading(modelName);
+                
+                WallAndDoor.wallModel = await modelLoaderManager.loadModel(
+                    '/model/wall/graveyard_fenceDraco.glb',
+                    (progress) => {
+                        loadingProgress.updateProgress(modelName, progress);
+                        console.log(`${modelName}加载进度: ${progress.toFixed(1)}%`);
+                    }
+                ) as GLTF;
+                
+                loadingProgress.finishLoading(modelName);
+            }
+        } catch (error) {
+            loadingProgress.finishLoading(modelName);
+            console.error('❌ 围墙模型加载失败:', error);
+            throw error;
         }
         console.log('🔍 开始提取模型部件...');
 

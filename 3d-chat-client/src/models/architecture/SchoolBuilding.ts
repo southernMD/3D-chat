@@ -1,21 +1,8 @@
 import * as THREE from 'three';
 import { BaseModel } from "./BaseModel";
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { InitialTransform } from "./BaseModel";
-interface GLTF {
-  scene: THREE.Group;
-  scenes: THREE.Group[];
-  animations: THREE.AnimationClip[];
-  cameras: THREE.Camera[];
-  asset: {
-    copyright?: string;
-    generator?: string;
-    version?: string;
-    minVersion?: string;
-    extensions?: any;
-    extras?: any;
-  };
-}
+import { modelLoaderManager } from '@/loaders/ModelLoaderManager';
+import { loadingProgress } from '@/utils/LoadingProgress';
 
 
 export class SchoolBuilding extends BaseModel {
@@ -39,42 +26,37 @@ export class SchoolBuilding extends BaseModel {
 
     async load(): Promise<void> {
         console.log('📁 开始加载学校建筑模型文件...');
-
-        const loader = new GLTFLoader();
-        const loadModel = (): Promise<GLTF> => {
-            return new Promise((resolve, reject) => {
-                loader.load(
-                    '/model/building/schoolBuild1.glb',
-                    (gltf) => {
-            console.log('✅ 学校建筑模型文件加载成功');
-                        resolve(gltf);
-                    },
-                    (progress) => {
-                        console.log('📊 学校建筑模型加载进度:', (progress.loaded / progress.total * 100).toFixed(2) + '%');
-                    },
-                    (err) => {
-                        console.error('❌ 学校建筑模型文件加载失败:', err);
-                        reject(err);
-                    }
-                );
-            });
-        };
+        const modelName = '学校建筑';
 
         try {
-            const gltf = await loadModel();
+            loadingProgress.startLoading(modelName);
+            
+            const gltf = await modelLoaderManager.loadModel(
+                '/model/building/schoolBuild1Draco.glb',
+                (progress) => {
+                    loadingProgress.updateProgress(modelName, progress);
+                    console.log(`${modelName}加载进度: ${progress.toFixed(1)}%`);
+                }
+            );
+            
+            loadingProgress.finishLoading(modelName);
+            console.log('✅ 学校建筑模型文件加载成功');
             console.log('🔍 开始提取学校建筑模型...');
 
-            this.buildingObject = gltf.scene.clone();
-            this.buildingObject.name = 'SchoolBuilding';
-            this.buildingObject.scale.setScalar(this.buildingScale);
+            if (gltf.scene) {
+                this.buildingObject = gltf.scene.clone();
+                this.buildingObject!.name = 'SchoolBuilding';
+                this.buildingObject!.scale.setScalar(this.buildingScale);
 
-            // 查找并填充门对象
-            // this.buildingObject.children = this.buildingObject.children.filter(child => !doors.includes(child.name));
-            this.modelGroup.add(this.buildingObject);
-            this.addToScene();
-            console.log('✅ 学校建筑模型加载完成');
+                // 查找并填充门对象
+                // this.buildingObject.children = this.buildingObject.children.filter(child => !doors.includes(child.name));
+                this.modelGroup.add(this.buildingObject!);
+                this.addToScene();
+                console.log('✅ 学校建筑模型加载完成');
+            }
 
         } catch (error) {
+            loadingProgress.finishLoading(modelName);
             console.error('❌ 学校建筑模型加载失败:', error);
         }
     }

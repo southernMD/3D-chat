@@ -1,9 +1,10 @@
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { modelPreloadService } from '@/services/ModelPreloadService';
 
 /**
  * 模型加载器管理器 - 单例模式
- * 提供优化的GLTF加载器，支持Draco压缩和加载进度
+ * 提供优化的GLTF加载器，支持Draco压缩、加载进度和预加载
  */
 export class ModelLoaderManager {
     private static instance: ModelLoaderManager;
@@ -45,15 +46,19 @@ export class ModelLoaderManager {
     }
 
     /**
-     * 加载模型（带进度回调）
+     * 加载模型（带进度回调和预加载支持）
+     * 优先使用预加载的本地 Blob URL，如果正在预加载则等待完成
      */
     public async loadModel(
         url: string,
         onProgress?: (progress: number) => void
     ): Promise<any> {
+        // 尝试获取预加载的本地 URL（如果正在加载会自动等待）
+        const actualUrl = await modelPreloadService.getModelUrl(url);
+        
         return new Promise((resolve, reject) => {
             this.gltfLoader.load(
-                url,
+                actualUrl,
                 (gltf) => {
                     if (onProgress) onProgress(100);
                     resolve(gltf);

@@ -1,8 +1,9 @@
 import * as THREE from "three";
 import { BaseModel } from "./BaseModel";
 import type { InitialTransform } from "./BaseModel";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { modelLoaderManager } from '@/loaders/ModelLoaderManager';
+import { loadingProgress } from '@/utils/LoadingProgress';
 export class Tree extends BaseModel {
     public treeObject: THREE.Object3D | null = null;
     private static treeModel: GLTF | null = null;
@@ -19,41 +20,39 @@ export class Tree extends BaseModel {
     }
 
     async load(): Promise<void> {
-        const loader = new GLTFLoader();
-        const loadModel = (): Promise<GLTF> => {
-            return new Promise((resolve) => {
-                loader.load(
-                    '/model/tree/tree.glb',
-                    (gltf) => {
-                        console.log('树模型文件加载成功');
-                        resolve(gltf);
-                    },
-                    (progress) => {
-                        console.log('📊 树建筑模型加载进度:', (progress.loaded / progress.total * 100).toFixed(2) + '%');
-                    },
-                    (err) => {
-                        console.error('❌ 树建筑模型文件加载失败，使用简单盒模型替代:', err);
-                        // 如果模型加载失败，创建简单的盒模型作为树
-                        this.createSimpleTreeModel();
-                        resolve({} as GLTF);
-                    }
-                );
-            });
-        };
-
+        const modelName = '树模型';
+        
         try {
             if(!Tree.treeModel){
-                Tree.treeModel = await loadModel();
+                loadingProgress.startLoading(modelName);
+                
+                try {
+                    Tree.treeModel = await modelLoaderManager.loadModel(
+                        '/model/tree/treeDraco.glb',
+                        (progress) => {
+                            loadingProgress.updateProgress(modelName, progress);
+                            console.log(`${modelName}加载进度: ${progress.toFixed(1)}%`);
+                        }
+                    ) as GLTF;
+                    
+                    loadingProgress.finishLoading(modelName);
+                    console.log('✅ 树模型文件加载成功');
+                } catch (err) {
+                    loadingProgress.finishLoading(modelName);
+                    console.error('❌ 树模型文件加载失败，使用简单盒模型替代:', err);
+                    this.createSimpleTreeModel();
+                    return;
+                }
             }
+            
             console.log('开始提取树模型...');
             this.treeObject = Tree.treeModel.scene.clone();
             this.treeObject.name = `tree-${this.name}`;
             this.treeObject.scale.setScalar(0.5);
             this.modelGroup.add(this.treeObject);
-            // 添加到模型组
             console.log('✅ 树模型加载完成');
         } catch (error) {
-            console.error('❌ 树建筑模型加载失败，使用简单模型:', error);
+            console.error('❌ 树模型加载失败，使用简单模型:', error);
             this.createSimpleTreeModel();
         }
     }
