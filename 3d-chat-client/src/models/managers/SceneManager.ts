@@ -30,7 +30,7 @@ export class SceneManager {
   /**
    * 初始化场景
    */
-  private initializeScene(): void {
+  private async initializeScene(): Promise<void> {
     // 创建网格辅助器
     // this.gridHelper = new GridHelper(1000, 100, 0x444444, 0x444444);
     // this.scene.add(this.gridHelper);
@@ -38,7 +38,7 @@ export class SceneManager {
     // 创建坐标轴辅助器
     // this.axesHelper = new THREE.AxesHelper(150);
     // this.scene.add(this.axesHelper);
-    this.createSkyBox();
+    await this.createSkyBox();
   }
 
   /**
@@ -97,7 +97,7 @@ export class SceneManager {
    */
   async createSkyBox(): Promise<void> {
     // 使用预加载的 URL
-    const url = await modelPreloadService.getModelUrl('/background.exr');
+    const url = await modelPreloadService.getModelUrl('/model/background.exr');
     
     const loader = new EXRLoader();
     loader.load(url, (texture) => {

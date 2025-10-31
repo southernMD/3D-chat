@@ -36,7 +36,7 @@ class ModelPreloadService {
     '/model/building/schoolBuild1Draco.glb',
     '/model/outdoorGym/OnePullUpBarDraco.glb',
     '/model/outdoorGym/OutdoorGymDraco.glb',
-    '/background.exr',
+    '/model/background.exr',
   ];
 
   private constructor() {

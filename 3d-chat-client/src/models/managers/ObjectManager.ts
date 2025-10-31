@@ -30,16 +30,16 @@ export class ObjectManager {
 
   async create(): Promise<void> {
     if (this.isCreated) return
+    await this.createOvalTrack('main-track', {
+      position: { x: 0, y: 5, z: 675 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: 8 // 支持x、z轴独立缩放
+    })
     await Promise.all([
       this.createGround('main-ground', {
         sizeX: PHYSICS_CONSTANTS.GROUND_SIZE_X,
         sizeZ: PHYSICS_CONSTANTS.GROUND_SIZE_Z,
         position: { x: 0, y: 0, z: 0 }
-      }),
-      this.createOvalTrack('main-track', {
-        position: { x: 0, y: 5, z: 675 },
-        rotation: { x: 0, y: 0, z: 0 },
-        scale: 8 // 支持x、z轴独立缩放
       }),
       this.createSchoolBuilding('school-building', {
         position: { x: 500, y: 0, z: -500 },
