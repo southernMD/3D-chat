@@ -7,20 +7,20 @@ import { loadingProgress } from '@/utils/LoadingProgress';
 /**
  * GLTF接口定义
  */
-interface GLTF {
-  scene: THREE.Group;
-  scenes: THREE.Group[];
-  animations: THREE.AnimationClip[];
-  cameras: THREE.Camera[];
-  asset: {
-    copyright?: string;
-    generator?: string;
-    version?: string;
-    minVersion?: string;
-    extensions?: any;
-    extras?: any;
-  };
-}
+// interface GLTF {
+//   scene: THREE.Group;
+//   scenes: THREE.Group[];
+//   animations: THREE.AnimationClip[];
+//   cameras: THREE.Camera[];
+//   asset: {
+//     copyright?: string;
+//     generator?: string;
+//     version?: string;
+//     minVersion?: string;
+//     extensions?: any;
+//     extras?: any;
+//   };
+// }
 
 /**
  * 单杠健身器材类
