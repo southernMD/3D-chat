@@ -39,7 +39,7 @@
               </div>
 
               <!-- 添加地图按钮 -->
-              <div class="map-card add-map-card" @click="showAddMapDialog">
+              <!-- <div class="map-card add-map-card" @click="showAddMapDialog">
                 <div class="map-preview add-map-preview">
                   <div class="add-map-icon">+</div>
                 </div>
@@ -47,7 +47,7 @@
                   <h4 class="map-name">{{ $t('createRoom.map.addMap') }}</h4>
                   <p class="map-description">{{ $t('createRoom.map.addMapDescription') }}</p>
                 </div>
-              </div>
+              </div> -->
             </div>
           </div>
           
@@ -245,14 +245,6 @@ const maps = ref([
     preview: 'school',
     available: true,
     title: t('createRoom.map.school'),
-  },
-  {
-    id: 'forest',
-    name: t('createRoom.map.forestCabin'),
-    description: t('createRoom.map.forestCabinDescription'),
-    preview: 'forest',
-    available: true,
-    title: t('createRoom.map.forestCabin'),
   }
 ])
 
@@ -467,7 +459,7 @@ const createRoom = async () => {
 
 .map-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 

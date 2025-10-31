@@ -10,13 +10,13 @@ COPY package.json package-lock.json ./
 # 安装 python3 和 pip，解决 mediasoup worker 编译依赖
 RUN apt-get update && apt-get install -y python3 python3-pip
 
-# 安装依赖（包括 devDependencies，因为需要编译）
+# 安装依赖
 RUN npm install
 
 # 复制所有源代码（排除 .dockerignore 里的内容）
 COPY . .
 
-# 复制并重命名环境变量文件（如果你用.env）
+# 复制并重命名环境变量文件
 COPY .env .env
 
 # 编译 TypeScript

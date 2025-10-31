@@ -155,7 +155,6 @@ VITE_API_URL=/api
 VITE_WS_HOST=公网ip
 VITE_TURN_URL部署的turn服务器的地址
 
-nginx的location /socket.io/应该是没用的（我不知道，这个端口我是没有的）
 证书用docker-compose挂载本机目录/etc/nginx/ssl/
 ```bash
 cd server/3d-chat-client

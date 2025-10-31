@@ -425,7 +425,7 @@ export abstract class Model extends StaticModel {
 
       // BVH碰撞检测 - 🚀 添加boundsTraverseOrder优化遍历顺序
       //TODO: OPEDNDOOR弹出消息窗口创建不正常
-      (collider.geometry as any).boundsTree.shapecast({
+      (collider.geometry as THREE.BoxGeometry).boundsTree!.shapecast({
         intersectsBounds: (box: THREE.Box3) => box.intersectsBox(tempBox),
 
         intersectsTriangle: (tri: any) => {

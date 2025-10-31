@@ -235,7 +235,7 @@ export class StaticMMDModelManager {
     // 计算时间差（秒）
     const timeDiff = (currentTime - targetState.timestamp) / 1000;
     
-    // 🚀 智能预测位置计算
+    //  智能预测位置计算
     const predictedPosition = this.calculatePredictedPosition(userId, targetState, timeDiff);
     
     // 根据地面状态调整外推时间限制
@@ -285,7 +285,7 @@ export class StaticMMDModelManager {
   }
 
   /**
-   * 🚀 智能预测位置计算（基于地面状态）
+   *  智能预测位置计算（基于地面状态）
    */
   private calculatePredictedPosition(userId: string, targetState: any, timeDiff: number): THREE.Vector3 {
     const predictedPosition = new THREE.Vector3();
@@ -296,44 +296,42 @@ export class StaticMMDModelManager {
       return predictedPosition;
     }
 
-    // 🏃 地面状态：使用完整预测算法
+    //  地面状态：使用完整预测算法
     if (targetState.isOnGround) {
-      // 🎯 基础线性预测（基于速度）
+      //  基础线性预测（基于速度）
       const linearPrediction = targetState.velocity.clone().multiplyScalar(timeDiff);
       predictedPosition.add(linearPrediction);
 
-      // 🚀 加速度预测（二次项）- 地面状态下使用较小的系数
+      //加速度预测（二次项）- 地面状态下使用较小的系数
       if (targetState.acceleration.length() > 0) {
         const accelerationPrediction = targetState.acceleration.clone()
           .multiplyScalar(0.3 * timeDiff * timeDiff); // 地面状态下减少加速度影响
         predictedPosition.add(accelerationPrediction);
       }
 
-      // 📊 基于历史误差的修正
+      // 基于历史误差的修正
       const errorCorrection = this.calculateErrorCorrection(userId, timeDiff);
       if (errorCorrection) {
         predictedPosition.add(errorCorrection);
       }
 
-      // 🎮 基于动画状态的修正
+      //  基于动画状态的修正
       const animationCorrection = this.calculateAnimationBasedCorrection(targetState, timeDiff);
       predictedPosition.add(animationCorrection);
     } else {
-      // 🚁 空中状态：使用简单的线性预测，避免复杂计算
+      // 空中状态：使用简单的线性预测，避免复杂计算
       const linearPrediction = targetState.velocity.clone().multiplyScalar(timeDiff);
       predictedPosition.add(linearPrediction);
-      
-      // 空中状态不做额外的物理计算，保持简单
     }
 
     return predictedPosition;
   }
 
   /**
-   * 🎯 计算自适应插值因子（基于地面状态）
+   *  计算自适应插值因子（基于地面状态）
    */
   private calculateAdaptiveInterpolationFactor(targetState: any, timeDiff: number): number {
-    // 🏃 地面状态：正常插值逻辑
+    //  地面状态：正常插值逻辑
     if (targetState.isOnGround) {
       let factor = this.interpolationFactor;
 
@@ -351,7 +349,7 @@ export class StaticMMDModelManager {
       // 地面状态限制范围
       return Math.min(Math.max(factor, 0.05), 0.8);
     } else {
-      // 🚁 空中状态：使用适中的插值因子，避免闪现效果
+      //  空中状态：使用适中的插值因子，避免闪现效果
       let aerialFactor = 0.2; // 提高空中状态基础插值因子
 
       // 基于置信度调整
@@ -367,7 +365,7 @@ export class StaticMMDModelManager {
   }
 
   /**
-   * 📊 基于历史误差计算修正值
+   * 基于历史误差计算修正值
    */
   private calculateErrorCorrection(userId: string, timeDiff: number): THREE.Vector3 | null {
     const history = this.predictionHistory.get(userId);
@@ -392,7 +390,7 @@ export class StaticMMDModelManager {
   }
 
   /**
-   * 🎮 基于动画状态的位置修正
+   *  基于动画状态的位置修正
    */
   private calculateAnimationBasedCorrection(targetState: any, timeDiff: number): THREE.Vector3 {
     const correction = new THREE.Vector3(0, 0, 0);
@@ -414,7 +412,7 @@ export class StaticMMDModelManager {
   }
 
   /**
-   * 📝 记录预测误差用于学习
+   *  记录预测误差用于学习
    */
   private recordPredictionError(userId: string, predicted: THREE.Vector3, actual: THREE.Vector3, timestamp: number): void {
     const error = predicted.distanceTo(actual);
@@ -446,7 +444,7 @@ export class StaticMMDModelManager {
   }
 
   /**
-   * 🚌 发送胶囊体更新事件到BVHPhysics
+   *  发送胶囊体更新事件到BVHPhysics
    */
   private sendCapsuleUpdateEvent(userId: string, model: StaticMMDModel | StaticGLTFModel): void {
     try {
@@ -547,6 +545,7 @@ export class StaticMMDModelManager {
           confidence = this.calculateStateConfidence(timeDelta, velocity, previousState);
         }
       }
+
 
       // 🚀 缓存增强的目标状态用于智能插值
       this.targetStates.set(userId, {
