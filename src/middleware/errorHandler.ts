@@ -151,17 +151,9 @@ export const globalErrorHandler = (
     let error = { ...err };
     error.message = err.message;
 
-    // MongoDB 重复键错误
-    if (err.code === 11000) {
-      const value = err.errmsg?.match(/(["'])(\\?.)*?\1/)?.[0] || '未知值';
-      const message = `重复的字段值: ${value}. 请使用其他值!`;
-      error = new ValidationError(message);
-    }
-
     // Mongoose 验证错误
     if (err.name === 'ValidationError') {
-      const errors = Object.values(err.errors || {}).map((val: any) => val.message);
-      const message = `无效的输入数据. ${errors.join('. ')}`;
+      const message = `${err.message}`;
       error = new ValidationError(message);
     }
 

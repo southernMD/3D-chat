@@ -83,14 +83,6 @@
           />
         </el-form-item>
 
-        <el-form-item prop="agreement">
-          <el-checkbox v-model="registerForm.agreement" :disabled="loading">
-            {{ $t('auth.register.agreement') }}
-            <el-link type="primary" @click="showTerms = true">{{ $t('auth.register.termsOfService') }}</el-link>
-            {{ $t('auth.register.and') }}
-            <el-link type="primary" @click="showPrivacy = true">{{ $t('auth.register.privacyPolicy') }}</el-link>
-          </el-checkbox>
-        </el-form-item>
 
         <el-form-item>
           <el-button
@@ -115,39 +107,6 @@
 
 
 
-    <!-- 用户协议对话框 -->
-    <el-dialog v-model="showTerms" title="用户协议" width="600px">
-      <div class="terms-content">
-        <h4>1. 服务条款</h4>
-        <p>欢迎使用3D Chat服务。使用本服务即表示您同意遵守以下条款。</p>
-        
-        <h4>2. 用户行为规范</h4>
-        <p>用户应当文明使用本服务，不得发布违法、有害、威胁、辱骂、骚扰、侵权或其他不当内容。</p>
-        
-        <h4>3. 隐私保护</h4>
-        <p>我们重视您的隐私，将按照隐私政策保护您的个人信息。</p>
-        
-        <h4>4. 服务变更</h4>
-        <p>我们保留随时修改或终止服务的权利，恕不另行通知。</p>
-      </div>
-    </el-dialog>
-
-    <!-- 隐私政策对话框 -->
-    <el-dialog v-model="showPrivacy" title="隐私政策" width="600px">
-      <div class="privacy-content">
-        <h4>1. 信息收集</h4>
-        <p>我们收集您提供的注册信息，包括邮箱地址和用户名。</p>
-        
-        <h4>2. 信息使用</h4>
-        <p>我们使用您的信息来提供服务、改进用户体验和发送重要通知。</p>
-        
-        <h4>3. 信息保护</h4>
-        <p>我们采用行业标准的安全措施来保护您的个人信息。</p>
-        
-        <h4>4. 信息共享</h4>
-        <p>除法律要求外，我们不会与第三方共享您的个人信息。</p>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
@@ -174,9 +133,6 @@ const codeSent = ref(false)
 const countdown = ref(0)
 let countdownTimer: NodeJS.Timeout | null = null
 
-// 对话框状态
-const showTerms = ref(false)
-const showPrivacy = ref(false)
 
 // 表单数据
 const registerForm = reactive({
@@ -184,8 +140,7 @@ const registerForm = reactive({
   username: '',
   password: '',
   confirmPassword: '',
-  verificationCode: '',
-  agreement: false
+  verificationCode: ''
 })
 
 // 确认密码验证
@@ -222,18 +177,6 @@ const registerRules: FormRules = {
     { required: true, message: t('auth.validation.confirmPasswordRequired'), trigger: 'blur' },
     { validator: validateConfirmPassword, trigger: 'blur' }
   ],
-  agreement: [
-    {
-      validator: ({}: any, value: boolean, callback: any) => {
-        if (!value) {
-          callback(new Error(t('auth.validation.agreementRequired')))
-        } else {
-          callback()
-        }
-      },
-      trigger: 'change'
-    }
-  ]
 }
 
 // 获取验证码按钮文本
@@ -471,26 +414,6 @@ onUnmounted(() => {
 
 
 
-.terms-content,
-.privacy-content {
-  max-height: 400px;
-  overflow-y: auto;
-  
-  h4 {
-    color: #00ffff;
-    margin: 20px 0 10px 0;
-
-    &:first-child {
-      margin-top: 0;
-    }
-  }
-
-  p {
-    color: rgba(255, 255, 255, 0.8);
-    line-height: 1.6;
-    margin-bottom: 12px;
-  }
-}
 
 :deep(.el-input__wrapper) {
   border-radius: 12px;
@@ -523,16 +446,6 @@ onUnmounted(() => {
   margin-bottom: 20px;
 }
 
-:deep(.el-checkbox__label) {
-  font-size: 14px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-:deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-  background-color: #00ffff;
-  border-color: #00ffff;
-}
 
 // 添加颜色循环动画
 @keyframes colorCycle {

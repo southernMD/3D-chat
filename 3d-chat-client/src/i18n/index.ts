@@ -78,10 +78,6 @@ const zh = {
       loginLink: '立即登录',
       registerSuccess: '注册成功',
       registerFailed: '注册失败',
-      agreement: '我已阅读并同意',
-      termsOfService: '服务条款',
-      privacyPolicy: '隐私政策',
-      and: '和'
     },
     validation: {
       emailRequired: '请输入邮箱',
@@ -97,7 +93,6 @@ const zh = {
       verificationCodeRequired: '请输入验证码',
       verificationCodeLength: '验证码为6位数字',
       verificationCodeFormat: '验证码必须为6位数字',
-      agreementRequired: '请同意服务条款和隐私政策'
     },
     messages: {
       sendCodeSuccess: '验证码已发送',
@@ -389,10 +384,6 @@ const en = {
       loginLink: 'Sign in now',
       registerSuccess: 'Registration successful',
       registerFailed: 'Registration failed',
-      agreement: 'I have read and agree to the',
-      termsOfService: 'Terms of Service',
-      privacyPolicy: 'Privacy Policy',
-      and: 'and'
     },
     validation: {
       emailRequired: 'Email is required',
@@ -408,7 +399,6 @@ const en = {
       verificationCodeRequired: 'Verification code is required',
       verificationCodeLength: 'Verification code must be 6 digits',
       verificationCodeFormat: 'Verification code must be 6 digits',
-      agreementRequired: 'Please agree to the Terms of Service and Privacy Policy'
     },
     messages: {
       sendCodeSuccess: 'Verification code sent',

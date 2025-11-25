@@ -334,13 +334,13 @@ export class AuthService {
       }
 
       if (!user) {
-        return { success: false, message: '账号或密码错误' };
+        return { success: false, message: '账号不存在' };
       }
 
       // 验证密码
       const isPasswordValid = await this.verifyPassword(password, user.password);
       if (!isPasswordValid) {
-        return { success: false, message: '账号或密码错误' };
+        return { success: false, message: '密码错误' };
       }
 
       // 生成JWT token
